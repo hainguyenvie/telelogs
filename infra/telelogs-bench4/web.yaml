@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-bench4-web
+  namespace: tensara
+  labels:
+    app: telelogs-bench4-web
+    owner: h2n
+spec:
+  restartPolicy: Always
+  nodeName: hgx046
+  containers:
+    - name: web
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command:
+        - /opt/conda/bin/python
+        - -m
+        - http.server
+        - "8080"
+        - --bind
+        - 0.0.0.0
+        - --directory
+        - /workspace/telelogs-bench4/dashboard
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      ports:
+        - name: http
+          containerPort: 8080
+      readinessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 3
+        periodSeconds: 10
+      volumeMounts:
+        - name: project
+          mountPath: /workspace/telelogs-bench4
+          readOnly: true
+  volumes:
+    - name: project
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs-bench4
+        type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telelogs-bench4-web
+  namespace: tensara
+spec:
+  type: ClusterIP
+  selector:
+    app: telelogs-bench4-web
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http

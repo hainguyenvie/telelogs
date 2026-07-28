@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: telelogs-bench4-vllm
+  namespace: tensara
+spec:
+  type: ClusterIP
+  selector:
+    app: telelogs-bench4
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: http

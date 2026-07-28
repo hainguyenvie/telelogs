@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Qwen3-8B · GSMA Full 4 Benchmarks</title>
+  <style>
+    :root { color-scheme: dark; --bg:#09111f; --panel:#101c2f; --line:#22324a; --text:#e8eef8; --muted:#91a4bf; --cyan:#42d3ff; --green:#52d69b; --red:#ff6b7a; --amber:#ffc857; }
+    * { box-sizing:border-box }
+    body { margin:0; background:radial-gradient(circle at 15% 0,#142b48 0,transparent 38%),var(--bg); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,sans-serif }
+    main { width:min(1400px,94vw); margin:28px auto 80px }
+    header { display:flex; gap:18px; align-items:flex-start; justify-content:space-between; margin-bottom:22px }
+    h1 { margin:0; font-size:clamp(24px,4vw,42px); letter-spacing:-.035em }
+    h2 { margin:30px 0 12px; font-size:20px }
+    .sub,.muted { color:var(--muted) }
+    .status { display:flex; align-items:center; gap:9px; padding:9px 13px; border:1px solid var(--line); border-radius:999px; background:#0d192a; white-space:nowrap }
+    .dot { width:9px; height:9px; border-radius:50%; background:var(--amber); box-shadow:0 0 14px var(--amber) }
+    .dot.running { background:var(--cyan); box-shadow:0 0 14px var(--cyan); animation:pulse 1.3s infinite }
+    .dot.completed { background:var(--green); box-shadow:0 0 14px var(--green) }
+    @keyframes pulse { 50% { opacity:.35 } }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px }
+    .panel { border:1px solid var(--line); background:linear-gradient(180deg,#122039,#0e192b); border-radius:15px; padding:16px; box-shadow:0 14px 35px #0003 }
+    .metric .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em }
+    .metric .value { font-size:27px; font-weight:750; margin-top:4px; font-variant-numeric:tabular-nums }
+    .benches { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px }
+    .bench-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline }
+    .bench-name { font-size:18px; font-weight:700 }
+    .score { color:var(--green); font-size:25px; font-weight:800 }
+    .bar { height:8px; background:#07101d; border-radius:99px; overflow:hidden; margin:14px 0 8px }
+    .bar > i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--cyan),var(--green)); transition:width .4s }
+    .breakdown-head { display:flex; align-items:end; justify-content:space-between; gap:14px; margin-top:22px }
+    .breakdown-head h3 { margin:0; font-size:16px }
+    .breakdown-head .muted { margin-top:2px; font-size:12px }
+    .table-wrap { margin-top:9px; border:1px solid var(--line); border-radius:13px; overflow:auto; background:#0d1829 }
+    table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }
+    th,td { padding:8px 12px; border-bottom:1px solid #1c2d44; text-align:right; white-space:nowrap }
+    th { color:var(--muted); background:#101e32; font-size:11px; text-transform:uppercase; letter-spacing:.055em }
+    th:first-child,td:first-child { text-align:left }
+    tbody tr:last-child td { border-bottom:0 }
+    .label-cell { font-weight:720 }
+    .accuracy-cell { min-width:160px }
+    .mini-score { display:flex; align-items:center; justify-content:flex-end; gap:9px }
+    .mini-bar { width:76px; height:5px; border-radius:99px; overflow:hidden; background:#07101d }
+    .mini-bar i { display:block; height:100%; background:linear-gradient(90deg,var(--cyan),var(--green)) }
+    .recent { display:grid; gap:10px }
+    .section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:30px }
+    .section-head h2 { margin:0 }
+    select { color:var(--text); background:#0d192a; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font:inherit; cursor:pointer }
+    details { border:1px solid var(--line); border-radius:13px; background:#0d1829; overflow:hidden }
+    summary { cursor:pointer; padding:13px 15px; list-style:none; display:flex; align-items:center; gap:12px }
+    summary::-webkit-details-marker { display:none }
+    .badge { font-size:11px; font-weight:800; padding:3px 7px; border-radius:7px; background:#19314e; color:var(--cyan); text-transform:uppercase }
+    .ok { color:var(--green) }.bad { color:var(--red) }
+    .summary-main { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .answer { font-family:ui-monospace,monospace }
+    .detail { border-top:1px solid var(--line); padding:15px; display:grid; gap:14px }
+    pre { margin:6px 0 0; padding:13px; border-radius:10px; background:#07101d; border:1px solid #192a42; white-space:pre-wrap; word-break:break-word; max-height:520px; overflow:auto; color:#d8e4f5 }
+    .loading { color:var(--muted); padding:18px }
+    footer { margin-top:28px; color:var(--muted); font-size:12px }
+    @media (max-width:950px) { .grid,.benches { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+    @media (max-width:560px) { .grid,.benches { grid-template-columns:1fr } header { flex-direction:column } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>Qwen3-8B · GSMA Full 4</h1><div class="sub">Zero-shot baseline · thinking enabled · cập nhật tự động mỗi 2 giây · <a href="dspy.html" style="color:var(--cyan)">xem DSPy TeleLogs →</a></div></div>
+    <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">Đang nối dữ liệu…</span></div>
+  </header>
+
+  <section class="grid">
+    <div class="panel metric"><div class="label">Tiến độ</div><div id="overall" class="value">—</div><div id="overall-sub" class="muted">—</div></div>
+    <div class="panel metric"><div class="label">Macro accuracy tạm thời</div><div id="macro" class="value">—</div><div class="muted">Trung bình 4 bộ đã có kết quả</div></div>
+    <div class="panel metric"><div class="label">Tốc độ</div><div id="speed" class="value">—</div><div class="muted">mẫu/phút</div></div>
+    <div class="panel metric"><div class="label">ETA</div><div id="eta" class="value">—</div><div id="tokens" class="muted">— tokens</div></div>
+  </section>
+
+  <h2>Điểm theo benchmark</h2>
+  <section id="benches" class="benches"></section>
+
+  <section aria-labelledby="breakdown-title">
+    <div class="breakdown-head">
+      <div><h3 id="breakdown-title">Breakdown theo label</h3><div id="breakdown-note" class="muted">Đúng/sai theo ground truth</div></div>
+      <select id="breakdown-filter" aria-label="Chọn dataset cho breakdown"><option value="telelogs">TeleLogs</option><option value="telemath">TeleMath</option><option value="teletables">TeleTables</option><option value="three_gpp">3GPP</option></select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>GT label / category</th><th>Tổng GT</th><th>Đúng</th><th>Sai</th><th>Accuracy</th></tr></thead>
+        <tbody id="breakdown"><tr><td colspan="5" class="loading">Đang tải breakdown…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="section-head"><h2>Kết quả mới nhất</h2><select id="dataset-filter" aria-label="Lọc dataset"><option value="all">Tất cả dataset</option><option value="telelogs">TeleLogs</option><option value="telemath">TeleMath</option><option value="teletables">TeleTables</option><option value="three_gpp">3GPP</option></select></div>
+  <section id="recent" class="recent"><div class="panel loading">Đang chờ mẫu đầu tiên…</div></section>
+
+  <footer id="footer">Dữ liệu scorer bám theo task chính thức trong gsma-labs/evals.</footer>
+</main>
+<script>
+const names={telelogs:'TeleLogs',telemath:'TeleMath',teletables:'TeleTables',three_gpp:'3GPP'};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const pct=v=>v==null?'—':(v*100).toFixed(2)+'%';
+const duration=s=>{if(s==null)return '—';s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h?`${h}h ${m}m`:`${m}m`};
+const number=n=>new Intl.NumberFormat('vi-VN').format(n||0);
+let recentData={all:[]};
+let activeDataset='all';
+let breakdownData={benchmarks:{}};
+let activeBreakdown='telelogs';
+
+async function loadProgress(){
+  try{
+    const p=await fetch('data/progress.json?'+Date.now()).then(r=>{if(!r.ok)throw Error(r.status);return r.json()});
+    document.getElementById('overall').textContent=`${number(p.completed)} / ${number(p.total)}`;
+    document.getElementById('overall-sub').textContent=(p.progress*100).toFixed(2)+'% · '+p.errors+' lỗi request';
+    document.getElementById('macro').textContent=pct(p.macro_accuracy);
+    document.getElementById('speed').textContent=p.samples_per_minute.toFixed(2);
+    document.getElementById('eta').textContent=duration(p.eta_seconds);
+    document.getElementById('tokens').textContent=number(p.completion_tokens)+' completion tokens';
+    document.getElementById('status-text').textContent=p.status==='completed'?'Hoàn tất':p.status==='completed_with_errors'?'Xong, còn lỗi':'Đang chạy';
+    document.getElementById('status-dot').className='dot '+p.status;
+    document.getElementById('footer').textContent=`Model ${p.model} · workers=${p.workers} · cập nhật ${new Date(p.updated_at).toLocaleString('vi-VN')}`;
+    document.getElementById('benches').innerHTML=Object.entries(p.benchmarks).map(([k,b])=>`
+      <article class="panel">
+        <div class="bench-head"><span class="bench-name">${names[k]||k}</span><span class="score">${pct(b.accuracy)}</span></div>
+        <div class="bar"><i style="width:${(b.progress*100).toFixed(2)}%"></i></div>
+        <div class="muted">${number(b.completed)} / ${number(b.total)} · đúng ${number(b.correct)} · lỗi ${b.errors}</div>
+        <div class="muted">reasoning ${number(b.reasoning_present)} · ${number(b.completion_tokens)} tokens</div>
+      </article>`).join('');
+  }catch(e){document.getElementById('status-text').textContent='Chờ progress.json'}
+}
+
+function renderBreakdown(){
+  const data=breakdownData.benchmarks?.[activeBreakdown];
+  const root=document.getElementById('breakdown');
+  if(!data?.rows?.length){root.innerHTML='<tr><td colspan="5" class="loading">Chưa có dữ liệu breakdown.</td></tr>';return}
+  document.getElementById('breakdown-note').textContent=data.grouping==='category'
+    ? 'TeleMath nhóm theo category; đúng/sai vẫn chấm bằng ground truth số'
+    : 'Đúng/sai theo ground-truth label';
+  root.innerHTML=data.rows.map(row=>`<tr>
+    <td class="label-cell">${esc(row.label)}</td>
+    <td>${number(row.total)}</td>
+    <td class="ok">${number(row.correct)}</td>
+    <td class="bad">${number(row.wrong)}</td>
+    <td class="accuracy-cell"><div class="mini-score"><span>${pct(row.accuracy)}</span><span class="mini-bar"><i style="width:${((row.accuracy||0)*100).toFixed(2)}%"></i></span></div></td>
+  </tr>`).join('');
+}
+
+async function loadBreakdown(){
+  try{
+    breakdownData=await fetch('data/breakdown.json?'+Date.now()).then(r=>{if(!r.ok)throw Error(r.status);return r.json()});
+    renderBreakdown();
+  }catch(e){document.getElementById('breakdown').innerHTML='<tr><td colspan="5" class="bad">Không tải được breakdown.</td></tr>'}
+}
+
+async function hydrate(details,url){
+  if(details.dataset.loaded)return;
+  const box=details.querySelector('.detail');box.innerHTML='<div class="loading">Đang tải reasoning đầy đủ…</div>';
+  try{
+    const x=await fetch(url).then(r=>r.json());
+    box.innerHTML=`
+      <div><strong>Question</strong><pre>${esc(x.question)}</pre></div>
+      <div><strong>Reasoning (${number((x.reasoning||'').length)} ký tự)</strong><pre>${esc(x.reasoning||'(không có)')}</pre></div>
+      <div><strong>Final completion</strong><pre>${esc(x.completion||'(trống)')}</pre></div>
+      <div class="muted">Target ${esc(x.target)} · Parsed ${esc(x.parsed_answer||'∅')} · ${esc(x.elapsed_seconds)}s · ${number(x.usage?.completion_tokens)} completion tokens</div>`;
+    details.dataset.loaded='1';
+  }catch(e){box.innerHTML='<div class="bad">Không tải được item JSON.</div>'}
+}
+
+function renderRecent(){
+    const rows=recentData[activeDataset]||[];
+    const root=document.getElementById('recent');
+    if(!rows.length){root.innerHTML='<div class="panel loading">Chưa có kết quả cho dataset này.</div>';return}
+    root.innerHTML=rows.map(x=>`
+      <details data-url="${esc(x.item_url)}">
+        <summary>
+          <span class="badge">${esc(names[x.benchmark]||x.benchmark)}</span>
+          <span class="summary-main">#${x.sample_index} · ${esc(x.question_preview)}</span>
+          <span class="answer ${x.correct?'ok':'bad'}">${esc(x.parsed_answer||'∅')} / ${esc(x.target)} ${x.correct?'✓':'✕'}</span>
+        </summary>
+        <div class="detail"><div><strong>Reasoning preview</strong><pre>${esc(x.reasoning_preview||'(chưa có)')}</pre></div><div><strong>Final</strong><pre>${esc(x.completion||'(trống)')}</pre></div></div>
+      </details>`).join('');
+    root.querySelectorAll('details').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)hydrate(d,d.dataset.url)}));
+}
+
+async function loadRecent(){
+  if(document.querySelector('#recent details[open]'))return;
+  try{
+    const data=await fetch('data/recent.json?'+Date.now()).then(r=>r.json());
+    recentData=Array.isArray(data)?{all:data}:data;
+    renderRecent();
+  }catch(e){}
+}
+
+document.getElementById('dataset-filter').addEventListener('change',e=>{activeDataset=e.target.value;renderRecent()});
+document.getElementById('breakdown-filter').addEventListener('change',e=>{activeBreakdown=e.target.value;renderBreakdown()});
+loadProgress();loadBreakdown();loadRecent();
+setInterval(loadProgress,2000);setInterval(loadRecent,2500);
+</script>
+</body>
+</html>

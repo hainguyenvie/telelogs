@@ -1,0 +1,32 @@
+{
+  "diagnose_residual": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case from calculator-verified facts.\n\nUse this evidence hierarchy exactly. C2.distance_gate, C5.frequent_change_gate,\nC7.speed_gate, and C8.affected_average_rb_gate are exact: if one is triggered,\nselect that class immediately and do not let a softer narrative override it.\nC1.affected_weak_rsrp_witness=true is sufficient positive evidence for C1.\nC1.affected_below_lower_lobe, C3.minimum_advantage_mbps,\nC4.affected_overlap_gate, and C6.affected_modulo_30_collision are only necessary\nconditions, never sufficient by themselves. C3 is a residual diagnosis after\nstronger supported mechanisms are excluded; compare only serving-segment\nthroughput, never infer throughput from RSRP, BRSRP, SINR, or PCI changes.\n\nReturn an audit-ready evidence trace of at most 120 words and exactly one class.",
+      "fields": [
+        {
+          "prefix": "Verified Facts:",
+          "description": "Authoritative compact JSON calculated from the raw drive-test tables."
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "Concise decisive evidence, at most 120 words; do not recompute facts."
+        },
+        {
+          "prefix": "Answer:",
+          "description": "Exactly one of C1,C2,C3,C4,C5,C6,C7,C8."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

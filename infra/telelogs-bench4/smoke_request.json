@@ -1,0 +1,14 @@
+{
+  "model": "Qwen/Qwen3-8B",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with exactly: QWEN3_BENCH4_READY"
+    }
+  ],
+  "temperature": 0,
+  "max_tokens": 64,
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  }
+}

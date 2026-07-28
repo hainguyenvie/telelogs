@@ -1,0 +1,11 @@
+{
+  "calibration_split": "train",
+  "residual_examples": 567,
+  "grid_step_mbps": 0.5,
+  "selected_threshold_mbps": 142.5,
+  "correct": 461,
+  "accuracy": 0.8130511463844797,
+  "tied_best_thresholds_mbps": [
+    142.5
+  ]
+}
