@@ -27,7 +27,8 @@ done/
 client_jobs/
 client_done/
 
-# TeleLogs benchmark data must not be redistributed.
+# Ignore all additional/generated data. The two reviewed raw snapshots are
+# force-tracked only in the private repository.
 data/
 data.zip
 

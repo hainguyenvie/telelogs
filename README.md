@@ -33,10 +33,12 @@ pipeline has not been rerun on official after selection.
 
 ## Data policy
 
-TeleLogs asks users not to publicly share or re-upload its dataset. Benchmark
-data, prepared facts and per-example predictions are intentionally excluded
-from Git. Obtain the dataset through its official distribution, then rebuild
-the deterministic inputs with:
+TeleLogs asks users not to publicly share or redistribute its dataset. The exact
+2,400-row train and 864-row official snapshots are committed here only because
+this GitHub repository is private. **Do not make the repository public while
+these files remain anywhere in its Git history.**
+
+Prepared facts and per-example predictions remain excluded. Rebuild them with:
 
 ```bash
 python infra/telelogs-dspy/prepare_repro_data.py \

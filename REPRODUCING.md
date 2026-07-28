@@ -27,19 +27,19 @@ Do not report 93.95% as the official score.
 
 ## Dataset requirement
 
-TeleLogs asks users not to redistribute/re-upload the benchmark. This repository
-therefore does not contain `train.json`, `test.json`, prepared facts or per-row
-predictions.
-
-Obtain the dataset through its official distribution and place it locally as:
+TeleLogs asks users not to publicly redistribute/re-upload the benchmark. The
+raw snapshots are committed at the following paths only because this repository
+is private:
 
 ```text
 data/raw_train_2400/train.json
 data/official_test_864/test.json
 ```
 
-The expected files contain 2,400 train rows and 864 official rows. Each row must
-have `question` and `answer`.
+Do not change the repository to public while these files remain anywhere in its
+Git history. Prepared facts and per-row predictions are still excluded and must
+be rebuilt locally. The committed files contain 2,400 train rows and 864
+official rows; each row has `question` and `answer`.
 
 ## Script map
 
