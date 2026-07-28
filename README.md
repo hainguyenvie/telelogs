@@ -58,3 +58,36 @@ This repository separates three measurements:
 
 The 90–94% results belong to category 3. They should not be reported as Qwen
 reading the full raw question and independently reasoning end to end.
+
+## Full four-benchmark artifacts
+
+The private repository also retains the completed Qwen3-8B base outputs for
+TeleLogs, TeleMath, TeleTables and 3GPP under:
+
+```text
+artifacts/telelogs-bench4/full4-base-qwen3-8b/
+```
+
+The ten-sample native-thinking TeleLogs pilot is under:
+
+```text
+artifacts/telelogs-bench4/pure_telelogs10/
+```
+
+The benchmark dashboard is plain static HTML/JavaScript. On H200 it is served
+by Python's standard-library `http.server` in `web.yaml`; it does not require
+React, Next.js or a separate application server:
+
+```bash
+ssh H200_Tensara \
+  'kubectl apply -f ~/projects/telelogs-bench4/web.yaml'
+
+./infra/telelogs-bench4/dashboard_forward.sh 18081
+```
+
+Then open:
+
+```text
+http://127.0.0.1:18081/
+http://127.0.0.1:18081/dspy.html
+```

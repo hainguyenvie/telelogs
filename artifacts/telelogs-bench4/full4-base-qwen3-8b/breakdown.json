@@ -1,0 +1,317 @@
+{
+  "generated_at": "2026-07-27T04:43:42.137847+00:00",
+  "benchmarks": {
+    "telelogs": {
+      "display_name": "TeleLogs",
+      "grouping": "ground_truth",
+      "rows": [
+        {
+          "label": "C1",
+          "total": 108,
+          "correct": 39,
+          "wrong": 69,
+          "errors": 0,
+          "accuracy": 0.3611111111111111
+        },
+        {
+          "label": "C2",
+          "total": 108,
+          "correct": 28,
+          "wrong": 80,
+          "errors": 0,
+          "accuracy": 0.25925925925925924
+        },
+        {
+          "label": "C3",
+          "total": 108,
+          "correct": 0,
+          "wrong": 108,
+          "errors": 0,
+          "accuracy": 0.0
+        },
+        {
+          "label": "C4",
+          "total": 108,
+          "correct": 47,
+          "wrong": 61,
+          "errors": 0,
+          "accuracy": 0.4351851851851852
+        },
+        {
+          "label": "C5",
+          "total": 108,
+          "correct": 19,
+          "wrong": 89,
+          "errors": 0,
+          "accuracy": 0.17592592592592593
+        },
+        {
+          "label": "C6",
+          "total": 108,
+          "correct": 103,
+          "wrong": 5,
+          "errors": 0,
+          "accuracy": 0.9537037037037037
+        },
+        {
+          "label": "C7",
+          "total": 108,
+          "correct": 19,
+          "wrong": 89,
+          "errors": 0,
+          "accuracy": 0.17592592592592593
+        },
+        {
+          "label": "C8",
+          "total": 108,
+          "correct": 60,
+          "wrong": 48,
+          "errors": 0,
+          "accuracy": 0.5555555555555556
+        }
+      ]
+    },
+    "telemath": {
+      "display_name": "TeleMath",
+      "grouping": "category",
+      "rows": [
+        {
+          "label": "Computer Networking",
+          "total": 24,
+          "correct": 7,
+          "wrong": 17,
+          "errors": 0,
+          "accuracy": 0.2916666666666667
+        },
+        {
+          "label": "Electrical Engineering",
+          "total": 9,
+          "correct": 5,
+          "wrong": 4,
+          "errors": 0,
+          "accuracy": 0.5555555555555556
+        },
+        {
+          "label": "Information Theory",
+          "total": 44,
+          "correct": 36,
+          "wrong": 8,
+          "errors": 0,
+          "accuracy": 0.8181818181818182
+        },
+        {
+          "label": "Operations Research",
+          "total": 93,
+          "correct": 55,
+          "wrong": 38,
+          "errors": 0,
+          "accuracy": 0.5913978494623656
+        },
+        {
+          "label": "Probability and Statistics",
+          "total": 109,
+          "correct": 68,
+          "wrong": 41,
+          "errors": 0,
+          "accuracy": 0.6238532110091743
+        },
+        {
+          "label": "Signal Processing",
+          "total": 68,
+          "correct": 39,
+          "wrong": 29,
+          "errors": 0,
+          "accuracy": 0.5735294117647058
+        },
+        {
+          "label": "Telecommunications Engineering",
+          "total": 153,
+          "correct": 75,
+          "wrong": 78,
+          "errors": 0,
+          "accuracy": 0.49019607843137253
+        }
+      ]
+    },
+    "teletables": {
+      "display_name": "TeleTables",
+      "grouping": "ground_truth",
+      "rows": [
+        {
+          "label": "A",
+          "total": 100,
+          "correct": 17,
+          "wrong": 83,
+          "errors": 0,
+          "accuracy": 0.17
+        },
+        {
+          "label": "B",
+          "total": 100,
+          "correct": 34,
+          "wrong": 66,
+          "errors": 0,
+          "accuracy": 0.34
+        },
+        {
+          "label": "C",
+          "total": 100,
+          "correct": 32,
+          "wrong": 68,
+          "errors": 0,
+          "accuracy": 0.32
+        },
+        {
+          "label": "D",
+          "total": 100,
+          "correct": 43,
+          "wrong": 57,
+          "errors": 0,
+          "accuracy": 0.43
+        },
+        {
+          "label": "E",
+          "total": 100,
+          "correct": 32,
+          "wrong": 68,
+          "errors": 0,
+          "accuracy": 0.32
+        }
+      ]
+    },
+    "three_gpp": {
+      "display_name": "3GPP",
+      "grouping": "ground_truth",
+      "rows": [
+        {
+          "label": "CT1",
+          "total": 123,
+          "correct": 38,
+          "wrong": 85,
+          "errors": 0,
+          "accuracy": 0.3089430894308943
+        },
+        {
+          "label": "CT3",
+          "total": 106,
+          "correct": 19,
+          "wrong": 87,
+          "errors": 0,
+          "accuracy": 0.1792452830188679
+        },
+        {
+          "label": "CT4",
+          "total": 147,
+          "correct": 32,
+          "wrong": 115,
+          "errors": 0,
+          "accuracy": 0.21768707482993196
+        },
+        {
+          "label": "CT6",
+          "total": 113,
+          "correct": 33,
+          "wrong": 80,
+          "errors": 0,
+          "accuracy": 0.2920353982300885
+        },
+        {
+          "label": "RAN1",
+          "total": 124,
+          "correct": 81,
+          "wrong": 43,
+          "errors": 0,
+          "accuracy": 0.6532258064516129
+        },
+        {
+          "label": "RAN2",
+          "total": 122,
+          "correct": 59,
+          "wrong": 63,
+          "errors": 0,
+          "accuracy": 0.48360655737704916
+        },
+        {
+          "label": "RAN3",
+          "total": 111,
+          "correct": 31,
+          "wrong": 80,
+          "errors": 0,
+          "accuracy": 0.27927927927927926
+        },
+        {
+          "label": "RAN4",
+          "total": 135,
+          "correct": 60,
+          "wrong": 75,
+          "errors": 0,
+          "accuracy": 0.4444444444444444
+        },
+        {
+          "label": "RAN5",
+          "total": 140,
+          "correct": 64,
+          "wrong": 76,
+          "errors": 0,
+          "accuracy": 0.45714285714285713
+        },
+        {
+          "label": "RAN_AH1",
+          "total": 129,
+          "correct": 0,
+          "wrong": 129,
+          "errors": 0,
+          "accuracy": 0.0
+        },
+        {
+          "label": "SA1",
+          "total": 114,
+          "correct": 24,
+          "wrong": 90,
+          "errors": 0,
+          "accuracy": 0.21052631578947367
+        },
+        {
+          "label": "SA2",
+          "total": 139,
+          "correct": 50,
+          "wrong": 89,
+          "errors": 0,
+          "accuracy": 0.3597122302158273
+        },
+        {
+          "label": "SA3",
+          "total": 144,
+          "correct": 56,
+          "wrong": 88,
+          "errors": 0,
+          "accuracy": 0.3888888888888889
+        },
+        {
+          "label": "SA4",
+          "total": 112,
+          "correct": 24,
+          "wrong": 88,
+          "errors": 0,
+          "accuracy": 0.21428571428571427
+        },
+        {
+          "label": "SA5",
+          "total": 122,
+          "correct": 33,
+          "wrong": 89,
+          "errors": 0,
+          "accuracy": 0.27049180327868855
+        },
+        {
+          "label": "SA6",
+          "total": 119,
+          "correct": 25,
+          "wrong": 94,
+          "errors": 0,
+          "accuracy": 0.21008403361344538
+        }
+      ]
+    }
+  }
+}
