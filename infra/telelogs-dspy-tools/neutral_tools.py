@@ -191,10 +191,22 @@ def analyze_throughput_segments(case: CaseContext) -> dict[str, Any]:
         for row in case.observations
         if row["throughput_mbps"] < case.throughput_threshold_mbps
     ]
+    minima = {pci: min(values) for pci, values in by_pci.items()}
+    lowest_pci = min(minima, key=lambda pci: minima[pci])
+    others = {pci: value for pci, value in minima.items() if pci != lowest_pci}
+    best_other_pci = max(others, key=lambda pci: others[pci]) if others else None
+    comparison = {
+        "lowest_minimum_pci": lowest_pci,
+        "lowest_minimum_mbps": _r(minima[lowest_pci], 2),
+        "best_other_minimum_pci": best_other_pci,
+        "best_other_minimum_mbps": None if best_other_pci is None else _r(others[best_other_pci], 2),
+        "minimum_difference_mbps": None if best_other_pci is None else _r(others[best_other_pci] - minima[lowest_pci], 2),
+    }
     return {
         "measurement_scope": "serving-cell segments and rows below the stated throughput criterion",
         "stated_throughput_criterion_mbps": case.throughput_threshold_mbps,
         "segment_statistics": segments,
+        "segment_minimum_comparison": comparison,
         "low_throughput_rows": low_rows,
     }
 
@@ -216,9 +228,24 @@ def analyze_coverage_geometry(case: CaseContext) -> dict[str, Any]:
                 "main_lobe_upper_deg": _r(row["main_lobe_upper_deg"], 2),
             }
         )
+    distances = [row["distance_km"] for row in case.observations if row["distance_km"] is not None]
+    below_lobe = [
+        {
+            "row": row["row"],
+            "serving_pci": row["serving_pci"],
+            "throughput_mbps": _r(row["throughput_mbps"], 2),
+            "serving_rsrp_dbm": _r(row["serving_rsrp_dbm"], 2),
+            "ue_elevation_deg": _r(row["elevation_deg"], 2),
+            "main_lobe_lower_deg": _r(row["main_lobe_lower_deg"], 2),
+        }
+        for row in case.observations
+        if row["elevation_deg"] is not None and row["elevation_deg"] < row["main_lobe_lower_deg"]
+    ]
     return {
         "measurement_scope": "serving geometry and signal level for every drive-test row",
         "engineering_available_for_all_serving_cells": all(row["distance_km"] is not None for row in case.observations),
+        "maximum_distance_km": _r(max(distances)) if distances else None,
+        "rows_below_main_lobe_lower_edge": below_lobe,
         "rows": rows,
     }
 
@@ -301,8 +328,18 @@ def analyze_neighbor_overlap(case: CaseContext) -> dict[str, Any]:
                     ),
                 }
             )
+    best = None
+    for row in rows:
+        top = row["noncolocated_neighbors"][0]
+        if best is None or top["neighbor_minus_serving_db"] > best["neighbor_minus_serving_db"]:
+            best = {
+                "row": row["row"],
+                "neighbor_pci": top["neighbor_pci"],
+                "neighbor_minus_serving_db": top["neighbor_minus_serving_db"],
+            }
     return {
         "measurement_scope": "non-colocated neighbor power relative to serving power on low-throughput rows",
+        "best_noncolocated_gap": best,
         "rows": rows,
     }
 
@@ -330,8 +367,20 @@ def analyze_pci_relations(case: CaseContext) -> dict[str, Any]:
                 "relations": relations,
             }
         )
+    equal_pairs = [
+        {
+            "row": row["row"],
+            "serving_pci": row["serving_pci"],
+            "neighbor_pci": relation["neighbor_pci"],
+            "shared_residue_mod30": relation["serving_residue_mod30"],
+        }
+        for row in rows
+        for relation in row["relations"]
+        if relation["serving_residue_mod30"] == relation["neighbor_residue_mod30"]
+    ]
     return {
         "measurement_scope": "serving and neighbor PCI modulo-30 residues on low-throughput rows",
+        "equal_residue_pairs": equal_pairs,
         "rows": rows,
     }
 

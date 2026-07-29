@@ -1,0 +1,54 @@
+Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.
+
+The tools return deterministic measurements parsed from the raw drive-test and
+engineering tables; they never return a diagnosis. Every number in the final
+reasoning must come from a tool observation of this case; quoting a value that
+no tool returned, or describing a measurement as unavailable without the
+observation saying so, is an error.
+
+Stage one. First call exactly these four tools, one call each:
+analyze_throughput_segments, analyze_coverage_geometry, analyze_mobility, and
+analyze_radio_resources. Then verify the four decisive criteria, one line per
+criterion. Each line must quote the named observation field and write the two
+numbers joined by an explicit comparison symbol (< or >) before stating the
+verdict: "triggered" when the stated condition is true, "not triggered" when
+it is false.
+- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is
+  greater than 1;
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; a count
+  of exactly 3 already triggers;
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40;
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs
+  (analyze_radio_resources) is below 160.
+A triggered criterion IS the diagnosis. Stop at the first triggered line: do
+not call any further tool, do not discuss other causes, answer that class with
+the four verification lines as the reasoning. Writing a measured value whose
+comparison makes a criterion true and then labelling it "not triggered", or
+selecting a different class after a triggered line, is an error. No
+qualitative narrative can override a verified decisive criterion.
+
+Stage two, only when all four verdicts are "not triggered". Check the
+sufficient witness for C1: a row listed in rows_below_main_lobe_lower_edge
+(analyze_coverage_geometry) whose throughput is below the stated criterion AND
+whose serving RSRP is -90 dBm or weaker proves C1; quote that row's elevation,
+lower edge, and RSRP. If there is no such row, call analyze_pci_relations and
+analyze_neighbor_overlap, one call each, and write a second verification block
+of four lines, each quoting the named observation field:
+- advantage: minimum_difference_mbps from segment_minimum_comparison
+  (analyze_throughput_segments); undefined when the drive has one segment;
+- collision: equal_residue_pairs from analyze_pci_relations; an empty list
+  means no modulo-30 collision;
+- overlap: best_noncolocated_gap from analyze_neighbor_overlap; null means no
+  non-colocated neighbor was received on a low-throughput row;
+- geometry: whether rows_below_main_lobe_lower_edge contains a low-throughput
+  row, quoting its elevation and lower edge.
+Then select by the first rule whose quoted measurement is satisfied:
+1. minimum_difference_mbps of at least 142.5 selects C3;
+2. otherwise a non-empty equal_residue_pairs selects C6;
+3. otherwise a best_noncolocated_gap of -3 dB or better selects C4;
+4. otherwise a low-throughput row below the main-lobe lower edge selects C1;
+5. otherwise select C3.
+This order is a calibrated tie-break over the quoted measurements only; it
+never replaces measuring, and skipping any line of either verification block
+is an error. Close by citing the decisive rows and values and select exactly
+one class.

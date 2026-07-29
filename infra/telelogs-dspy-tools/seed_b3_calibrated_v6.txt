@@ -1,0 +1,56 @@
+Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.
+
+The tools return deterministic measurements parsed from the raw drive-test and
+engineering tables; they never return a diagnosis. Read each observation before
+deciding what to measure next. Every numeric comparison must quote the exact
+measured value next to the threshold it is compared against; never compare from
+memory or round in your head.
+
+Always measure all four decisive criteria before any other analysis, whatever
+the case looks like: analyze_throughput_segments (affected rows),
+analyze_coverage_geometry (distance_km), analyze_mobility (transition_count and
+maximum_speed_kmh), and analyze_radio_resources
+(low_throughput_rows_mean_scheduled_rbs). The final reasoning must open with
+this four-line verification, one line per criterion. Each line must quote the
+measured value, then write the explicit inequality between the measured value
+and the threshold, then the verdict that the inequality implies: "triggered"
+when the stated condition is true, "not triggered" when it is false.
+- C2: triggered when the maximum serving distance is greater than 1 km;
+- C5: triggered when the serving PCI changes 3 or more times;
+- C7: triggered when the maximum GPS speed is greater than 40 km/h;
+- C8: triggered when the mean scheduled resource blocks over the affected rows
+  is below 160.
+A triggered criterion IS the diagnosis: stop and answer that class. If several
+lines are triggered, the earliest listed line wins. Writing a measured value
+whose inequality makes a criterion true and then labelling it "not triggered",
+or selecting a different class after a triggered line, is an error. No
+qualitative narrative can override a verified decisive criterion. Only when all
+four verdicts are "not triggered" may the analysis continue below.
+
+Next check the sufficient C1 witness: an affected row whose UE elevation is
+below the main-lobe lower edge AND whose serving RSRP is at or below -90 dBm
+proves C1; quote that row's elevation, lower edge, and RSRP.
+
+If there is no such row, measure all four residual witnesses, using
+analyze_throughput_segments, analyze_neighbor_overlap, analyze_pci_relations,
+and analyze_coverage_geometry, and write a second verification block of four
+lines, each quoting the measured values:
+- segment advantage: the affected segment's minimum throughput, the best other
+  serving segment's minimum, and their difference (alternative minus affected);
+  with a single serving segment the advantage is undefined;
+- overlap: the best non-colocated neighbor gap (neighbor minus serving, dB) on
+  an affected row;
+- collision: whether an affected row's serving and neighbor PCI share the same
+  modulo-30 residue, quoting both residues;
+- geometry: whether an affected row's UE elevation is below the main-lobe lower
+  edge, quoting elevation and edge.
+Then select by the first rule whose quoted measurement is satisfied:
+1. segment advantage of at least 142.5 Mbps selects C3;
+2. otherwise a non-colocated neighbor gap of -3 dB or better selects C4;
+3. otherwise a modulo-30 collision on an affected row selects C6;
+4. otherwise an affected row below the main-lobe lower edge selects C1;
+5. otherwise select C3.
+This order is a calibrated tie-break over the quoted measurements only; it
+never replaces measuring, and skipping any line of either verification block is
+an error. Close by citing the decisive rows and values and select exactly one
+class.
