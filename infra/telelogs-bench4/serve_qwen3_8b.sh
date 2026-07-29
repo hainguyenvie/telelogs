@@ -8,9 +8,11 @@ export HF_HOME=/workspace/telelogs/cache/hf
 export HF_HUB_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 export VLLM_WORKER_MULTIPROC_METHOD=spawn
+TP_SIZE=${VLLM_TENSOR_PARALLEL_SIZE:-1}
 
 echo "model=$MODEL"
 echo "python=$PYTHON"
+echo "tensor_parallel_size=$TP_SIZE"
 "$PYTHON" -c 'import vllm; print("vllm=" + vllm.__version__)'
 nvidia-smi --query-gpu=name,uuid,memory.total,memory.used --format=csv,noheader
 
@@ -24,6 +26,7 @@ while true; do
     --host 0.0.0.0 \
     --port 8000 \
     --dtype bfloat16 \
+    --tensor-parallel-size "$TP_SIZE" \
     --max-model-len 40960 \
     --gpu-memory-utilization 0.90 \
     --max-num-seqs 64 \

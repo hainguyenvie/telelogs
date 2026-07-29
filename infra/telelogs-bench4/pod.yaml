@@ -8,6 +8,8 @@ metadata:
     owner: h2n
 spec:
   restartPolicy: Always
+  # /mnt/registry/tensara-home is hgx046-local storage; this pod cannot run on
+  # other nodes (probe 2026-07-29: the hostPath comes up empty on hgx45).
   nodeName: hgx046
   containers:
     - name: main
@@ -71,6 +73,8 @@ spec:
           value: "false"
         - name: VLLM_WORKER_MULTIPROC_METHOD
           value: spawn
+        - name: VLLM_TENSOR_PARALLEL_SIZE
+          value: "1"
       ports:
         - name: http
           containerPort: 8000
