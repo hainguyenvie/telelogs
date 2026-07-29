@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: telelogs-rl-vllm
+spec:
+  selector:
+    app: telelogs-rl
+  ports:
+    - name: openai
+      port: 8000
+      targetPort: 8000

@@ -34,6 +34,7 @@ DISPLAY_NAMES = {
     "b1_all_tools": "B1 · DSPy all neutral tools",
     "b2_planned_tools": "B2 · DSPy plan → tools → diagnose",
     "b3_react_tools": "B3 · DSPy ReAct agentic tool calling",
+    "b3_react_verified": "B3v · ReAct + consistency-audit retries",
 }
 
 
@@ -149,7 +150,7 @@ def dashboard_payload(
         "status": status,
         "run_name": args.run_name,
         "model": MODEL,
-        "native_thinking": False,
+        "native_thinking": bool(getattr(args, "thinking", False)),
         "dspy_enabled": True,
         "eval_split": args.eval_split,
         "eval_per_label": args.eval_per_label,
@@ -174,6 +175,7 @@ def main() -> None:
     parser.add_argument("--eval-offset-per-label", type=int, default=0)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--max-tokens", type=int, default=1000)
+    parser.add_argument("--thinking", action="store_true", help="enable Qwen3 native thinking for every request")
     parser.add_argument("--run-name", default="tool_dev32")
     parser.add_argument("--dashboard-output", type=Path, default=DEFAULT_DASHBOARD)
     parser.add_argument(
@@ -200,9 +202,10 @@ def main() -> None:
         MODEL,
         api_base=API_BASE,
         api_key="local",
-        temperature=0.0,
+        temperature=0.6 if args.thinking else 0.0,
+        top_p=0.95 if args.thinking else 1.0,
         max_tokens=args.max_tokens,
-        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        extra_body={"chat_template_kwargs": {"enable_thinking": bool(args.thinking)}},
         cache=False,
     )
     dspy.configure(lm=lm)

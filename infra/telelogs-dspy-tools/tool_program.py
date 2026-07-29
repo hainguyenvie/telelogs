@@ -240,9 +240,12 @@ class ReActToolsProgram(dspy.Module):
         return pred
 
 
+from verifier import VerifiedReActProgram  # noqa: E402  (needs ReActToolsProgram defined above)
+
 PROGRAMS = {
     "b0_raw": RawProgram,
     "b1_all_tools": AllToolsProgram,
     "b2_planned_tools": PlannedToolsProgram,
     "b3_react_tools": ReActToolsProgram,
+    "b3_react_verified": VerifiedReActProgram,
 }
