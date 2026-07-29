@@ -1,0 +1,44 @@
+{
+  "diagnose": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose a TeleLogs case using the raw question and the supplied label-neutral\ntool observations.\n\nThe observations are deterministic measurements parsed from the raw drive-test\nand engineering tables; they never contain a diagnosis. Every numeric\ncomparison must quote the exact measured value next to the threshold it is\ncompared against; never compare from memory or round in your head.\n\nFirst identify the affected rows: the rows whose throughput is below the stated\ncriterion (analyze_throughput_segments). Then verify the four decisive\ncriteria; if a verified one holds, select that class immediately and do not let\nany softer narrative override it:\n- C2: the maximum serving distance across rows is greater than 1 km\n  (analyze_coverage_geometry, distance_km).\n- C5: the serving PCI changes 3 or more times along the drive\n  (analyze_mobility, transition_count).\n- C7: the maximum GPS speed is greater than 40 km/h\n  (analyze_mobility, maximum_speed_kmh).\n- C8: the mean scheduled resource blocks over the affected rows is below 160\n  (analyze_radio_resources, low_throughput_rows_mean_scheduled_rbs).\n\nIf none of the four holds, decide among C1, C3, C4, and C6 from the measured\nevidence of this specific case. There is no fixed preference order among them;\neach has a witness that is necessary but not sufficient, so absence rules the\nclass out while presence alone does not prove it:\n- C1: an affected row whose UE elevation is below the main-lobe lower edge AND\n  whose serving RSRP is at or below -90 dBm is strong C1 evidence\n  (analyze_coverage_geometry). Being below the lower lobe with healthy RSRP is\n  common to every class and is not C1 evidence by itself.\n- C3: compare serving segments (analyze_throughput_segments): another serving\n  segment of the same drive must sustain a clearly higher minimum throughput\n  than the affected segment; quote both minima.\n- C4: an affected row where a non-colocated neighbor is received at a gap of\n  -3 dB or better relative to serving (analyze_neighbor_overlap,\n  neighbor_minus_serving_db >= -3).\n- C6: an affected row whose serving and neighbor PCI share the same modulo-30\n  residue (analyze_pci_relations).\n\nWeigh the present and absent witnesses of this case against the eight cause\ndefinitions in the question, resolve conflicts by which mechanism the\nmeasurements support most directly, cite decisive rows and values, and select\nexactly one class.",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Selected Tools:",
+          "description": "JSON list of measurement tools used for this case."
+        },
+        {
+          "prefix": "Tool Observations:",
+          "description": "Authoritative JSON measurements returned by deterministic tools."
+        },
+        {
+          "prefix": "Planning Reason:",
+          "description": "Why these measurements were selected; may state that all tools ran."
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "Auditable diagnosis citing tool measurements and row evidence, at most 180 words."
+        },
+        {
+          "prefix": "Answer:",
+          "description": "Exactly one class identifier: C1,C2,C3,C4,C5,C6,C7,or C8."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

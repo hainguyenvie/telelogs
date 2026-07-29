@@ -1,0 +1,24 @@
+{
+  "run_name": "seeded_b1_all_tools",
+  "optimizer": "none",
+  "method": "b1_all_tools",
+  "model": "openai/Qwen/Qwen3-8B",
+  "train_per_label": 8,
+  "val_per_label": 4,
+  "val_offset_per_label": 8,
+  "reflection_provider": null,
+  "reflection_usage": null,
+  "baseline_val": {
+    "total": 32,
+    "correct": 11,
+    "accuracy": 0.34375,
+    "errors": 1
+  },
+  "optimized_val": {
+    "total": 32,
+    "correct": 13,
+    "accuracy": 0.40625,
+    "errors": 1
+  },
+  "program_path": "/workspace/telelogs-bench4/dspy-tools/results/optimized/seeded_b1_all_tools/program.json"
+}

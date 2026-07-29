@@ -1,0 +1,67 @@
+{
+  "react.react": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Read each observation before\ndeciding what to measure next. Every numeric comparison must quote the exact\nmeasured value next to the threshold it is compared against; never compare from\nmemory or round in your head.\n\nAlways measure all four decisive criteria before any other analysis, whatever\nthe case looks like: analyze_throughput_segments (affected rows),\nanalyze_coverage_geometry (distance_km), analyze_mobility (transition_count and\nmaximum_speed_kmh), and analyze_radio_resources\n(low_throughput_rows_mean_scheduled_rbs). The final reasoning must open with\nthis four-line verification, one line per criterion, each quoting the measured\nvalue, the threshold, and a pass/fail verdict:\n- C2: maximum serving distance greater than 1 km;\n- C5: serving PCI changes 3 or more times;\n- C7: maximum GPS speed greater than 40 km/h;\n- C8: mean scheduled resource blocks over the affected rows below 160.\nIf exactly one criterion passes, that class is the diagnosis; stating a passing\nmeasured value and then selecting a different class is an error. No qualitative\nnarrative can override a verified decisive criterion.\n\nOnly when all four fail, decide among C1, C3, C4, and C6 from the measured\nevidence of this specific case, with no fixed preference order:\n- C1: an affected row whose UE elevation is below the main-lobe lower edge AND\n  whose serving RSRP is at or below -90 dBm proves C1. Without such a row C1 is\n  not excluded, but residual C1 still needs the affected rows below the\n  main-lobe lower edge at comparatively weak serving RSRP; below-lobe geometry\n  with healthy RSRP is common to every class and proves nothing.\n- C3: another serving segment of the same drive sustains a clearly higher\n  minimum throughput than the affected segment; quote both minima.\n- C4: an affected row where a non-colocated neighbor is received at a gap of\n  -3 dB or better relative to serving; absence excludes C4.\n- C6: an affected row whose serving and neighbor PCI share the same modulo-30\n  residue; absence excludes C6.\n\nClose by weighing the surviving candidates against the eight cause definitions\nin the question, cite the decisive rows and values, and select exactly one\nclass.\n\nYou are an Agent. In each episode, you will be given the fields `raw_question` as input. And you can see your past trajectory so far.\nYour goal is to use one or more of the supplied tools to collect any necessary information for producing `reasoning`, `answer`.\n\nTo do this, you will interleave next_thought, next_tool_name, and next_tool_args in each turn, and also when finishing the task.\nAfter each tool call, you receive a resulting observation, which gets appended to your trajectory.\n\nWhen writing next_thought, you may reason about the current situation and plan for future steps.\nWhen selecting the next_tool_name and its next_tool_args, the tool must be one of:\n\n(1) analyze_throughput_segments, whose description is <desc>Summarize throughput by serving segment and list low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(2) analyze_coverage_geometry, whose description is <desc>Measure serving distance, antenna vertical geometry, and serving RSRP by row. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(3) analyze_mobility, whose description is <desc>Measure vehicle speed and serving-cell transition events. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(4) analyze_radio_resources, whose description is <desc>Measure scheduled resource blocks overall and on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(5) analyze_neighbor_overlap, whose description is <desc>Measure non-colocated neighbor power relative to serving power on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(6) analyze_pci_relations, whose description is <desc>Inspect serving and neighbor PCI modulo-30 residues on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(7) finish, whose description is <desc>Marks the task as complete. That is, signals that all information for producing the outputs, i.e. `reasoning`, `answer`, are now available to be extracted.</desc>. It takes arguments {}.\nWhen providing `next_tool_args`, the value inside the field must be in JSON format",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Next Thought:",
+          "description": "${next_thought}"
+        },
+        {
+          "prefix": "Next Tool Name:",
+          "description": "${next_tool_name}"
+        },
+        {
+          "prefix": "Next Tool Args:",
+          "description": "${next_tool_args}"
+        }
+      ]
+    },
+    "lm": null
+  },
+  "react.extract.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Read each observation before\ndeciding what to measure next. Every numeric comparison must quote the exact\nmeasured value next to the threshold it is compared against; never compare from\nmemory or round in your head.\n\nAlways measure all four decisive criteria before any other analysis, whatever\nthe case looks like: analyze_throughput_segments (affected rows),\nanalyze_coverage_geometry (distance_km), analyze_mobility (transition_count and\nmaximum_speed_kmh), and analyze_radio_resources\n(low_throughput_rows_mean_scheduled_rbs). The final reasoning must open with\nthis four-line verification, one line per criterion, each quoting the measured\nvalue, the threshold, and a pass/fail verdict:\n- C2: maximum serving distance greater than 1 km;\n- C5: serving PCI changes 3 or more times;\n- C7: maximum GPS speed greater than 40 km/h;\n- C8: mean scheduled resource blocks over the affected rows below 160.\nIf exactly one criterion passes, that class is the diagnosis; stating a passing\nmeasured value and then selecting a different class is an error. No qualitative\nnarrative can override a verified decisive criterion.\n\nOnly when all four fail, decide among C1, C3, C4, and C6 from the measured\nevidence of this specific case, with no fixed preference order:\n- C1: an affected row whose UE elevation is below the main-lobe lower edge AND\n  whose serving RSRP is at or below -90 dBm proves C1. Without such a row C1 is\n  not excluded, but residual C1 still needs the affected rows below the\n  main-lobe lower edge at comparatively weak serving RSRP; below-lobe geometry\n  with healthy RSRP is common to every class and proves nothing.\n- C3: another serving segment of the same drive sustains a clearly higher\n  minimum throughput than the affected segment; quote both minima.\n- C4: an affected row where a non-colocated neighbor is received at a gap of\n  -3 dB or better relative to serving; absence excludes C4.\n- C6: an affected row whose serving and neighbor PCI share the same modulo-30\n  residue; absence excludes C6.\n\nClose by weighing the surviving candidates against the eight cause definitions\nin the question, cite the decisive rows and values, and select exactly one\nclass.",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "Auditable diagnosis citing tool measurements and row evidence, at most 180 words."
+        },
+        {
+          "prefix": "Answer:",
+          "description": "Exactly one class identifier: C1,C2,C3,C4,C5,C6,C7,or C8."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

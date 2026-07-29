@@ -1,0 +1,67 @@
+{
+  "react.react": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Read each observation before\ndeciding what to measure next. Every numeric comparison must quote the exact\nmeasured value next to the threshold it is compared against; never compare from\nmemory or round in your head.\n\nFirst identify the affected rows: the rows whose throughput is below the stated\ncriterion (analyze_throughput_segments). Then verify these five decisive\ncriteria with tools. If a verified one holds, that criterion IS the diagnosis:\nselect that class and stop. Stating a measured value that satisfies one of\nthese criteria and then selecting a different class is an error. No qualitative\nnarrative can override a verified decisive criterion.\n- C2: the maximum serving distance across rows is greater than 1 km\n  (analyze_coverage_geometry, distance_km).\n- C5: the serving PCI changes 3 or more times along the drive\n  (analyze_mobility, transition_count).\n- C7: the maximum GPS speed is greater than 40 km/h\n  (analyze_mobility, maximum_speed_kmh).\n- C8: the mean scheduled resource blocks over the affected rows is below 160\n  (analyze_radio_resources, low_throughput_rows_mean_scheduled_rbs).\n- C1: some affected row has UE elevation below the main-lobe lower edge AND\n  serving RSRP at or below -90 dBm (analyze_coverage_geometry). This witness is\n  sufficient when present; when it is absent C1 is NOT excluded and stays a\n  candidate below.\n\nIf none of the five holds, decide among C1, C3, C4, and C6 from the measured\nevidence of this specific case; there is no fixed preference order among them.\nFor C3, C4, and C6 the witness is necessary: if it is absent, that class is\nexcluded; if it is present, it supports but does not yet prove the class.\n- C3: compare serving segments (analyze_throughput_segments): another serving\n  segment of the same drive must sustain a clearly higher minimum throughput\n  than the affected segment; quote both minima.\n- C4: an affected row where a non-colocated neighbor is received at a gap of\n  -3 dB or better relative to serving (analyze_neighbor_overlap,\n  neighbor_minus_serving_db >= -3).\n- C6: an affected row whose serving and neighbor PCI share the same modulo-30\n  residue (analyze_pci_relations).\n- Residual C1 needs the affected rows both below the main-lobe lower edge and\n  at comparatively weak serving RSRP for this drive. Being below the lower lobe\n  with healthy RSRP is common to every class and is never C1 evidence by\n  itself.\n\nWeigh the present and absent witnesses of this case against the eight cause\ndefinitions in the question, resolve conflicts by which mechanism the\nmeasurements support most directly, cite decisive rows and values, and select\nexactly one class.\n\nYou are an Agent. In each episode, you will be given the fields `raw_question` as input. And you can see your past trajectory so far.\nYour goal is to use one or more of the supplied tools to collect any necessary information for producing `reasoning`, `answer`.\n\nTo do this, you will interleave next_thought, next_tool_name, and next_tool_args in each turn, and also when finishing the task.\nAfter each tool call, you receive a resulting observation, which gets appended to your trajectory.\n\nWhen writing next_thought, you may reason about the current situation and plan for future steps.\nWhen selecting the next_tool_name and its next_tool_args, the tool must be one of:\n\n(1) analyze_throughput_segments, whose description is <desc>Summarize throughput by serving segment and list low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(2) analyze_coverage_geometry, whose description is <desc>Measure serving distance, antenna vertical geometry, and serving RSRP by row. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(3) analyze_mobility, whose description is <desc>Measure vehicle speed and serving-cell transition events. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(4) analyze_radio_resources, whose description is <desc>Measure scheduled resource blocks overall and on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(5) analyze_neighbor_overlap, whose description is <desc>Measure non-colocated neighbor power relative to serving power on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(6) analyze_pci_relations, whose description is <desc>Inspect serving and neighbor PCI modulo-30 residues on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(7) finish, whose description is <desc>Marks the task as complete. That is, signals that all information for producing the outputs, i.e. `reasoning`, `answer`, are now available to be extracted.</desc>. It takes arguments {}.\nWhen providing `next_tool_args`, the value inside the field must be in JSON format",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Next Thought:",
+          "description": "${next_thought}"
+        },
+        {
+          "prefix": "Next Tool Name:",
+          "description": "${next_tool_name}"
+        },
+        {
+          "prefix": "Next Tool Args:",
+          "description": "${next_tool_args}"
+        }
+      ]
+    },
+    "lm": null
+  },
+  "react.extract.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Read each observation before\ndeciding what to measure next. Every numeric comparison must quote the exact\nmeasured value next to the threshold it is compared against; never compare from\nmemory or round in your head.\n\nFirst identify the affected rows: the rows whose throughput is below the stated\ncriterion (analyze_throughput_segments). Then verify these five decisive\ncriteria with tools. If a verified one holds, that criterion IS the diagnosis:\nselect that class and stop. Stating a measured value that satisfies one of\nthese criteria and then selecting a different class is an error. No qualitative\nnarrative can override a verified decisive criterion.\n- C2: the maximum serving distance across rows is greater than 1 km\n  (analyze_coverage_geometry, distance_km).\n- C5: the serving PCI changes 3 or more times along the drive\n  (analyze_mobility, transition_count).\n- C7: the maximum GPS speed is greater than 40 km/h\n  (analyze_mobility, maximum_speed_kmh).\n- C8: the mean scheduled resource blocks over the affected rows is below 160\n  (analyze_radio_resources, low_throughput_rows_mean_scheduled_rbs).\n- C1: some affected row has UE elevation below the main-lobe lower edge AND\n  serving RSRP at or below -90 dBm (analyze_coverage_geometry). This witness is\n  sufficient when present; when it is absent C1 is NOT excluded and stays a\n  candidate below.\n\nIf none of the five holds, decide among C1, C3, C4, and C6 from the measured\nevidence of this specific case; there is no fixed preference order among them.\nFor C3, C4, and C6 the witness is necessary: if it is absent, that class is\nexcluded; if it is present, it supports but does not yet prove the class.\n- C3: compare serving segments (analyze_throughput_segments): another serving\n  segment of the same drive must sustain a clearly higher minimum throughput\n  than the affected segment; quote both minima.\n- C4: an affected row where a non-colocated neighbor is received at a gap of\n  -3 dB or better relative to serving (analyze_neighbor_overlap,\n  neighbor_minus_serving_db >= -3).\n- C6: an affected row whose serving and neighbor PCI share the same modulo-30\n  residue (analyze_pci_relations).\n- Residual C1 needs the affected rows both below the main-lobe lower edge and\n  at comparatively weak serving RSRP for this drive. Being below the lower lobe\n  with healthy RSRP is common to every class and is never C1 evidence by\n  itself.\n\nWeigh the present and absent witnesses of this case against the eight cause\ndefinitions in the question, resolve conflicts by which mechanism the\nmeasurements support most directly, cite decisive rows and values, and select\nexactly one class.",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "Auditable diagnosis citing tool measurements and row evidence, at most 180 words."
+        },
+        {
+          "prefix": "Answer:",
+          "description": "Exactly one class identifier: C1,C2,C3,C4,C5,C6,C7,or C8."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

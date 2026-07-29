@@ -1,0 +1,537 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_name": "tool_dev96",
+  "model": "openai/Qwen/Qwen3-8B",
+  "native_thinking": false,
+  "dspy_enabled": true,
+  "eval_split": "dev",
+  "eval_per_label": 12,
+  "eval_offset_per_label": 0,
+  "methods": [
+    "b0_raw",
+    "b1_all_tools",
+    "b2_planned_tools",
+    "b3_react_tools"
+  ],
+  "completed": 384,
+  "total": 384,
+  "progress": 1.0,
+  "samples_per_minute": 83.9633510096848,
+  "started_at": "2026-07-29T07:05:21.971684+00:00",
+  "updated_at": "2026-07-29T07:09:56.377275+00:00",
+  "by_method": {
+    "b0_raw": {
+      "display_name": "B0 · DSPy raw zero-shot",
+      "completed": 96,
+      "total": 96,
+      "correct": 15,
+      "accuracy": 0.15625,
+      "errors": 0,
+      "mean_latency_seconds": 2.2513229166666666,
+      "mean_tool_calls": 0,
+      "tool_usage": {},
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 4,
+          "accuracy": 0.3333333333333333
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C5",
+          "prediction": "C2",
+          "count": 8
+        },
+        {
+          "target": "C2",
+          "prediction": "C5",
+          "count": 7
+        },
+        {
+          "target": "C3",
+          "prediction": "C2",
+          "count": 5
+        },
+        {
+          "target": "C7",
+          "prediction": "C5",
+          "count": 5
+        },
+        {
+          "target": "C8",
+          "prediction": "C5",
+          "count": 5
+        },
+        {
+          "target": "C6",
+          "prediction": "C5",
+          "count": 4
+        },
+        {
+          "target": "C8",
+          "prediction": "C2",
+          "count": 4
+        },
+        {
+          "target": "C6",
+          "prediction": "C1",
+          "count": 4
+        },
+        {
+          "target": "C4",
+          "prediction": "C2",
+          "count": 4
+        },
+        {
+          "target": "C4",
+          "prediction": "C5",
+          "count": 3
+        },
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C6",
+          "prediction": "C2",
+          "count": 3
+        }
+      ]
+    },
+    "b1_all_tools": {
+      "display_name": "B1 · DSPy all neutral tools",
+      "completed": 96,
+      "total": 96,
+      "correct": 32,
+      "accuracy": 0.3333333333333333,
+      "errors": 0,
+      "mean_latency_seconds": 3.1868020833333333,
+      "mean_tool_calls": 6,
+      "tool_usage": {
+        "analyze_throughput_segments": 96,
+        "analyze_coverage_geometry": 96,
+        "analyze_mobility": 96,
+        "analyze_radio_resources": 96,
+        "analyze_neighbor_overlap": 96,
+        "analyze_pci_relations": 96
+      },
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 4,
+          "accuracy": 0.3333333333333333
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 9,
+          "accuracy": 0.75
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 5,
+          "accuracy": 0.4166666666666667
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 5,
+          "accuracy": 0.4166666666666667
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 8,
+          "accuracy": 0.6666666666666666
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C4",
+          "prediction": "C1",
+          "count": 5
+        },
+        {
+          "target": "C7",
+          "prediction": "C2",
+          "count": 4
+        },
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 4
+        },
+        {
+          "target": "C3",
+          "prediction": "C2",
+          "count": 3
+        },
+        {
+          "target": "C5",
+          "prediction": "C2",
+          "count": 3
+        },
+        {
+          "target": "C7",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C7",
+          "prediction": "C4",
+          "count": 3
+        },
+        {
+          "target": "C2",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C6",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C1",
+          "prediction": "C8",
+          "count": 3
+        },
+        {
+          "target": "C1",
+          "prediction": "C5",
+          "count": 2
+        },
+        {
+          "target": "C3",
+          "prediction": "C8",
+          "count": 2
+        }
+      ]
+    },
+    "b2_planned_tools": {
+      "display_name": "B2 · DSPy plan → tools → diagnose",
+      "completed": 96,
+      "total": 96,
+      "correct": 24,
+      "accuracy": 0.25,
+      "errors": 0,
+      "mean_latency_seconds": 4.487364583333333,
+      "mean_tool_calls": 4.177083333333333,
+      "tool_usage": {
+        "analyze_coverage_geometry": 96,
+        "analyze_neighbor_overlap": 95,
+        "analyze_mobility": 96,
+        "analyze_radio_resources": 96,
+        "analyze_pci_relations": 18
+      },
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 3,
+          "accuracy": 0.25
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 10,
+          "accuracy": 0.8333333333333334
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 3,
+          "accuracy": 0.25
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 3,
+          "accuracy": 0.25
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 4,
+          "accuracy": 0.3333333333333333
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C7",
+          "prediction": "C5",
+          "count": 5
+        },
+        {
+          "target": "C8",
+          "prediction": "C5",
+          "count": 5
+        },
+        {
+          "target": "C1",
+          "prediction": "C5",
+          "count": 5
+        },
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 4
+        },
+        {
+          "target": "C4",
+          "prediction": "C6",
+          "count": 4
+        },
+        {
+          "target": "C6",
+          "prediction": "C5",
+          "count": 4
+        },
+        {
+          "target": "C3",
+          "prediction": "C2",
+          "count": 4
+        },
+        {
+          "target": "C4",
+          "prediction": "C5",
+          "count": 4
+        },
+        {
+          "target": "C5",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C6",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C5",
+          "prediction": "C8",
+          "count": 3
+        },
+        {
+          "target": "C7",
+          "prediction": "C4",
+          "count": 3
+        }
+      ]
+    },
+    "b3_react_tools": {
+      "display_name": "B3 · DSPy ReAct agentic tool calling",
+      "completed": 96,
+      "total": 96,
+      "correct": 19,
+      "accuracy": 0.19791666666666666,
+      "errors": 0,
+      "mean_latency_seconds": 12.541385416666667,
+      "mean_tool_calls": 7.0625,
+      "tool_usage": {
+        "analyze_throughput_segments": 106,
+        "analyze_coverage_geometry": 179,
+        "analyze_mobility": 93,
+        "analyze_radio_resources": 102,
+        "analyze_neighbor_overlap": 111,
+        "analyze_pci_relations": 87
+      },
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 7,
+          "accuracy": 0.5833333333333334
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 5,
+          "accuracy": 0.4166666666666667
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 3,
+          "accuracy": 0.25
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C8",
+          "prediction": "C2",
+          "count": 6
+        },
+        {
+          "target": "C1",
+          "prediction": "C2",
+          "count": 5
+        },
+        {
+          "target": "C3",
+          "prediction": "C2",
+          "count": 5
+        },
+        {
+          "target": "C5",
+          "prediction": "C2",
+          "count": 5
+        },
+        {
+          "target": "C4",
+          "prediction": "C2",
+          "count": 5
+        },
+        {
+          "target": "C6",
+          "prediction": "C1",
+          "count": 4
+        },
+        {
+          "target": "C4",
+          "prediction": "C1",
+          "count": 4
+        },
+        {
+          "target": "C7",
+          "prediction": "C6",
+          "count": 4
+        },
+        {
+          "target": "C1",
+          "prediction": "C5",
+          "count": 3
+        },
+        {
+          "target": "C6",
+          "prediction": "C5",
+          "count": 3
+        },
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 3
+        },
+        {
+          "target": "C3",
+          "prediction": "C6",
+          "count": 3
+        }
+      ]
+    }
+  }
+}

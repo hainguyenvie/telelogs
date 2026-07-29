@@ -1,0 +1,24 @@
+{
+  "run_name": "seeded3_b3_react_tools",
+  "optimizer": "none",
+  "method": "b3_react_tools",
+  "model": "openai/Qwen/Qwen3-8B",
+  "train_per_label": 8,
+  "val_per_label": 4,
+  "val_offset_per_label": 8,
+  "reflection_provider": null,
+  "reflection_usage": null,
+  "baseline_val": {
+    "total": 32,
+    "correct": 10,
+    "accuracy": 0.3125,
+    "errors": 0
+  },
+  "optimized_val": {
+    "total": 32,
+    "correct": 15,
+    "accuracy": 0.46875,
+    "errors": 0
+  },
+  "program_path": "/workspace/telelogs-bench4/dspy-tools/results/optimized/seeded3_b3_react_tools/program.json"
+}
