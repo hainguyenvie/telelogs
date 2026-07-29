@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_name": "tool_dev96_b3s6boot46",
+  "model": "openai/Qwen/Qwen3-8B",
+  "native_thinking": false,
+  "dspy_enabled": true,
+  "eval_split": "dev",
+  "eval_per_label": 12,
+  "eval_offset_per_label": 0,
+  "methods": [
+    "b3_react_tools"
+  ],
+  "completed": 96,
+  "total": 96,
+  "progress": 1.0,
+  "samples_per_minute": 46.008921815753176,
+  "started_at": "2026-07-29T11:28:30.815905+00:00",
+  "updated_at": "2026-07-29T11:30:36.009093+00:00",
+  "by_method": {
+    "b3_react_tools": {
+      "display_name": "B3 · DSPy ReAct agentic tool calling",
+      "completed": 96,
+      "total": 96,
+      "correct": 67,
+      "accuracy": 0.6979166666666666,
+      "errors": 0,
+      "mean_latency_seconds": 10.311583333333333,
+      "mean_tool_calls": 4,
+      "tool_usage": {
+        "analyze_throughput_segments": 96,
+        "analyze_coverage_geometry": 96,
+        "analyze_mobility": 96,
+        "analyze_radio_resources": 96
+      },
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 6,
+          "accuracy": 0.5
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 12,
+          "accuracy": 1.0
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 4,
+          "accuracy": 0.3333333333333333
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 12,
+          "accuracy": 1.0
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 12,
+          "accuracy": 1.0
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 12,
+          "accuracy": 1.0
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 9,
+          "accuracy": 0.75
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 7
+        },
+        {
+          "target": "C4",
+          "prediction": "C1",
+          "count": 6
+        },
+        {
+          "target": "C4",
+          "prediction": "C3",
+          "count": 4
+        },
+        {
+          "target": "C1",
+          "prediction": "C3",
+          "count": 3
+        },
+        {
+          "target": "C1",
+          "prediction": "C6",
+          "count": 3
+        },
+        {
+          "target": "C4",
+          "prediction": "C6",
+          "count": 2
+        },
+        {
+          "target": "C8",
+          "prediction": "C1",
+          "count": 2
+        },
+        {
+          "target": "C3",
+          "prediction": "C4",
+          "count": 1
+        },
+        {
+          "target": "C8",
+          "prediction": "C6",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

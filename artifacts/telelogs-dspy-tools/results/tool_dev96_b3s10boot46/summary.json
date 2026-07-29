@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_name": "tool_dev96_b3s10boot46",
+  "model": "openai/Qwen/Qwen3-8B",
+  "native_thinking": false,
+  "dspy_enabled": true,
+  "eval_split": "dev",
+  "eval_per_label": 12,
+  "eval_offset_per_label": 0,
+  "methods": [
+    "b3_react_tools"
+  ],
+  "completed": 96,
+  "total": 96,
+  "progress": 1.0,
+  "samples_per_minute": 51.86909942172659,
+  "started_at": "2026-07-29T13:20:20.308247+00:00",
+  "updated_at": "2026-07-29T13:22:11.357105+00:00",
+  "by_method": {
+    "b3_react_tools": {
+      "display_name": "B3 · DSPy ReAct agentic tool calling",
+      "completed": 96,
+      "total": 96,
+      "correct": 33,
+      "accuracy": 0.34375,
+      "errors": 0,
+      "mean_latency_seconds": 8.865979166666667,
+      "mean_tool_calls": 1.4375,
+      "tool_usage": {
+        "analyze_radio_resources": 34,
+        "analyze_coverage_geometry": 41,
+        "analyze_pci_relations": 23,
+        "analyze_neighbor_overlap": 24,
+        "analyze_throughput_segments": 14,
+        "analyze_mobility": 2
+      },
+      "by_label": {
+        "C1": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C2": {
+          "completed": 12,
+          "total": 12,
+          "correct": 3,
+          "accuracy": 0.25
+        },
+        "C3": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        },
+        "C4": {
+          "completed": 12,
+          "total": 12,
+          "correct": 11,
+          "accuracy": 0.9166666666666666
+        },
+        "C5": {
+          "completed": 12,
+          "total": 12,
+          "correct": 1,
+          "accuracy": 0.08333333333333333
+        },
+        "C6": {
+          "completed": 12,
+          "total": 12,
+          "correct": 4,
+          "accuracy": 0.3333333333333333
+        },
+        "C7": {
+          "completed": 12,
+          "total": 12,
+          "correct": 9,
+          "accuracy": 0.75
+        },
+        "C8": {
+          "completed": 12,
+          "total": 12,
+          "correct": 2,
+          "accuracy": 0.16666666666666666
+        }
+      },
+      "top_confusions": [
+        {
+          "target": "C1",
+          "prediction": "C4",
+          "count": 11
+        },
+        {
+          "target": "C5",
+          "prediction": "C4",
+          "count": 11
+        },
+        {
+          "target": "C3",
+          "prediction": "C4",
+          "count": 9
+        },
+        {
+          "target": "C2",
+          "prediction": "C4",
+          "count": 9
+        },
+        {
+          "target": "C8",
+          "prediction": "C4",
+          "count": 8
+        },
+        {
+          "target": "C6",
+          "prediction": "C4",
+          "count": 7
+        },
+        {
+          "target": "C8",
+          "prediction": "C1",
+          "count": 2
+        },
+        {
+          "target": "C7",
+          "prediction": "C5",
+          "count": 2
+        },
+        {
+          "target": "C4",
+          "prediction": "C6",
+          "count": 1
+        },
+        {
+          "target": "C6",
+          "prediction": "C1",
+          "count": 1
+        },
+        {
+          "target": "C3",
+          "prediction": "C1",
+          "count": 1
+        },
+        {
+          "target": "C7",
+          "prediction": "C4",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

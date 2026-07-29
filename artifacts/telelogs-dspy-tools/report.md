@@ -1,5 +1,15 @@
 # TeleLogs tool-calling migration · Qwen3-8B
 
+> **Round-2 note (2026-07-29, seeds v5–v11).** A second round ported the old
+> hybrid's full decision flow (exact gates → strong-C1 → calibrated residual
+> tie-break) into the ReAct instruction and upgraded the tools with one-step
+> aggregates ("tools v2", see below). Best round-2 candidate
+> (`bootstrap26_seeded11_b3`) reached **72.92% on dev-96** but only **66.67% on
+> the holdout confirmation**, so the round-1 program below **remains selected**
+> (69.79% dev / 75.00% holdout). The round-1 numbers were produced with tools
+> v1 (commit `0e7c7d7`); from seed8 onward all runs use tools v2. Details in
+> "Round 2" below.
+
 ## Selected result
 
 | Evaluation | Correct | Accuracy |
@@ -51,20 +61,97 @@ per-class see-saw the instruction text alone also shows. Selection went to the
 dev-96 maximum per protocol; the holdout confirmation (75.00%) shows it
 generalizes.
 
+## Round 2 (2026-07-29): porting the 93% decision flow into the agent
+
+Goal, per the user's direction: the gate-then-LM hybrid's logic held ~90%+, so
+recreate that *flow of thinking* inside the tool-calling track instead of
+leaving the residual zone to free-form reasoning.
+
+### Symbolic ceiling (train-fit only, no dev/holdout fitting)
+
+Running the old policy as pure Python over the neutral tools:
+
+- Exact gates + strong-C1 witness: **874/874 = 100%** on the hash-split train
+  population — every C2/C5/C7/C8 case is caught, none falls to residual.
+- The old residual order (advantage≥142.5 → C3, then C4 > C6 > C1) is
+  split-dependent: on this split it scores 71.60% on the 567-case train
+  residual pool and collapses C6 on dev-96 (1/12; total 86.46%).
+- Refit on the train residual pool only: best order is **C6 > C4 > C1 with the
+  142.5 threshold unchanged** → 74.96% train residual and **93/96 = 96.88% on
+  dev-96** (C3 10, C4 11, everything else 12/12). This is the faithful-execution
+  ceiling for the current tools.
+
+### Tools v2
+
+Qwen3-8B cannot reliably scan lists or subtract decimals inside a trajectory,
+so the tools now precompute one-step, label-neutral aggregates (no thresholds,
+no classes, audit unchanged): `maximum_distance_km`,
+`segment_minimum_comparison.minimum_difference_mbps`, `best_noncolocated_gap`,
+`equal_residue_pairs`, `rows_below_main_lobe_lower_edge`.
+
+### Execution-bug taxonomy (each cost 10–25 points until fixed)
+
+| # | Bug | Fix that worked |
+|---|---|---|
+| 1 | "pass/fail" verdicts polarity-invert ("2.774 km … verdict: fail") | say "triggered / not triggered" (the old pipeline's word) |
+| 2 | Conditional tool calls skipped; residual observations **fabricated** (0/96 calls to overlap/pci tools while the reasoning "quotes" them) | integrity clause + structural staging (see 3) |
+| 3 | All six blobs at once → misreads plus motivated arithmetic ("100.98 is not below 160" to dodge C8; "2.977 > 1 → triggered" then answers C3) | **two-stage calling**: 4 decisive tools, stop-and-answer on trigger; only residual cases call the last two tools. C8 3/12→12/12, C2→12/12 |
+| 4 | Boundary slip ("changes 3 times, equal to 3 → not triggered") | "a count of exactly 3 already triggers" |
+| 5 | Negative-dB comparisons flip ("−2.19 not worse than −3 → no C4"; "−88.89 weaker than −90 → C1") | signed-inequality coaching; ban "worse/weaker/better" |
+| 6 | "Write all four residual lines, first satisfied wins" → model answers the **last** satisfied line (geometry/C1, true in ~51% of cases) | stop at first satisfied rule; later rules must not be mentioned (seed10 → seed11) |
+
+Even after all fixes, two slips persist at low rate: repetition momentum (a
+correct inequality followed by the wrong verdict word after seven "not
+triggered" lines) and stage-2 skipping (imitating the gated demo's 4-call
+trajectory shape). These are the direct targets for a consistency-verifier
+retry layer.
+
+### Round-2 dev-96 scoreboard (zero request errors everywhere)
+
+| Variant | Accuracy | Note |
+|---|---:|---|
+| seed5 (policy port, "pass/fail") | 44.79% | verdict polarity flips break C2/C8 |
+| seed5 + bootstrap (C6,C1 demos) | 67.71% | C6 0→9/12 — the ported order works |
+| seed6 (triggered/not) | 37.50% | pure-run variance; C5 collapsed |
+| seed6 + bootstrap (C4,C6 demos) | 69.79% | C2/C5/C6/C7 12/12; C4 0 — residual block fabricated |
+| seed7 (all six tools forced) | 44.79% | b1 syndrome returns; C2,C7 demos → 42.71% |
+| seed8 (tools v2, named fields) | 62.50% | best pure so far; C8 flips remain |
+| seed8 + bootstrap | 38.54% | demo lottery: a C3-answering demo floods C3 |
+| seed9 (two-stage calling, C6>C4>C1) | 62.50% | gates fixed; stage-2 skipping appears |
+| **seed9 + bootstrap (C2,C6 demos)** | **72.92%** | gates 48/48, C1 11/12 |
+| seed10 (write-all-lines) | 62.50% / 65.62% / 34.38% | recency bias → last satisfied line wins |
+| seed11 (stop-at-first + signed inequalities) | 63.54% | |
+| **seed11 + bootstrap (C2,C6 demos)** | **72.92%** | ties seed9; healthier C3 (8/12) |
+| seed11 + balanced 4 residual demos | 65.62% | no correct C4 trajectory bootstrappable; C1 1/12 |
+
+### Holdout confirmation and selection decision
+
+`bootstrap26_seeded11_b3` (dev-96 72.92%) was confirmed once on holdout-96:
+**64/96 = 66.67%** (C2/C5/C7 12/12, C8 11, C1 10 — but C3 4, C6 3, C4 0). The
+dev advantage did not transfer; the round-1 program (69.79% dev / **75.00%**
+holdout) generalizes better and **remains selected**. Residual-zone execution
+is the unstable component: dev↔holdout swings of ±6 points come almost
+entirely from C1/C3/C4/C6 execution slips, not from the gates, which held
+47–48/48 on every confirmed run.
+
 ## Next steps
 
-1. C6 is the open structural weakness of the selected program (0/12 with C4
-   demos present). Candidate fixes: a C6-specific instruction clause tied to
-   the mod-30 measured residues quoted in the checklist; or demo pairs chosen
-   as (C4-correct, C6-correct) from the SAME drive geometry so the contrast is
-   inside the demos rather than between them.
-2. GEPA with a strong reflector (DeepSeek balance is exhausted; the Viettel
+1. **Consistency-verifier retry layer** — now the highest-leverage move. The
+   two persistent bugs (inequality written correctly but verdict word flipped;
+   stage-2 concluded without both residual observations) are text-internal or
+   trajectory-structural contradictions. A checker that flags only such
+   self-contradictions and asks the model to re-decide (never supplying a
+   label, never comparing against the symbolic answer) should recover much of
+   the 72.9→96.9 dev gap AND cut the dev↔holdout variance.
+2. Native-thinking probe: all runs so far use `enable_thinking: False`; a
+   thinking-mode variant of the seed11 program is the cheapest test of whether
+   procedure-following, not knowledge, is the binding constraint.
+3. GEPA with a strong reflector (DeepSeek balance is exhausted; the Viettel
    gateway `Qwen/Qwen3.5-122B-A10B-FP8` is the data-safe candidate) on top of
    the selected program, with dev-96 (not val-32/64) as the selection gate.
-3. The 53→75% arc came from instruction + 2 demos only; the model still makes
-   threshold slips inside trajectories. A verifier pass (the 8-gate schema as
-   a checker, never as the answer path) over the emitted reasoning would catch
-   the remaining contradiction-style errors for report generation.
+4. The symbolic refit (C6>C4>C1 @ 142.5, 96.88% dev-96) doubles as the natural
+   process-reward/verifier reference for report generation — usable to audit
+   emitted reasoning, never as the answer path.
 
 The GEPA + DeepSeek Flash attempt aborted: the DeepSeek account balance is
 exhausted, and GEPA silently burns rollouts when every reflection call fails

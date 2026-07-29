@@ -1,0 +1,67 @@
+{
+  "react.react": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Every number in the final\nreasoning must come from a tool observation of this case; quoting a value that\nno tool returned, or describing a measurement as unavailable without the\nobservation saying so, is an error. Comparisons must be written as signed\ninequalities between the two numbers, never as words like \"worse\", \"weaker\" or\n\"better\"; remember that for negative numbers -2.1 > -3 and -95 < -90.\n\nStage one. First call exactly these four tools, one call each:\nanalyze_throughput_segments, analyze_coverage_geometry, analyze_mobility, and\nanalyze_radio_resources. Then verify the four decisive criteria, one line per\ncriterion. Each line must quote the named observation field, write the two\nnumbers joined by < or >, and state the verdict: \"triggered\" when the stated\ncondition is true, \"not triggered\" when it is false.\n- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is\n  greater than 1;\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; a count\n  of exactly 3 already triggers;\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40;\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs\n  (analyze_radio_resources) is below 160.\nA triggered criterion IS the diagnosis. Stop at the first triggered line: do\nnot call any further tool, do not discuss other causes, answer that class with\nthe four verification lines as the reasoning. Writing a measured value whose\ncomparison makes a criterion true and then labelling it \"not triggered\", or\nselecting a different class after a triggered line, is an error. No\nqualitative narrative can override a verified decisive criterion.\n\nStage two, only when all four verdicts are \"not triggered\". Check the\nsufficient witness for C1: a row listed in rows_below_main_lobe_lower_edge\n(analyze_coverage_geometry) whose throughput is below the stated criterion AND\nwhose serving RSRP satisfies RSRP <= -90 proves C1; write the signed\ninequality (-93.1 < -90 satisfies it; -88.9 > -90 does not). If no row\nqualifies, call analyze_pci_relations and analyze_neighbor_overlap, one call\neach; writing any residual conclusion without both observations is an error.\nThen check these rules one at a time, in this exact order, quoting the named\nobservation field:\n1. minimum_difference_mbps from segment_minimum_comparison\n   (analyze_throughput_segments) of at least 142.5 selects C3; undefined when\n   the drive has a single segment;\n2. otherwise a non-empty equal_residue_pairs from analyze_pci_relations\n   selects C6;\n3. otherwise a best_noncolocated_gap from analyze_neighbor_overlap of -3 dB or\n   stronger, meaning gap > -3 or gap = -3, selects C4 (null means no\n   non-colocated neighbor);\n4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge\n   selects C1;\n5. otherwise select C3.\nExactly as in stage one, stop at the first satisfied rule: it is the\ndiagnosis, and later rules must not be evaluated or mentioned. Selecting a\nclass whose rule comes after the first satisfied rule is an error. This order\nis a calibrated tie-break over the quoted measurements only; it never replaces\nmeasuring. Close by citing the decisive rows and values and select exactly one\nclass.\n\nYou are an Agent. In each episode, you will be given the fields `raw_question` as input. And you can see your past trajectory so far.\nYour goal is to use one or more of the supplied tools to collect any necessary information for producing `reasoning`, `answer`.\n\nTo do this, you will interleave next_thought, next_tool_name, and next_tool_args in each turn, and also when finishing the task.\nAfter each tool call, you receive a resulting observation, which gets appended to your trajectory.\n\nWhen writing next_thought, you may reason about the current situation and plan for future steps.\nWhen selecting the next_tool_name and its next_tool_args, the tool must be one of:\n\n(1) analyze_throughput_segments, whose description is <desc>Summarize throughput by serving segment and list low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(2) analyze_coverage_geometry, whose description is <desc>Measure serving distance, antenna vertical geometry, and serving RSRP by row. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(3) analyze_mobility, whose description is <desc>Measure vehicle speed and serving-cell transition events. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(4) analyze_radio_resources, whose description is <desc>Measure scheduled resource blocks overall and on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(5) analyze_neighbor_overlap, whose description is <desc>Measure non-colocated neighbor power relative to serving power on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(6) analyze_pci_relations, whose description is <desc>Inspect serving and neighbor PCI modulo-30 residues on low-throughput rows. Takes no arguments; it always covers the whole case.</desc>. It takes arguments {}.\n(7) finish, whose description is <desc>Marks the task as complete. That is, signals that all information for producing the outputs, i.e. `reasoning`, `answer`, are now available to be extracted.</desc>. It takes arguments {}.\nWhen providing `next_tool_args`, the value inside the field must be in JSON format",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Next Thought:",
+          "description": "${next_thought}"
+        },
+        {
+          "prefix": "Next Tool Name:",
+          "description": "${next_tool_name}"
+        },
+        {
+          "prefix": "Next Tool Args:",
+          "description": "${next_tool_args}"
+        }
+      ]
+    },
+    "lm": null
+  },
+  "react.extract.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.\n\nThe tools return deterministic measurements parsed from the raw drive-test and\nengineering tables; they never return a diagnosis. Every number in the final\nreasoning must come from a tool observation of this case; quoting a value that\nno tool returned, or describing a measurement as unavailable without the\nobservation saying so, is an error. Comparisons must be written as signed\ninequalities between the two numbers, never as words like \"worse\", \"weaker\" or\n\"better\"; remember that for negative numbers -2.1 > -3 and -95 < -90.\n\nStage one. First call exactly these four tools, one call each:\nanalyze_throughput_segments, analyze_coverage_geometry, analyze_mobility, and\nanalyze_radio_resources. Then verify the four decisive criteria, one line per\ncriterion. Each line must quote the named observation field, write the two\nnumbers joined by < or >, and state the verdict: \"triggered\" when the stated\ncondition is true, \"not triggered\" when it is false.\n- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is\n  greater than 1;\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; a count\n  of exactly 3 already triggers;\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40;\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs\n  (analyze_radio_resources) is below 160.\nA triggered criterion IS the diagnosis. Stop at the first triggered line: do\nnot call any further tool, do not discuss other causes, answer that class with\nthe four verification lines as the reasoning. Writing a measured value whose\ncomparison makes a criterion true and then labelling it \"not triggered\", or\nselecting a different class after a triggered line, is an error. No\nqualitative narrative can override a verified decisive criterion.\n\nStage two, only when all four verdicts are \"not triggered\". Check the\nsufficient witness for C1: a row listed in rows_below_main_lobe_lower_edge\n(analyze_coverage_geometry) whose throughput is below the stated criterion AND\nwhose serving RSRP satisfies RSRP <= -90 proves C1; write the signed\ninequality (-93.1 < -90 satisfies it; -88.9 > -90 does not). If no row\nqualifies, call analyze_pci_relations and analyze_neighbor_overlap, one call\neach; writing any residual conclusion without both observations is an error.\nThen check these rules one at a time, in this exact order, quoting the named\nobservation field:\n1. minimum_difference_mbps from segment_minimum_comparison\n   (analyze_throughput_segments) of at least 142.5 selects C3; undefined when\n   the drive has a single segment;\n2. otherwise a non-empty equal_residue_pairs from analyze_pci_relations\n   selects C6;\n3. otherwise a best_noncolocated_gap from analyze_neighbor_overlap of -3 dB or\n   stronger, meaning gap > -3 or gap = -3, selects C4 (null means no\n   non-colocated neighbor);\n4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge\n   selects C1;\n5. otherwise select C3.\nExactly as in stage one, stop at the first satisfied rule: it is the\ndiagnosis, and later rules must not be evaluated or mentioned. Selecting a\nclass whose rule comes after the first satisfied rule is an error. This order\nis a calibrated tie-break over the quoted measurements only; it never replaces\nmeasuring. Close by citing the decisive rows and values and select exactly one\nclass.",
+      "fields": [
+        {
+          "prefix": "Raw Question:",
+          "description": "Complete unmodified TeleLogs benchmark question."
+        },
+        {
+          "prefix": "Trajectory:",
+          "description": "${trajectory}"
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "Auditable diagnosis citing tool measurements and row evidence, at most 180 words."
+        },
+        {
+          "prefix": "Answer:",
+          "description": "Exactly one class identifier: C1,C2,C3,C4,C5,C6,C7,or C8."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}
