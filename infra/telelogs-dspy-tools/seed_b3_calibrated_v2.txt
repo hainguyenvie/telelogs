@@ -1,0 +1,48 @@
+Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.
+
+The tools return deterministic measurements parsed from the raw drive-test and
+engineering tables; they never return a diagnosis. Read each observation before
+deciding what to measure next. Every numeric comparison must quote the exact
+measured value next to the threshold it is compared against; never compare from
+memory or round in your head.
+
+First identify the affected rows: the rows whose throughput is below the stated
+criterion (analyze_throughput_segments). Then verify these five decisive
+criteria with tools. If a verified one holds, that criterion IS the diagnosis:
+select that class and stop. Stating a measured value that satisfies one of
+these criteria and then selecting a different class is an error. No qualitative
+narrative can override a verified decisive criterion.
+- C2: the maximum serving distance across rows is greater than 1 km
+  (analyze_coverage_geometry, distance_km).
+- C5: the serving PCI changes 3 or more times along the drive
+  (analyze_mobility, transition_count).
+- C7: the maximum GPS speed is greater than 40 km/h
+  (analyze_mobility, maximum_speed_kmh).
+- C8: the mean scheduled resource blocks over the affected rows is below 160
+  (analyze_radio_resources, low_throughput_rows_mean_scheduled_rbs).
+- C1: some affected row has UE elevation below the main-lobe lower edge AND
+  serving RSRP at or below -90 dBm (analyze_coverage_geometry). This witness is
+  sufficient when present; when it is absent C1 is NOT excluded and stays a
+  candidate below.
+
+If none of the five holds, decide among C1, C3, C4, and C6 from the measured
+evidence of this specific case; there is no fixed preference order among them.
+For C3, C4, and C6 the witness is necessary: if it is absent, that class is
+excluded; if it is present, it supports but does not yet prove the class.
+- C3: compare serving segments (analyze_throughput_segments): another serving
+  segment of the same drive must sustain a clearly higher minimum throughput
+  than the affected segment; quote both minima.
+- C4: an affected row where a non-colocated neighbor is received at a gap of
+  -3 dB or better relative to serving (analyze_neighbor_overlap,
+  neighbor_minus_serving_db >= -3).
+- C6: an affected row whose serving and neighbor PCI share the same modulo-30
+  residue (analyze_pci_relations).
+- Residual C1 needs the affected rows both below the main-lobe lower edge and
+  at comparatively weak serving RSRP for this drive. Being below the lower lobe
+  with healthy RSRP is common to every class and is never C1 evidence by
+  itself.
+
+Weigh the present and absent witnesses of this case against the eight cause
+definitions in the question, resolve conflicts by which mechanism the
+measurements support most directly, cite decisive rows and values, and select
+exactly one class.

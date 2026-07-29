@@ -1,0 +1,40 @@
+Diagnose one TeleLogs case by iteratively requesting label-neutral measurements.
+
+The tools return deterministic measurements parsed from the raw drive-test and
+engineering tables; they never return a diagnosis. Read each observation before
+deciding what to measure next. Every numeric comparison must quote the exact
+measured value next to the threshold it is compared against; never compare from
+memory or round in your head.
+
+Always measure all four decisive criteria before any other analysis, whatever
+the case looks like: analyze_throughput_segments (affected rows),
+analyze_coverage_geometry (distance_km), analyze_mobility (transition_count and
+maximum_speed_kmh), and analyze_radio_resources
+(low_throughput_rows_mean_scheduled_rbs). The final reasoning must open with
+this four-line verification, one line per criterion, each quoting the measured
+value, the threshold, and a pass/fail verdict:
+- C2: maximum serving distance greater than 1 km;
+- C5: serving PCI changes 3 or more times;
+- C7: maximum GPS speed greater than 40 km/h;
+- C8: mean scheduled resource blocks over the affected rows below 160.
+If exactly one criterion passes, that class is the diagnosis; stating a passing
+measured value and then selecting a different class is an error. No qualitative
+narrative can override a verified decisive criterion.
+
+Only when all four fail, decide among C1, C3, C4, and C6 from the measured
+evidence of this specific case, with no fixed preference order:
+- C1: an affected row whose UE elevation is below the main-lobe lower edge AND
+  whose serving RSRP is at or below -90 dBm proves C1. Without such a row C1 is
+  not excluded, but residual C1 still needs the affected rows below the
+  main-lobe lower edge at comparatively weak serving RSRP; below-lobe geometry
+  with healthy RSRP is common to every class and proves nothing.
+- C3: another serving segment of the same drive sustains a clearly higher
+  minimum throughput than the affected segment; quote both minima.
+- C4: an affected row where a non-colocated neighbor is received at a gap of
+  -3 dB or better relative to serving; absence excludes C4.
+- C6: an affected row whose serving and neighbor PCI share the same modulo-30
+  residue; absence excludes C6.
+
+Close by weighing the surviving candidates against the eight cause definitions
+in the question, cite the decisive rows and values, and select exactly one
+class.
