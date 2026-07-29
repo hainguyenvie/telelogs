@@ -23,12 +23,21 @@ Reference results:
 The 93.95% result is not an official/pristine test score. The calibrated
 pipeline has not been rerun on official after selection.
 
+A second track migrates the answer-producing gates into label-neutral tools
+that Qwen itself must call through `dspy.ReAct`, so every diagnosis carries an
+auditable tool trajectory. Its selected program (checklist instruction plus two
+bootstrapped C4 trajectory demos) reaches 67/96 = 69.79% on the internal dev
+split and 72/96 = 75.00% on the untouched internal holdout; these are
+internal-split numbers, not official scores. See
+[the tool-calling report](artifacts/telelogs-dspy-tools/report.md).
+
 ## Start here
 
 - [Exact commands to reproduce the runs](REPRODUCING.md)
 - [Detailed answer-trace and reasoning pipeline](artifacts/telelogs-dspy/CURRENT_HIGH_ACCURACY_REASONING_PIPELINE.md)
 - [Experiment report](artifacts/telelogs-dspy/report.md)
 - [DSPy implementation](infra/telelogs-dspy/telelogs_program.py)
+- [Tool-calling migration track](infra/telelogs-dspy-tools/README.md) and [its report](artifacts/telelogs-dspy-tools/report.md)
 - [H200/vLLM deployment](infra/telelogs-bench4/README.md)
 
 ## Data policy
