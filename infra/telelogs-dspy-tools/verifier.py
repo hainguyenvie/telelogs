@@ -22,6 +22,7 @@ itself. This keeps the audit label-neutral in the same sense as the tools.
 
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 
@@ -235,6 +236,56 @@ def verify_prediction(
             'states it is NOT satisfied ("not triggered"); recompute that line and resolve the '
             "contradiction using only your own measurements."
         )
+    # v2.2: observation-grounded witness check. v2/v2.1 only audited what the model
+    # WROTE, so a residual class chosen without ever mentioning its witness slipped
+    # through — after the forced-measurement program removed the "never measured"
+    # failure mode, that became the dominant remaining pathology. These branches were
+    # replayed over the 2,880 stored round-3/4 predictions and fired 198 times, wrong
+    # 198/198 (C1-without-a-below-lobe-row 26/26, C4-with-gap-below-minus-3 172/172),
+    # i.e. zero false alarms, so they are unconditional. The analogous C3-fallback
+    # branch (chose C3 while an earlier rule's witness is present) is deliberately
+    # LEFT OUT: 118 firings at 86.4% precision, 16 of them on correct answers, which
+    # fails the same zero-false-flag rule that selected v2.1 over v2.
+    if answer == "C1" and lobe_rows == []:
+        flags.append(
+            "The final answer is the below-main-lobe cause, but rows_below_main_lobe_lower_edge "
+            "came back EMPTY from analyze_coverage_geometry: no measured row sits below the lower "
+            "edge, so that cause has no witness in your own observations. Evaluate the residual "
+            "rules in order against the measured fields and answer the first one that is satisfied."
+        )
+    if answer == "C6" and residue_pairs == []:
+        flags.append(
+            "The final answer is the mod-30 cause, but equal_residue_pairs came back EMPTY from "
+            "analyze_pci_relations: no serving/neighbor pair shares a residue in your own "
+            "observations. Re-evaluate the residual rules in order."
+        )
+    observed_gap = _observed_value(observations, "analyze_neighbor_overlap", "best_noncolocated_gap")
+    if answer == "C4" and observed_gap is not None and observed_gap < -3.0:
+        flags.append(
+            f"The final answer is the overlapping-coverage cause, but the measured "
+            f"best_noncolocated_gap is {observed_gap} dB, and {observed_gap} < -3, so that rule is "
+            "not satisfied by your own observations. Continue down the residual rules in order and "
+            "answer the first rule whose measured condition holds."
+        )
+
+    # The C3-fallback branch, off by default (see the note above). Enabled with
+    # TELELOGS_VERIFIER_C3_FALLBACK=1 so the two variants can be compared on the
+    # selection set instead of argued about: 118 firings, 102 wrong, 16 false alarms.
+    if os.environ.get("TELELOGS_VERIFIER_C3_FALLBACK") == "1" and answer == "C3":
+        observed_advantage = _observed_value(
+            observations, "analyze_throughput_segments", "minimum_difference_mbps"
+        )
+        earlier_fires = bool(residue_pairs) or bool(lobe_rows) or (
+            observed_gap is not None and observed_gap >= -3.0
+        )
+        if observed_advantage is not None and observed_advantage < 142.5 and earlier_fires:
+            flags.append(
+                f"The final answer is the fallback cause, but minimum_difference_mbps is "
+                f"{observed_advantage} and {observed_advantage} < 142.5, so the first rule is not "
+                "satisfied, while an earlier rule's measured witness IS present in your "
+                "observations. Work down the rules in order and answer the first one that holds."
+            )
+
     if answer == "C3" and not triggered_fields and "minimum_difference_mbps" not in text:
         flags.append(
             "The fallback conclusion requires first quoting minimum_difference_mbps from "

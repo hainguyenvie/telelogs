@@ -35,6 +35,7 @@ DISPLAY_NAMES = {
     "b2_planned_tools": "B2 · DSPy plan → tools → diagnose",
     "b3_react_tools": "B3 · DSPy ReAct agentic tool calling",
     "b3_react_verified": "B3v · ReAct + consistency-audit retries",
+    "b3_react_forced": "B3f · ReAct + audit + forced stage-2 measurement",
 }
 
 
@@ -178,6 +179,9 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--max-tokens", type=int, default=1000)
     parser.add_argument("--thinking", action="store_true", help="enable Qwen3 native thinking for every request")
+    parser.add_argument("--narrate", action="store_true",
+                        help="add a free-prose narrative field after the answer is locked (presentation only)")
+    parser.add_argument("--narrate-language", default="English")
     parser.add_argument("--run-name", default="tool_dev32")
     parser.add_argument("--dashboard-output", type=Path, default=DEFAULT_DASHBOARD)
     parser.add_argument(
@@ -215,6 +219,11 @@ def main() -> None:
     for method, path in compiled_paths.items():
         if method in programs:
             programs[method].load(path)
+    narrator = None
+    if args.narrate:
+        from narrate import NarrationLayer
+
+        narrator = NarrationLayer(language=args.narrate_language)
 
     rows = load_rows(args.raw_data)
     if args.eval_split == "all":
@@ -250,6 +259,7 @@ def main() -> None:
     def run_one(row: dict[str, Any], method: str) -> dict[str, Any]:
         begin = time.monotonic()
         error = None
+        narrative = ""
         try:
             pred = programs[method](raw_question=row["question"], case=contexts[row["source_index"]])
             answer = normalize_answer(getattr(pred, "answer", ""))
@@ -258,6 +268,9 @@ def main() -> None:
             observations = dict(getattr(pred, "tool_observations", {}))
             planning_reason = str(getattr(pred, "planning_reason", ""))
             lm_calls = int(getattr(pred, "lm_calls", 1))
+            if narrator is not None:
+                narrative = narrator(raw_question=row["question"], pred=pred)
+                lm_calls += 1
         except Exception as exc:
             answer, reasoning, selected_tools, observations, planning_reason, lm_calls = "", "", [], {}, "", 0
             error = f"{type(exc).__name__}: {exc}"
@@ -273,6 +286,7 @@ def main() -> None:
             "selected_tools": selected_tools,
             "tool_observations": observations,
             "reasoning": reasoning,
+            "narrative": narrative,
             "lm_calls": lm_calls,
             "elapsed_seconds": round(time.monotonic() - begin, 3),
             "error": error,
