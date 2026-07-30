@@ -58,16 +58,29 @@
       <div class="muted">Track tool-calling (b3 ReAct + tools label-neutral) · Qwen3-8B · dev-96 · 2026-07-30</div>
       <div><a href="tools.html">Live run dashboard</a> · <a href="dspy.html">Prompt study cũ</a> · <a href="./">Full 4 benchmarks</a></div>
     </div>
-    <div class="status"><span class="dot"></span><span>GRPO đang train trên hgx47 · trang sẽ cập nhật khi xong</span></div>
+    <div class="status"><span class="dot"></span><span>Official-864: <b style="color:var(--green)">79.75%</b> (ensemble v1) · verifier v2 + GRPO đang chạy</span></div>
   </header>
 
   <section class="grid" style="margin-top:20px">
-    <div class="panel"><div class="label">Ứng viên tốt nhất (kỳ vọng)</div><div class="value ok">80.62%</div><div class="muted">ensemble 3 phiếu: 2 verifier + 1 thinking · ±1.7 điểm qua 5 lần gieo</div></div>
-    <div class="panel"><div class="label">Single tất định tốt nhất</div><div class="value">76.04%</div><div class="muted">verifier no-think (s11boot26) · gates 48/48 · ~1.4× lượt gọi</div></div>
-    <div class="panel"><div class="label">Baseline round 2</div><div class="value">72.92%</div><div class="muted">s11boot26 no-think · trần của trục instruction</div></div>
-    <div class="panel"><div class="label">Trần symbolic</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
-    <div class="panel"><div class="label">GRPO v1c</div><div class="value warn">đang chạy</div><div class="muted">1×H200 colocate · ~74s/step · ETA ~21h · reward 0.625 @step5</div></div>
+    <div class="panel"><div class="label">Official-864 · ensemble</div><div class="value ok">79.75%</div><div class="muted">689/864 · gates 431/432 · phát bắn đầu tiên và duy nhất (cấu hình đăng ký trước)</div></div>
+    <div class="panel"><div class="label">Holdout-96 · ensemble</div><div class="value ok">81.25%</div><div class="muted">78/96 · khớp kỳ vọng dev 80.62±1.7 — không sụp khi đổi split</div></div>
+    <div class="panel"><div class="label">Dev-96 · ensemble kỳ vọng</div><div class="value">80.62%</div><div class="muted">2 verifier + 1 thinking · ±1.7 điểm qua 5 lần gieo phiếu</div></div>
+    <div class="panel"><div class="label">Trần symbolic (dev)</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
+    <div class="panel"><div class="label">Đang chạy tiếp</div><div class="value warn">v2 + GRPO</div><div class="muted">verifier v2 (dev→holdout→official) · GRPO reward 0.58→0.725 @⅕ chặng</div></div>
   </section>
+
+  <h2>Kết quả trên cả ba tập (ensemble v1 — cấu hình đăng ký trước khi chạy)</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="text-align:left">Cấu hình</th><th>Dev-96</th><th>Holdout-96</th><th>Official-864</th><th style="text-align:left">Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td style="text-align:left"><b>Ensemble 3 phiếu (majority, hòa → verifier-s11)</b></td><td><b class="ok">80.62%*</b></td><td><b class="ok">81.25%</b></td><td><b class="ok">79.75%</b></td><td style="text-align:left">*kỳ vọng qua 5 lần gieo; gates official 431/432</td></tr>
+      <tr><td style="text-align:left">— Voter A: verifier + s11boot26 (no-think, tất định)</td><td>76.04%</td><td>78.12%</td><td>74.42%</td><td style="text-align:left">một mình đã vượt chuẩn round-1 (75.00 holdout); C4 yếu (20/108 official)</td></tr>
+      <tr><td style="text-align:left">— Voter B: verifier + s4boot46 (no-think, tất định)</td><td>73.96%</td><td>75.00%</td><td>71.76%</td><td style="text-align:left">bù trừ: C4 93/108 official nơi Voter A chết; C3 sập</td></tr>
+      <tr><td style="text-align:left">— Voter C: s11boot26 native thinking (temp 0.6)</td><td>75.21%±4.6</td><td>73.96%</td><td>76.39%</td><td style="text-align:left">C3 102/108 official; rò gate 405/432</td></tr>
+      <tr><td style="text-align:left" class="muted">Chuẩn cũ: selected round-1 (s4boot46 no-think)</td><td class="muted">69.79%</td><td class="muted">75.00%</td><td class="muted">—</td><td style="text-align:left" class="muted">chưa từng chạy official</td></tr>
+    </tbody>
+  </table></div>
+  <div class="muted" style="margin-top:8px">Official-864 chạy đúng một lần với cấu hình đã đăng ký trước (sha256 test.json khớp README). Lỗi official còn lại tập trung đúng bệnh đã biết: C4→C3 ×34 (lật cực dòng gap — verifier v2 đang nhắm), C3→C1 ×28, C4→C1 ×20.</div>
 
   <h2>Kiến trúc pipeline R3 (ensemble 3 phiếu)</h2>
   <div class="panel">
@@ -219,7 +232,7 @@
       <div class="flow">
         <div class="step"><span class="chip dead">v1a chết</span><span class="muted">pip kéo transformers 5.14 → peft 0.17 thiếu <code>HybridCache</code>. Fix: pin <code>transformers==4.55.2</code>.</span></div>
         <div class="step"><span class="chip dead">v1b kill</span><span class="muted">rollout mặc định bật thinking → 94% completion cắt cụt ở 768 token, reward chấm trên chuỗi think dở dang. Fix: soft switch <code>/no_think</code> trong prompt.</span></div>
-        <div class="step"><span class="chip live">v1c khỏe</span><span class="muted">cắt cụt 0% · reward_correct 0.625 @step5 · KL 0.001 · ~74s/step · 1048 step ≈ 21h · checkpoint mỗi 50 step.</span></div>
+        <div class="step"><span class="chip live">v1c khỏe</span><span class="muted">cắt cụt 0% · ~74s/step · 1048 step ≈ 21h · checkpoint mỗi 50 step · <b style="color:var(--green)">reward tăng 0.58 → 0.70 → 0.725</b> ở ⅕ chặng đường (epoch 0.2) — policy đang học thật vùng residual.</span></div>
         <div class="step"><span class="chip info">thiết kế</span><span class="muted">TRL GRPO + LoRA r32, vLLM colocate 1 GPU · dataset 2.099 prompt label-free (874 gated + 658 residual ×2, khớp symbolic) · nhãn chỉ nằm trong reward · eval bằng đúng b3 ReAct dev-96 trỏ sang model đã merge.</span></div>
       </div>
     </div>
