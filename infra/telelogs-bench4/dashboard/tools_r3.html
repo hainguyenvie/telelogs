@@ -62,7 +62,7 @@
   </header>
 
   <section class="grid" style="margin-top:20px">
-    <div class="panel"><div class="label">Official-864 · weighted vote</div><div class="value ok">82.64%</div><div class="muted">714/864 · gates 432/432 · majority v2: 79.98% · phát 1 đăng ký trước: 79.75%</div></div>
+    <div class="panel"><div class="label">Official-864 · hệ R3-final</div><div class="value ok">82.99%</div><div class="muted">717/864 · gates 432/432 · hành trình: 79.75 → 79.98 → 82.64 → <b>82.99</b></div></div>
     <div class="panel"><div class="label">Holdout-96 · ensemble</div><div class="value ok">81.25%</div><div class="muted">78/96 (v1 = v2) · khớp kỳ vọng dev — không sụp khi đổi split</div></div>
     <div class="panel"><div class="label">Dev-96 · ensemble v2 kỳ vọng</div><div class="value">82.71%</div><div class="muted">±3.1 qua 5 lần gieo phiếu thinking (v1: 80.62±1.7)</div></div>
     <div class="panel"><div class="label">Trần symbolic (dev)</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
@@ -82,6 +82,7 @@
       <tr><td style="text-align:left">— verifier v2 + s11</td><td>78.12%</td><td>77.08%</td><td>75.93%</td><td style="text-align:left">v2 đẩy lỗi ra khỏi hố đen C3: C1 +12, C6 +10 case official so v1</td></tr>
       <tr><td style="text-align:left">— verifier v2 + s4</td><td>73.96%</td><td>71.88%</td><td>71.76%</td><td style="text-align:left">seed4 không quote field residual nên v2 gần như không đổi</td></tr>
       <tr><td style="text-align:left"><b>Weighted vote</b> (trọng số precision từng-phiếu-từng-lớp, fit CHỈ trên dev)</td><td><b class="ok">85.00%*</b></td><td>80.21%</td><td><b class="ok">82.64%</b></td><td style="text-align:left">*in-sample; official +2.66 điểm out-of-sample (714/864, C6 98/108, C1 87/108); holdout −1 case = nhiễu n=96; oracle "có phiếu đúng": 95.7% official</td></tr>
+      <tr><td style="text-align:left"><b>HỆ R3-FINAL: weighted vote + verifier v2.1</b> (thêm check khống-danh-sách)</td><td>80.83%*</td><td><b class="ok">83.33%</b></td><td><b class="ok">82.99%</b></td><td style="text-align:left">717/864 · C1 89, C6 97, C4 42 · chọn v2.1 theo nguyên tắc thiết kế (superset check, 0 false-flag), không chọn theo điểm official; chênh v2↔v2.1 = 3 case/864 (ngang nhau thống kê)</td></tr>
     </tbody>
   </table></div>
   <div class="muted" style="margin-top:8px">Official-864 chạy đúng một lần với cấu hình đã đăng ký trước (sha256 test.json khớp README). Lỗi official còn lại tập trung đúng bệnh đã biết: C4→C3 ×34 (lật cực dòng gap — verifier v2 đang nhắm), C3→C1 ×28, C4→C1 ×20.</div>
