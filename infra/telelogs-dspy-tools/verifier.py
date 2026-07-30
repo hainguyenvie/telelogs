@@ -182,6 +182,39 @@ def verify_prediction(
             'states "not triggered"; resolve this contradiction using only your own measurements.'
         )
 
+    # v2.1: fabricated-list misquotes — the round-3 official diagnosis showed
+    # ~55 errors flow INTO C1/C6 by citing list entries the observation does
+    # not contain (rows_below_main_lobe_lower_edge / equal_residue_pairs).
+    def observed_list(tool: str, field: str):
+        for key, blob in (observations or {}).items():
+            if key.endswith(tool):
+                value = _find_field(blob, field)
+                if isinstance(value, list):
+                    return value
+        return None
+
+    lobe_rows = observed_list("analyze_coverage_geometry", "rows_below_main_lobe_lower_edge")
+    if answer == "C1" and lobe_rows == [] and "rows_below_main_lobe_lower_edge" in text:
+        flags.append(
+            "The reasoning relies on rows_below_main_lobe_lower_edge, but the tool observation "
+            "returned an EMPTY list for it; no such row exists in the observation — re-read the "
+            "observations and redo the residual evaluation."
+        )
+    residue_pairs = observed_list("analyze_pci_relations", "equal_residue_pairs")
+    if "equal_residue_pairs" in text and residue_pairs is not None:
+        if answer == "C6" and residue_pairs == []:
+            flags.append(
+                "The reasoning selects the mod-30 rule, but the tool observation returned an "
+                "EMPTY equal_residue_pairs list; re-read the observation and redo that step."
+            )
+        if answer in {"C4", "C1"} and residue_pairs and re.search(
+            r"equal_residue_pairs\s*(?:=|is)\s*(?:\[\s*\]|empty)", text
+        ):
+            flags.append(
+                "The reasoning states equal_residue_pairs is empty, but the tool observation "
+                "returned a NON-empty list; re-read the observation and redo the rules in order."
+            )
+
     strong_c1_claimed = answer == "C1" and bool(STRONG_C1_RE.search(text))
     first_affirmed = next((c for c in RESIDUAL_ORDER if residual_verdicts.get(c)), None)
     if first_affirmed and answer != first_affirmed and not strong_c1_claimed and not triggered_fields:
