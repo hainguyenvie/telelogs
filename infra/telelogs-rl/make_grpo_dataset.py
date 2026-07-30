@@ -79,7 +79,10 @@ def build_prompt(question: str, observations: dict) -> list[dict[str, str]]:
         f"### Observation from {name}\n{json.dumps(obs, ensure_ascii=False, separators=(',', ':'))}"
         for name, obs in observations.items()
     ]
-    user = f"{question.strip()}\n\n" + "\n\n".join(blocks)
+    # Qwen3 soft switch: trl 0.21 cannot pass chat_template_kwargs, and default
+    # thinking-mode rollouts truncate at max_completion_length (94% clipped at
+    # 768 observed) which corrupts the reward. /no_think forces short answers.
+    user = f"{question.strip()}\n\n" + "\n\n".join(blocks) + "\n\n/no_think"
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user},

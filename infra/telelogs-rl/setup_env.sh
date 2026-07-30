@@ -8,13 +8,16 @@ PYBIN=$(command -v python3 || echo /opt/conda/bin/python3)
 
 "$PYBIN" -m venv "$ROOT/venv"
 "$ROOT/venv/bin/pip" install --upgrade pip
+# transformers/hub MUST be pinned: unpinned resolution grabs transformers 5.x,
+# whose removed HybridCache breaks peft 0.17 (hit 2026-07-30).
 "$ROOT/venv/bin/pip" install \
   "trl==0.21.0" \
   "peft==0.17.0" \
   "accelerate==1.9.0" \
   "datasets==4.0.0" \
   "vllm==0.10.0" \
-  "huggingface_hub[hf_transfer]"
+  "transformers==4.55.2" \
+  "huggingface_hub==0.34.4"
 
 export HF_HOME="$ROOT/cache/hf"
 export HF_HUB_ENABLE_HF_TRANSFER=1

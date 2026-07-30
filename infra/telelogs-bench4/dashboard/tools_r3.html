@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Round 3 · Verifier / Thinking / Ensemble / GRPO · TeleLogs</title>
+  <style>
+    :root{color-scheme:dark;--bg:#08111f;--panel:#101d31;--line:#243750;--text:#eaf1fb;--muted:#94a8c4;--cyan:#46d5ff;--green:#54d89f;--red:#ff7180;--amber:#ffca5c;--purple:#bd9cff}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 14% 0,#153354 0,transparent 38%),var(--bg);color:var(--text);font:14px/1.5 ui-sans-serif,system-ui,sans-serif}main{width:min(1480px,95vw);margin:26px auto 70px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between}h1{font-size:clamp(26px,4vw,42px);margin:0;letter-spacing:-.035em}h2{margin:30px 0 12px}h3{margin:0 0 8px}.muted{color:var(--muted)}a{color:var(--cyan)}
+    .status{display:flex;gap:9px;align-items:center;border:1px solid var(--line);background:#0c192a;border-radius:99px;padding:9px 13px;white-space:nowrap}.dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 13px var(--cyan);animation:pulse 1.2s infinite}@keyframes pulse{50%{opacity:.35}}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}.cols2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .panel{border:1px solid var(--line);background:linear-gradient(180deg,#12223a,#0e1a2c);border-radius:14px;padding:15px;box-shadow:0 12px 30px #0003}
+    .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.075em}.value{font-size:26px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}
+    .bars{display:grid;gap:8px;font-variant-numeric:tabular-nums}.bar-row{display:grid;grid-template-columns:290px 1fr 148px;gap:10px;align-items:center;padding:2px 0;border-radius:8px}.bar-row:hover{background:#13233c}
+    .track{position:relative;height:14px;background:#07101c;border-radius:5px;overflow:hidden}.fill{position:absolute;inset:0 auto 0 0;border-radius:4px;background:linear-gradient(90deg,#2596c9,var(--cyan))}
+    .fill.ref{background:#33465f}.fill.ens{background:linear-gradient(90deg,#3ba57e,var(--green))}
+    .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--purple);opacity:.85}.tick.base{background:var(--muted);opacity:.6}
+    .bar-val{text-align:right;white-space:nowrap}.bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}.sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+    .strip{position:relative;height:96px;margin:16px 6px 4px}.axisline{position:absolute;left:0;right:0;top:56px;height:1px;background:#1c2e46}
+    .sdot{position:absolute;top:48px;width:15px;height:15px;border-radius:50%;background:var(--cyan);border:2px solid #0c1828;cursor:default}
+    .sdot span{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text);font-variant-numeric:tabular-nums}
+    .band{position:absolute;top:52px;height:9px;background:#46d5ff22;border-radius:5px}.meanline{position:absolute;top:44px;height:25px;width:2px;background:var(--amber)}
+    .meanlab{position:absolute;top:74px;transform:translateX(-50%);font-size:11px;color:var(--amber);white-space:nowrap}
+    .axlab{position:absolute;top:62px;font-size:10px;color:var(--muted);transform:translateX(-50%)}
+    .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;background:#0c1828}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+    th,td{padding:8px 11px;border-bottom:1px solid #1c2e46;text-align:center;white-space:nowrap}th{color:var(--muted);background:#102038;font-size:11px;text-transform:uppercase}
+    th:first-child,td:first-child{text-align:left}tr:hover td{background:#12223a}
+    .cell{display:inline-block;min-width:34px;padding:2px 6px;border-radius:6px}
+    ul{margin:8px 0;padding-left:20px}li{margin:4px 0}
+    .flow{display:grid;gap:9px}.step{display:flex;gap:10px;align-items:baseline}.chip{flex:none;font-size:11px;padding:3px 8px;border-radius:7px;font-weight:800}
+    .chip.dead{background:#3a1d27;color:var(--red)}.chip.live{background:#173a2e;color:var(--green)}.chip.info{background:#19334f;color:var(--cyan)}
+    code{background:#07101c;border:1px solid #1b2e47;border-radius:5px;padding:1px 5px;font-size:12px}
+    @media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.cols2{grid-template-columns:1fr}.bar-row{grid-template-columns:150px 1fr 120px}}
+  </style>
+</head>
+<body><main>
+  <header>
+    <div>
+      <h1>Round 3 · Verifier / Thinking / Ensemble / GRPO</h1>
+      <div class="muted">Track tool-calling (b3 ReAct + tools label-neutral) · Qwen3-8B · dev-96 · 2026-07-30</div>
+      <div><a href="tools.html">Live run dashboard</a> · <a href="dspy.html">Prompt study cũ</a> · <a href="./">Full 4 benchmarks</a></div>
+    </div>
+    <div class="status"><span class="dot"></span><span>GRPO đang train trên hgx47 · trang sẽ cập nhật khi xong</span></div>
+  </header>
+
+  <section class="grid" style="margin-top:20px">
+    <div class="panel"><div class="label">Ứng viên tốt nhất (kỳ vọng)</div><div class="value ok">80.62%</div><div class="muted">ensemble 3 phiếu: 2 verifier + 1 thinking · ±1.7 điểm qua 5 lần gieo</div></div>
+    <div class="panel"><div class="label">Single tất định tốt nhất</div><div class="value">76.04%</div><div class="muted">verifier no-think (s11boot26) · gates 48/48 · ~1.4× lượt gọi</div></div>
+    <div class="panel"><div class="label">Baseline round 2</div><div class="value">72.92%</div><div class="muted">s11boot26 no-think · trần của trục instruction</div></div>
+    <div class="panel"><div class="label">Trần symbolic</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
+    <div class="panel"><div class="label">GRPO v1c</div><div class="value warn">đang chạy</div><div class="muted">1×H200 colocate · ~74s/step · ETA ~21h · reward 0.625 @step5</div></div>
+  </section>
+
+  <h2>Bảng xếp hạng dev-96</h2>
+  <div class="panel">
+    <div class="bars" id="scoreboard"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:linear-gradient(90deg,#3ba57e,var(--green))"></span>Ensemble nhiều phiếu</span>
+      <span><span class="sw" style="background:linear-gradient(90deg,#2596c9,var(--cyan))"></span>Cấu hình một mô hình</span>
+      <span><span class="sw" style="background:#33465f"></span>Tham chiếu</span>
+      <span><span class="sw" style="background:var(--muted)"></span>vạch: baseline 72.92%</span>
+      <span><span class="sw" style="background:var(--purple)"></span>vạch: trần symbolic 96.88%</span>
+    </div>
+    <div class="muted" style="margin-top:8px">Thang 60–100%. "Kỳ vọng" = trung bình qua 5 lần gieo phiếu thinking; các số khác là một lần chạy đầy đủ dev-96. Hover để xem chi tiết.</div>
+  </div>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>Phương sai của native thinking (temp 0.6)</h3>
+      <div class="muted">5 lần chạy dev-96 cùng một chương trình s11boot26, chỉ khác sampling:</div>
+      <div class="strip" id="strip"></div>
+      <ul class="muted">
+        <li>Một lần chạy đơn lẻ là <b style="color:var(--text)">xúc xắc ±4.6 điểm</b> — con số 80.21% ban đầu là đỉnh của dải nhiễu.</li>
+        <li>Thinking làm <b style="color:var(--text)">rò rỉ gates</b>: C2 11/12 ở 3/5 lần, C7 11/12 ở 3/5 lần, C8 tụt tới 5/12 — thứ mà verifier no-think giữ 48/48 tuyệt đối.</li>
+        <li>Bù lại nó mở khóa C3 (12/12 hai lần — điều no-think chưa từng làm được).</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Verifier chống tự-mâu-thuẫn (label-neutral)</h3>
+      <div class="muted">Chỉ flag mâu thuẫn nội-văn-bản / cấu trúc rồi bắt model quyết lại (tối đa 2 retry) — không bao giờ gợi ý nhãn:</div>
+      <ul>
+        <li>Bất đẳng thức viết sai số học (<code>-2.19 &lt; -3</code>)</li>
+        <li>Chữ verdict ngược với chính bất đẳng thức model vừa viết</li>
+        <li>Quote sai số so với observation của tool</li>
+        <li>Kết luận residual khi chưa gọi đủ 2 tool giai đoạn 2</li>
+      </ul>
+      <div class="muted">Offline trên trace round-2: bắt <b style="color:var(--text)">21/26 case sai</b>. Trên dev-96: 58 case sạch ngay, 12 case tự sửa đúng sau retry, 26 case vẫn kẹt flag. Phát hiện phụ: nhiều case C1 "đúng" hóa ra đoán ăn may không đo gì — verifier ép đo thật, đúng tinh thần trace integrity. Think+verifier <b style="color:var(--text)">không xếp chồng</b> (76.04%): retry trong chế độ sampling lật cả câu đúng.</div>
+    </div>
+  </div>
+
+  <h2>Per-label (số câu đúng /12)</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Cấu hình</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th><th>C6</th><th>C7</th><th>C8</th><th>Tổng</th></tr></thead>
+    <tbody id="matrix"></tbody>
+  </table></div>
+  <div class="muted" style="margin-top:8px">Đậm màu = gần 12/12. Gates chính xác C2/C5/C7/C8 gần bão hòa ở mọi cấu hình no-think; toàn bộ trận địa còn lại nằm ở vùng residual C1/C3/C4/C6 (trần symbolic đạt 45/48 vùng này).</div>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>Ensemble hoạt động thế nào</h3>
+      <div class="muted">Mỗi case lấy đa số phiếu; hòa phiếu thì ưu tiên verifier-s11 (tất định, gates chắc nhất). Tổ hợp 3 phiếu = <b style="color:var(--text)">verifier-s11 + verifier-s4 + 1 run thinking tươi</b>:</div>
+      <ul>
+        <li>Hai phiếu verifier <b style="color:var(--text)">tất định</b> làm mỏ neo (gates 48/48, bù trừ nhau: v-s11 mạnh C1/C8, v-s4 mạnh C4/C6) — phiếu thinking bơm C3.</li>
+        <li>Kết quả qua 5 lần gieo phiếu thinking: <b style="color:var(--text)">83.3 / 80.2 / 81.25 / 79.2 / 79.2</b> → kỳ vọng 80.62% ± 1.7 (so với single thinking ±4.6).</li>
+        <li>Chi phí ≈ 2.6× base về compute; wall-clock ≈ một run thinking nếu chạy 3 phiếu song song.</li>
+        <li>7 phiếu (5 thinking + 2 verifier) = 81.25% — thêm 4 run thinking chỉ mua thêm ~0.6 điểm.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>GRPO v1c (đang chạy · hgx47, GPU trống duy nhất của cụm)</h3>
+      <div class="flow">
+        <div class="step"><span class="chip dead">v1a chết</span><span class="muted">pip kéo transformers 5.14 → peft 0.17 thiếu <code>HybridCache</code>. Fix: pin <code>transformers==4.55.2</code>.</span></div>
+        <div class="step"><span class="chip dead">v1b kill</span><span class="muted">rollout mặc định bật thinking → 94% completion cắt cụt ở 768 token, reward chấm trên chuỗi think dở dang. Fix: soft switch <code>/no_think</code> trong prompt.</span></div>
+        <div class="step"><span class="chip live">v1c khỏe</span><span class="muted">cắt cụt 0% · reward_correct 0.625 @step5 · KL 0.001 · ~74s/step · 1048 step ≈ 21h · checkpoint mỗi 50 step.</span></div>
+        <div class="step"><span class="chip info">thiết kế</span><span class="muted">TRL GRPO + LoRA r32, vLLM colocate 1 GPU · dataset 2.099 prompt label-free (874 gated + 658 residual ×2, khớp symbolic) · nhãn chỉ nằm trong reward · eval bằng đúng b3 ReAct dev-96 trỏ sang model đã merge.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Giao thức</h2>
+  <div class="panel muted">Chọn cấu hình <b style="color:var(--text)">chỉ trên dev-96</b>. Holdout-96 chưa đụng ở round 3 — sẽ bắn đúng <b style="color:var(--text)">một phát</b> cho MỘT cấu hình cuối cùng sau khi GRPO xong (chuẩn hiện tại phải vượt: 75.00% holdout của chương trình selected round-1). Official-864 đóng băng. Mọi tool đều label-neutral (audit tự động); verifier không bao giờ cung cấp nhãn; GRPO không nhìn thấy nhãn ngoài hàm reward.</div>
+
+<script>
+const SCORE=[
+  {name:"Ensemble 3 phiếu (2 verifier + 1 think) — kỳ vọng",pct:80.62,type:"ens",tip:"5 lần gieo phiếu thinking: 83.33 / 80.21 / 81.25 / 79.17 / 79.17 · ±1.74 điểm"},
+  {name:"Ensemble 7 phiếu (5 think + 2 verifier)",pct:81.25,type:"ens",tip:"78/96 · một lần đánh giá · C6 8/12, C8 12/12"},
+  {name:"Self-consistency 5 phiếu thinking",pct:80.21,type:"ens",tip:"77/96 · đa số của 5 run thinking"},
+  {name:"Verifier no-think · s11boot26",pct:76.04,type:"single",tip:"73/96 · TẤT ĐỊNH · gates 48/48 · ~1.4× lượt gọi, ~15s/câu"},
+  {name:"Thinking đơn (trung bình 5 lần)",pct:75.21,type:"single",tip:"77/67/74/68/75 trên 96 · ±4.62 điểm · ~48s/câu"},
+  {name:"Verifier no-think · s4boot46",pct:73.96,type:"single",tip:"71/96 · C6 8/12 kỷ lục nhưng C3 0/12"},
+  {name:"Baseline round 2 · s11boot26",pct:72.92,type:"ref",tip:"70/96 · no-think · temp 0"},
+  {name:"Selected round 1 · s4boot46 (holdout 75.00)",pct:69.79,type:"ref",tip:"67/96 dev · 72/96 holdout — chuẩn phải vượt"},
+  {name:"Trần symbolic (Python thuần, cùng luồng)",pct:96.88,type:"ref",tip:"93/96 · gates + C6>C4>C1 @142.5 (fit trên train)"},
+];
+const MIN=60,MAX=100,W=p=>((p-MIN)/(MAX-MIN)*100).toFixed(2)+"%";
+document.getElementById("scoreboard").innerHTML=SCORE.map(r=>
+  `<div class="bar-row" title="${r.tip}">
+     <div class="bar-name">${r.name}</div>
+     <div class="track"><i class="fill ${r.type==="ref"?"ref":r.type==="ens"?"ens":""}" style="width:${W(r.pct)}"></i>
+       <i class="tick base" style="left:${W(72.92)}"></i><i class="tick" style="left:${W(96.88)}"></i></div>
+     <div class="bar-val"><b>${r.pct.toFixed(2)}%</b> <span class="muted">${Math.round(r.pct/100*96)}/96</span></div>
+   </div>`).join("");
+
+const RUNS=[{v:80.21,n:77},{v:69.79,n:67},{v:77.08,n:74},{v:70.83,n:68},{v:78.12,n:75}],SMIN=65,SMAX=85;
+const X=v=>((v-SMIN)/(SMAX-SMIN)*100);
+const mean=75.21,sd=4.62,strip=document.getElementById("strip");
+strip.innerHTML=
+  `<div class="axisline"></div>`+
+  [65,70,75,80,85].map(v=>`<span class="axlab" style="left:${X(v)}%">${v}%</span>`).join("")+
+  `<div class="band" style="left:${X(mean-sd)}%;width:${X(mean+sd)-X(mean-sd)}%"></div>`+
+  `<div class="meanline" style="left:${X(mean)}%"></div><span class="meanlab" style="left:${X(mean)}%">mean 75.21% ± 4.62</span>`+
+  RUNS.map(r=>`<span class="sdot" style="left:calc(${X(r.v)}% - 7px)" title="${r.n}/96 = ${r.v}%"><span>${r.n}</span></span>`).join("");
+
+const MATRIX=[
+  ["Ensemble 3 phiếu (draw t1)",[10,12,7,7,12,8,12,12]],
+  ["Ensemble 7 phiếu",[8,12,11,3,12,8,12,12]],
+  ["SC-5 thinking",[8,12,12,4,12,7,11,11]],
+  ["Verifier · s11boot26",[10,12,7,2,12,6,12,12]],
+  ["Thinking run tốt nhất (t1)",[8,11,12,6,12,7,12,9]],
+  ["Verifier · s4boot46",[6,12,0,9,12,8,12,12]],
+  ["Baseline s11boot26",[10,12,8,2,12,2,12,12]],
+  ["Trần symbolic",[12,12,10,11,12,12,12,12]],
+];
+document.getElementById("matrix").innerHTML=MATRIX.map(([name,row])=>{
+  const total=row.reduce((a,b)=>a+b,0);
+  return `<tr><td>${name}</td>${row.map(n=>{
+    const a=(0.08+0.55*(n/12)).toFixed(2);
+    return `<td><span class="cell" style="background:rgba(70,213,255,${a})" title="${n}/12">${n}</span></td>`;}).join("")}
+    <td><b>${total}</b>/96</td></tr>`;}).join("");
+</script>
+</main></body></html>
