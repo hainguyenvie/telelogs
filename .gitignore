@@ -1,7 +1,12 @@
 # Secrets and local configuration
 .env
 .env.*
-!.env.example
+config.local.*
+*.local.json
+*.local.yaml
+*.local.yml
+credentials*.json
+smoke_request.json
 *.pem
 *.key
 secrets/
