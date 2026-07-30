@@ -38,6 +38,17 @@ GATE_SPECS = {
 }
 RESIDUAL_TOOLS = ("analyze_pci_relations", "analyze_neighbor_overlap")
 
+# Stage-two calibrated rules, in the seed's order. Verifier v2 audits the same
+# polarity contradictions on these lines that v1 audited on the four gates —
+# round-3 trace analysis showed the dominant confusion (C4->C3, 50/190 errors)
+# is a verdict flip on a correctly written residual inequality
+# ("best_noncolocated_gap = 9.98 > -3 -> not triggered").
+RESIDUAL_SPECS = {
+    "C3": ("minimum_difference_mbps", 142.5, "ge", "analyze_throughput_segments"),
+    "C4": ("best_noncolocated_gap", -3.0, "ge", "analyze_neighbor_overlap"),
+}
+RESIDUAL_ORDER = ("C3", "C6", "C4", "C1")
+
 INEQ_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(<=|>=|<|>)\s*(-?\d+(?:\.\d+)?)")
 STRONG_C1_RE = re.compile(r"-\d+(?:\.\d+)?\s*<=?\s*-90\b")
 
@@ -74,6 +85,8 @@ def _observed_value(observations: dict[str, Any], tool: str, field: str) -> floa
     for key, blob in (observations or {}).items():
         if key.endswith(tool):
             value = _find_field(blob, field)
+            if field == "best_noncolocated_gap" and isinstance(value, dict):
+                value = value.get("neighbor_minus_serving_db")
             if isinstance(value, (int, float)):
                 return float(value)
     return None
@@ -108,41 +121,54 @@ def verify_prediction(
                 "-95 < -90) and re-evaluate that step."
             )
 
-    triggered_fields: list[str] = []
-    verdict_by_class: dict[str, bool] = {}
-    for gate_class, (field, threshold, direction, _tool) in GATE_SPECS.items():
+    def audit_numeric_specs(specs: dict) -> dict[str, bool]:
+        verdicts: dict[str, bool] = {}
+        for spec_class, (field, threshold, direction, _tool) in specs.items():
+            for line in text.splitlines() or [text]:
+                if field not in line:
+                    continue
+                verdict = _line_verdict(line)
+                if verdict is None:
+                    continue
+                verdicts[spec_class] = verdict
+                quoted = None
+                for pair in INEQ_RE.finditer(line):
+                    left, _op, right = float(pair[1]), pair[2], float(pair[3])
+                    if abs(right - threshold) < 1e-9 and abs(left - threshold) >= 1e-9:
+                        quoted = left
+                    elif abs(left - threshold) < 1e-9 and abs(right - threshold) >= 1e-9:
+                        quoted = right
+                if quoted is None:
+                    continue
+                actual = _observed_value(observations, _tool, field)
+                if actual is not None and abs(quoted - actual) > 0.05:
+                    flags.append(
+                        f"The verification line quoting {field} uses the value {quoted}, but the "
+                        f"tool observation returned {actual}; re-read the observation and redo that line."
+                    )
+                    continue
+                if _condition(quoted, threshold, direction) != verdict:
+                    flags.append(
+                        f"The verification line quoting {field} writes a comparison of {quoted} "
+                        f"against {threshold} whose verdict word contradicts that comparison under "
+                        "your stated criterion; recompute that single line and follow your procedure."
+                    )
+                break
+        return verdicts
+
+    verdict_by_class = audit_numeric_specs(GATE_SPECS)
+    triggered_fields = [GATE_SPECS[c][0] for c, v in verdict_by_class.items() if v]
+
+    # Stage-two audit (verifier v2): same polarity/misquote discipline on the
+    # numeric residual rules, plus keyword-only verdict collection for C6/C1.
+    residual_verdicts = audit_numeric_specs(RESIDUAL_SPECS)
+    for res_class, keyword in (("C6", "equal_residue_pairs"), ("C1", "rows_below_main_lobe_lower_edge")):
         for line in text.splitlines() or [text]:
-            if field not in line:
-                continue
-            verdict = _line_verdict(line)
-            if verdict is None:
-                continue
-            verdict_by_class[gate_class] = verdict
-            if verdict:
-                triggered_fields.append(field)
-            quoted = None
-            for pair in INEQ_RE.finditer(line):
-                left, _op, right = float(pair[1]), pair[2], float(pair[3])
-                if abs(right - threshold) < 1e-9 and abs(left - threshold) >= 1e-9:
-                    quoted = left
-                elif abs(left - threshold) < 1e-9 and abs(right - threshold) >= 1e-9:
-                    quoted = right
-            if quoted is None:
-                continue
-            actual = _observed_value(observations, _tool, field)
-            if actual is not None and abs(quoted - actual) > 0.05:
-                flags.append(
-                    f"The verification line quoting {field} uses the value {quoted}, but the "
-                    f"tool observation returned {actual}; re-read the observation and redo that line."
-                )
-                continue
-            if _condition(quoted, threshold, direction) != verdict:
-                flags.append(
-                    f"The verification line quoting {field} writes a comparison of {quoted} "
-                    f"against {threshold} whose verdict word contradicts that comparison under "
-                    "your stated criterion; recompute that single line and follow your procedure."
-                )
-            break
+            if keyword in line:
+                verdict = _line_verdict(line)
+                if verdict is not None:
+                    residual_verdicts.setdefault(res_class, verdict)
+                    break
 
     if triggered_fields and answer not in {c for c, v in verdict_by_class.items() if v}:
         flags.append(
@@ -154,6 +180,33 @@ def verify_prediction(
         flags.append(
             "The final answer corresponds to a decisive criterion whose own verification line "
             'states "not triggered"; resolve this contradiction using only your own measurements.'
+        )
+
+    strong_c1_claimed = answer == "C1" and bool(STRONG_C1_RE.search(text))
+    first_affirmed = next((c for c in RESIDUAL_ORDER if residual_verdicts.get(c)), None)
+    if first_affirmed and answer != first_affirmed and not strong_c1_claimed and not triggered_fields:
+        flags.append(
+            "One of your residual rule lines states that an earlier rule in your stated order is "
+            "satisfied, but the final answer does not follow the first satisfied rule; re-evaluate "
+            "the rules one at a time, stop at the first satisfied one, and resolve the contradiction."
+        )
+    if (
+        answer in residual_verdicts
+        and answer != "C3"  # C3 is also the rule-5 fallback: a "not triggered" rule-1 line is legitimate
+        and residual_verdicts[answer] is False
+        and not strong_c1_claimed
+        and not triggered_fields
+    ):
+        flags.append(
+            "The final answer corresponds to a residual rule whose own line in your reasoning "
+            'states it is NOT satisfied ("not triggered"); recompute that line and resolve the '
+            "contradiction using only your own measurements."
+        )
+    if answer == "C3" and not triggered_fields and "minimum_difference_mbps" not in text:
+        flags.append(
+            "The fallback conclusion requires first quoting minimum_difference_mbps from "
+            "segment_minimum_comparison and evaluating each residual rule in order; quote the "
+            "measured values before selecting any fallback."
         )
 
     if answer in GATE_SPECS:
