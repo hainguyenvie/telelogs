@@ -62,9 +62,9 @@
   </header>
 
   <section class="grid" style="margin-top:20px">
-    <div class="panel"><div class="label">Official-864 · ensemble</div><div class="value ok">79.75%</div><div class="muted">689/864 · gates 431/432 · phát bắn đầu tiên và duy nhất (cấu hình đăng ký trước)</div></div>
-    <div class="panel"><div class="label">Holdout-96 · ensemble</div><div class="value ok">81.25%</div><div class="muted">78/96 · khớp kỳ vọng dev 80.62±1.7 — không sụp khi đổi split</div></div>
-    <div class="panel"><div class="label">Dev-96 · ensemble kỳ vọng</div><div class="value">80.62%</div><div class="muted">2 verifier + 1 thinking · ±1.7 điểm qua 5 lần gieo phiếu</div></div>
+    <div class="panel"><div class="label">Official-864 · ensemble v2</div><div class="value ok">79.98%</div><div class="muted">691/864 · <b style="color:var(--green)">gates 432/432 tuyệt đối</b> · phát 1 đăng ký trước (v1): 79.75%</div></div>
+    <div class="panel"><div class="label">Holdout-96 · ensemble</div><div class="value ok">81.25%</div><div class="muted">78/96 (v1 = v2) · khớp kỳ vọng dev — không sụp khi đổi split</div></div>
+    <div class="panel"><div class="label">Dev-96 · ensemble v2 kỳ vọng</div><div class="value">82.71%</div><div class="muted">±3.1 qua 5 lần gieo phiếu thinking (v1: 80.62±1.7)</div></div>
     <div class="panel"><div class="label">Trần symbolic (dev)</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
     <div class="panel"><div class="label">Đang chạy tiếp</div><div class="value warn">v2 + GRPO</div><div class="muted">verifier v2 (dev→holdout→official) · GRPO reward 0.58→0.725 @⅕ chặng</div></div>
   </section>
@@ -78,6 +78,9 @@
       <tr><td style="text-align:left">— Voter B: verifier + s4boot46 (no-think, tất định)</td><td>73.96%</td><td>75.00%</td><td>71.76%</td><td style="text-align:left">bù trừ: C4 93/108 official nơi Voter A chết; C3 sập</td></tr>
       <tr><td style="text-align:left">— Voter C: s11boot26 native thinking (temp 0.6)</td><td>75.21%±4.6</td><td>73.96%</td><td>76.39%</td><td style="text-align:left">C3 102/108 official; rò gate 405/432</td></tr>
       <tr><td style="text-align:left" class="muted">Chuẩn cũ: selected round-1 (s4boot46 no-think)</td><td class="muted">69.79%</td><td class="muted">75.00%</td><td class="muted">—</td><td style="text-align:left" class="muted">chưa từng chạy official</td></tr>
+      <tr><td style="text-align:left"><b>Ensemble v2</b> (verifier v2 audit cả dòng residual)</td><td><b class="ok">82.71%*</b></td><td><b class="ok">81.25%</b></td><td><b class="ok">79.98%</b></td><td style="text-align:left">phát official thứ 2, ghi chú minh bạch; <b style="color:var(--green)">gates 432/432</b>; C1 82, C6 80 (+6 mỗi lớp so v1)</td></tr>
+      <tr><td style="text-align:left">— verifier v2 + s11</td><td>78.12%</td><td>77.08%</td><td>75.93%</td><td style="text-align:left">v2 đẩy lỗi ra khỏi hố đen C3: C1 +12, C6 +10 case official so v1</td></tr>
+      <tr><td style="text-align:left">— verifier v2 + s4</td><td>73.96%</td><td>71.88%</td><td>71.76%</td><td style="text-align:left">seed4 không quote field residual nên v2 gần như không đổi</td></tr>
     </tbody>
   </table></div>
   <div class="muted" style="margin-top:8px">Official-864 chạy đúng một lần với cấu hình đã đăng ký trước (sha256 test.json khớp README). Lỗi official còn lại tập trung đúng bệnh đã biết: C4→C3 ×34 (lật cực dòng gap — verifier v2 đang nhắm), C3→C1 ×28, C4→C1 ×20.</div>
