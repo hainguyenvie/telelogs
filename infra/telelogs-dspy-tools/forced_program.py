@@ -77,6 +77,11 @@ class ForcedMeasurementProgram(dspy.Module):
     def load(self, path) -> None:
         self.inner.load(path)
 
+    def extra_block(self, case, observations: dict[str, Any]) -> str:
+        """Hook: extra material appended wherever numbers are handed back. See compare_program."""
+        del case, observations
+        return ""
+
     def forward(self, raw_question: str, case) -> dspy.Prediction:
         from tool_program import normalize_answer
 
@@ -110,7 +115,7 @@ class ForcedMeasurementProgram(dspy.Module):
                 block, observed = forced_block(case, missing)
                 forced.update(observed)
                 forced_rounds += 1
-                question = raw_question + block
+                question = raw_question + block + self.extra_block(case, observations)
                 if len(flags) > 1:
                     question += AUDIT_HEADER + "\n".join(f"- {flag}" for flag in flags)
             else:
@@ -118,6 +123,7 @@ class ForcedMeasurementProgram(dspy.Module):
                 if forced:
                     block, _ = forced_block(case, list(forced))
                     question += block
+                question += self.extra_block(case, observations)
 
         pred, final_flags = min(enumerate(attempts), key=lambda item: (len(item[1][1]), -item[0]))[1]
         pred.lm_calls = total_calls
