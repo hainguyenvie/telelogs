@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Round 3 · Verifier / Thinking / Ensemble / GRPO · TeleLogs</title>
+  <title>Round 3–4 · Verifier / Ensemble / Forced measurement / GRPO · TeleLogs</title>
   <style>
     :root{color-scheme:dark;--bg:#08111f;--panel:#101d31;--line:#243750;--text:#eaf1fb;--muted:#94a8c4;--cyan:#46d5ff;--green:#54d89f;--red:#ff7180;--amber:#ffca5c;--purple:#bd9cff}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 14% 0,#153354 0,transparent 38%),var(--bg);color:var(--text);font:14px/1.5 ui-sans-serif,system-ui,sans-serif}main{width:min(1480px,95vw);margin:26px auto 70px}
@@ -54,11 +54,11 @@
 <body><main>
   <header>
     <div>
-      <h1>Round 3 · Verifier / Thinking / Ensemble / GRPO</h1>
+      <h1>Round 3–4 · Verifier · Ensemble · Forced measurement</h1>
       <div class="muted">Track tool-calling (b3 ReAct + tools label-neutral) · Qwen3-8B · dev-96 · 2026-07-30</div>
-      <div><a href="tools.html">Live run dashboard</a> · <a href="dspy.html">Prompt study cũ</a> · <a href="./">Full 4 benchmarks</a></div>
+      <div><a href="#r4">→ Round 4 (một chương trình đơn)</a> · <a href="tools.html">Live run dashboard</a> · <a href="dspy.html">Prompt study cũ</a> · <a href="./">Full 4 benchmarks</a></div>
     </div>
-    <div class="status"><span class="dot"></span><span>Official-864: <b style="color:var(--green)">82.99%</b> (R3-final) · latency đã đo · GRPO đang train</span></div>
+    <div class="status"><span class="dot"></span><span>Official-864: <b style="color:var(--green)">82.99%</b> (ensemble R3-final) · phiếu đơn tốt nhất 76.85% · GRPO đang train</span></div>
   </header>
 
   <section class="grid" style="margin-top:20px">
@@ -458,6 +458,102 @@
     </table></div>
     <div class="muted" style="margin-top:8px">Đa số thường sẽ chọn C3 và sai. Weighted vote biết "phiếu nào bầu C3 cũng không đáng tin, còn s4 bầu C6 thì gần như chắc" nên chọn C6. Tổng kết trên official-864, weighted khác đa số thường ở 23 case: <b style="color:var(--text)">được 20 (5 ca thiểu-số-thắng kiểu này — tất cả đều gold C6 cùng một khuôn — và 15 ca vỡ 3 hướng chọn phiếu nặng nhất), mất 3</b> → net +17 case = 81,02% → 82,99%.</div>
     <div class="muted" style="margin-top:10px"><b style="color:var(--amber)">Ghi chú trung thực về chất lượng lập luận:</b> phiếu B ra nhãn đúng nhưng câu loại C4 của nó viết <i>"best_noncolocated_gap là 1,48 dB, không phải −3 dB hoặc tốt hơn, nên C4 không được hỗ trợ"</i> — sai chiều so đúng thứ mà verifier v2 được thiết kế để bắt (1,48 &gt; −3 nên bằng chứng C4 CÓ bật). Nó thoát audit vì câu văn không khớp mẫu polarity. Nghĩa là: <b style="color:var(--text)">trọng số học từ tần suất đúng nên nó thưởng cả những lần đúng vì may</b> — và đây chính là lý do nhược điểm số 4 ở trên đáng để chữa bằng trọng tài đọc-trace, không phải bằng prompt.</div>
+  </div>
+
+  <h2 id="r4">Round 4 — bỏ ensemble: siết một chương trình đơn tới đâu?</h2>
+  <div class="muted">Câu hỏi: không dùng bầu phiếu thì một chương trình có vượt được 82.99% không, và trục prompt đã cạn thật chưa. Round 4 trả lời bằng bốn thí nghiệm, trong đó <b style="color:var(--text)">cái có headroom lớn nhất lại về số 0</b> — và chính kết quả âm đó là phát hiện quan trọng nhất.</div>
+
+  <section class="grid" style="margin-top:14px">
+    <div class="panel"><div class="label">Phiếu đơn tốt nhất (official)</div><div class="value">76.85%</div><div class="muted">s11 + verifier v2.1 · 664/864</div></div>
+    <div class="panel"><div class="label">+ Forced measurement</div><div class="value bad">76.27%</div><div class="muted">659/864 — <b>không tăng</b>, dù dev-96 báo +7,3 điểm</div></div>
+    <div class="panel"><div class="label">Ensemble 3 phiếu</div><div class="value ok">82.99%</div><div class="muted">chương trình đơn vẫn kém <b>6,1 điểm</b></div></div>
+    <div class="panel"><div class="label">Vùng residual: LM vs Python</div><div class="value warn">47.9% / 76.9%</div><div class="muted">cùng 376 ca, cùng 6 observation, cùng luật in trong prompt</div></div>
+    <div class="panel"><div class="label">Oracle 2 phiếu (v2.1 + forced)</div><div class="value" style="color:var(--purple)">84.14%</div><div class="muted">chỉ trùng nhãn 80.0% → forcing tạo ĐA DẠNG dù không tạo điểm</div></div>
+  </section>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Thí nghiệm chính: bắt buộc đo giai đoạn 2 — cơ chế chạy đúng, điểm không lên</h3>
+    <div class="muted">Chẩn đoán trước khi làm: vùng residual của phiếu đơn tốt nhất tách làm hai nửa — 194 ca gọi đủ 2 tool giai đoạn 2 (đúng 63.9%) và 182 ca THIẾU (đúng 34.1%, trong đó trả lời C1 tới 120 lần). Cả 182 ca <b style="color:var(--text)">đã đốt hết 3 lượt audit</b>: verifier đòi số đo ba lần và bị phớt. 88 ca trong đó policy sẽ đúng nếu có số → tôi tính "+10,2 điểm đang nằm trên bàn". Nên tôi thôi xin: chương trình tự chạy tool còn thiếu rồi đưa số cho model quyết lại.</div>
+    <div class="table-wrap" style="margin-top:10px"><table>
+      <thead><tr><th style="text-align:left">Cấu hình</th><th>dev-96</th><th>holdout-96</th><th>official-864</th><th>Phủ stage-2 (câu residual)</th><th>Residual đúng (official)</th><th>Gate</th><th>LM calls</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">s11 + verifier v2.1</td><td>72.92%</td><td><b>80.21%</b></td><td><b>76.85%</b></td><td class="bad">52%</td><td>186/376 = 49.5%</td><td>478/488</td><td>12.0</td></tr>
+        <tr><td style="text-align:left"><b>+ forced measurement</b></td><td class="ok"><b>80.21%</b></td><td>79.17%</td><td>76.27%</td><td class="ok"><b>100%</b></td><td>180/376 = 47.9%</td><td>479/488</td><td><b>10.7</b></td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">Đọc thẳng, không tô hồng: <b style="color:var(--text)">lỗi "trả lời mà chưa đo" đã bị xóa sổ (52% → 100% phủ), nhưng accuracy không đổi</b> (−5 ca trên 864, trong nhiễu). dev-96 báo +7,3 điểm; holdout −1 ca; official −5 ca. Đây là <b style="color:var(--text)">lần thứ ba dev-96 chọn nhiễu</b> ở round 3–4, và là lý do từ round 4 việc chọn cấu hình chuyển sang dev-96 + tập <code>sel200</code> (200 ca train-split ngoài vùng lấy demo, tổng 296 ca).</div>
+    <div class="muted" style="margin-top:8px">Con số "+10,2 điểm headroom" hóa ra là ảo: nó giả định <i>hễ có số đo thì model sẽ ra đáp án của policy</i>. Model không làm thế. Sau khi bắt buộc đo, khối lỗi chỉ <b style="color:var(--text)">dịch chỗ</b>: từ C4→C3 (37) sang <b class="bad">C3→C1 48 và C4→C1 44</b> — C1 trở thành bãi rác mới (184 câu trả lời C1, chỉ 79 đúng).</div>
+  </div>
+
+  <div class="panel" style="margin-top:12px" >
+    <h3>Con số quan trọng nhất của round 4</h3>
+    <div class="bars" style="margin-top:6px">
+      <div class="bar-row" title="376 ca residual official, đủ cả 6 observation">
+        <div class="bar-name">Python thuần, cùng luật, cùng số đo</div>
+        <div class="track"><i class="fill" style="width:76.9%;background:linear-gradient(90deg,#7a5cc0,#bd9cff)"></i></div>
+        <div class="bar-val"><b>76.9%</b> <span class="muted">289/376</span></div>
+      </div>
+      <div class="bar-row" title="cùng 376 ca, model có đủ 6 observation trên bàn">
+        <div class="bar-name">LM với ĐỦ 6 observation trên bàn</div>
+        <div class="track"><i class="fill" style="width:47.9%;background:linear-gradient(90deg,#a34b57,#ff7180)"></i></div>
+        <div class="bar-val"><b>47.9%</b> <span class="muted">180/376</span></div>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:10px"><b style="color:var(--text)">109 ca sai thuần vì không áp dụng nổi thứ tự luật</b> — dữ liệu ở trên bàn, luật in nguyên văn trong prompt, không thiếu gì cả. Đây là câu trả lời có bằng chứng cho "prompt đã cạn chưa": <b style="color:var(--text)">cạn theo hướng cấp thêm thông tin hoặc viết lại chỉ dẫn</b>. Ba đường còn lại đều không phải prompt: (1) bước quyết định KHÔNG bị phân tán — <code>b3_react_specialist</code>, residual có call riêng chỉ thấy 6 observation và thứ tự luật, không có 4 gate/8 định nghĩa/bảng drive-test; (2) học luật vào trọng số — GRPO, đúng cái mà dataset RL của nó đang huấn luyện (prompt single-turn đã kèm observation); (3) chấp nhận đường bầu phiếu, nơi oracle đã là 96.06%.</div>
+  </div>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>Sổ ghi trung thực: trục một-chương-trình đã thử gì</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="text-align:left">Đòn</th><th style="text-align:left">Kết quả</th><th style="text-align:left">Phán quyết</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">11 seed viết tay</td><td style="text-align:left">tốt nhất 63.54% dev</td><td style="text-align:left" class="muted">cạn</td></tr>
+          <tr><td style="text-align:left">BootstrapFewShot 2 demo</td><td style="text-align:left">72.92% dev (đứng im từ 29/07)</td><td style="text-align:left" class="muted">cạn</td></tr>
+          <tr><td style="text-align:left">Demo budget 4</td><td style="text-align:left">73.96% dev</td><td style="text-align:left" class="muted">nhích 1 điểm</td></tr>
+          <tr><td style="text-align:left"><b>Demo budget 6</b></td><td style="text-align:left"><b class="bad">0/96 — vỡ context window</b></td><td style="text-align:left"><b style="color:var(--amber)">CHẶN CỨNG</b>, không phải "đã dò hết": mỗi demo ReAct chứa cả observation</td></tr>
+          <tr><td style="text-align:left">GEPA (reflector Qwen)</td><td style="text-align:left">45.83% dev</td><td style="text-align:left" class="muted">thất bại</td></tr>
+          <tr><td style="text-align:left">Verifier v1 → v2 → v2.1</td><td style="text-align:left">72.92 → 76.85% official</td><td style="text-align:left" class="ok">có tác dụng (mechanism, không phải câu chữ)</td></tr>
+          <tr><td style="text-align:left"><b>Forced measurement</b></td><td style="text-align:left"><b>76.27% official</b></td><td style="text-align:left" class="bad">bằng 0 — xóa được lỗi đo, không mua được điểm</td></tr>
+          <tr><td style="text-align:left">MIPROv2</td><td style="text-align:left"><i class="muted">đang chạy</i></td><td style="text-align:left" class="warn">optimizer DSPy DUY NHẤT chưa từng chạy (26 program compiled đều là seed/bootstrap/GEPA); lần 1 chết vì thiếu <code>optuna</code></td></tr>
+          <tr><td style="text-align:left">Residual specialist</td><td style="text-align:left"><i class="muted">đang chạy</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
+          <tr><td style="text-align:left">GRPO (trọng số)</td><td style="text-align:left"><i class="muted">đang train</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="panel">
+      <h3>Verifier v2.2 — kiểm witness theo OBSERVATION, không theo chữ model viết</h3>
+      <div class="muted">v2/v2.1 chỉ audit những gì model <i>viết ra</i>, nên ca chọn một lớp mà không hề nhắc tới witness của nó thì lọt lưới. Sau khi forcing xóa lỗi "không đo", đây thành bệnh chính. Replay trên <b style="color:var(--text)">2.880 prediction đã lưu</b> của 6 run:</div>
+      <div class="table-wrap" style="margin-top:8px"><table>
+        <thead><tr><th style="text-align:left">Nhánh kiểm</th><th>Kích hoạt</th><th>Sai</th><th>Báo động sai</th><th>Ship?</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">C1 mà <code>rows_below_main_lobe_lower_edge</code> RỖNG</td><td>26</td><td>26</td><td class="ok">0</td><td class="ok"><b>có</b></td></tr>
+          <tr><td style="text-align:left">C4 mà <code>best_noncolocated_gap &lt; −3</code></td><td>172</td><td>172</td><td class="ok">0</td><td class="ok"><b>có</b></td></tr>
+          <tr><td style="text-align:left">C6 mà <code>equal_residue_pairs</code> RỖNG</td><td>0</td><td>0</td><td class="ok">0</td><td class="muted">có (không bao giờ nổ)</td></tr>
+          <tr><td style="text-align:left">C3 fallback mà luật trước đã có witness</td><td>118</td><td>102</td><td class="bad">16</td><td class="warn">sau cờ env</td></tr>
+        </tbody>
+      </table></div>
+      <div class="muted" style="margin-top:8px">Hai nhánh đầu <b style="color:var(--text)">198/198 đều là câu sai, zero báo động sai</b> → ship vô điều kiện, theo đúng nguyên tắc đã chọn v2.1 (superset audit, 0 false-flag). Nhánh C3 để sau <code>TELELOGS_VERIFIER_C3_FALLBACK=1</code> để so bằng số. Điểm đáng chú ý nhất: <b style="color:var(--text)">v2.2 mở khóa retry cho phiếu s4</b> — dưới v2.1 nó chỉ bị cờ 7/864 trace nên chưa từng chạy lại lần nào; dưới v2.2 là 165/864 với 97% cờ đúng.</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Reasoning mềm hơn — mà không đụng vào phần máy kiểm được</h3>
+    <div class="muted">Dòng audit <b style="color:var(--text)">cứng vì buộc phải cứng</b>: verifier parse đúng tên field + bất đẳng thức có dấu + chữ "triggered"/"not triggered". Làm mềm văn bản đang bị audit = làm mù audit. Nên không làm mềm nó, mà thôi bắt một chuỗi làm hai việc: lớp <code>narrate.py</code> chạy SAU khi nhãn đã chốt, với lớp chẩn đoán là <b style="color:var(--text)">INPUT</b> chứ không phải output — về cấu trúc nó không thể đổi verdict. Giá 1 lượt LM (~2s). Đo trên cùng 16 ca dev: <b style="color:var(--text)">11/16 cả khi có và khi không có narration</b> — accuracy y hệt.</div>
+    <div class="cols2" style="margin-top:10px">
+      <div class="abox" style="max-width:none;text-align:left">
+        <b>Dòng máy-kiểm (giữ nguyên, verifier parse)</b>
+        <div class="muted" style="margin-top:6px;font-family:ui-monospace,monospace;font-size:11.5px;white-space:pre-wrap">- C2: maximum_distance_km (analyze_coverage_geometry) is 0.064 &lt; 1 → not triggered.
+- C5: transition_count (analyze_mobility) is 1 &lt; 3 → not triggered.
+- C7: maximum_speed_kmh (analyze_mobility) is 30 &lt; 40 → not triggered.
+- C8: low_throughput_rows_mean_scheduled_rbs is 210.02 &gt; 160 → not triggered.</div>
+      </div>
+      <div class="abox" style="max-width:none;text-align:left;border-color:#3ba57e">
+        <b style="color:var(--green)">Narrative (field mới, văn xuôi)</b>
+        <div class="muted" style="margin-top:6px">"On this road section, the throughput drops below 600Mbps in specific segments, primarily when the serving cell PCI is 712 or 832. The analysis reveals that the issue is not due to coverage distance, handover frequency, vehicle speed, or insufficient scheduled RBs… Instead, the key insight lies in the PCI modulo-30 residue analysis, which shows that the serving cell and several neighboring cells share the same residue (22)… <b style="color:var(--text)">While a competing explanation could involve coverage geometry issues, the analysis confirms that no rows fall below the main lobe lower edge with poor RSRP, eliminating that possibility.</b>"</div>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:8px">Nó tự nêu cơ chế vật lý, giả thuyết cạnh tranh, và phép đo đã loại giả thuyết đó — dùng trực tiếp trong báo cáo được. Cờ <code>--narrate-language</code> cho bản tiếng Việt.</div>
   </div>
 
   <h2>Giao thức</h2>
