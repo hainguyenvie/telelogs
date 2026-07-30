@@ -36,15 +36,23 @@ thực thi LM hiện tại (72.92% dev).
 3. Case strong-C1 trong nhóm residual nhận đủ 6 observation dù luồng deploy
    có thể dừng ở 4 — chấp nhận, ghi chú để phân tích sau.
 
-## Hạ tầng (CHƯA launch — chờ lệnh)
+## Hạ tầng (v2 — ĐÃ launch 2026-07-30)
 
-- Pod `telelogs-rl`: 2×H200 trên hgx046 (còn trống ≥5 GPU lúc khảo sát
-  2026-07-30), image `pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel`, hostPath
-  `/mnt/registry/tensara-home/projects/telelogs-rl` → `/workspace/telelogs-rl`,
-  mount read-only `projects/telelogs` (weights Qwen3-8B trong cache HF) và
-  `projects/telelogs-bench4` (data + code neutral_tools). Runner loop
-  jobs/→done/ giống bench4. KHÔNG đụng GPU của telelogs-bench4,
-  tensara-dev-0, vt-track1.
+Khảo sát thực nghiệm 2026-07-30 (probe pod admission): hgx046 0 GPU trống
+(kubelet "Available: 0" dù namespace tensara chỉ chiếm 3 — phần còn lại bị
+namespace khác giữ), hgx45 0 trống, **hgx47 đúng 1 GPU trống** → pivot sang
+thiết kế 1-GPU:
+
+- Pod `telelogs-rl`: 1×H200 trên hgx47, image pytorch 2.8. Storage node-local
+  `/mnt/tensara-home/projects/telelogs-rl` (registry storage của hgx046 KHÔNG
+  share sang node khác — đã probe xác nhận cả hgx45 lẫn hgx47).
+- Bootstrap: weights Qwen3-8B tải từ HF (hgx47 có internet); code+data kéo
+  qua HTTP fileserver tạm trên bench4-client (job `zz_fileserver.sh`, tự tắt).
+- Training: TRL vLLM **colocate** trên cùng GPU (`--vllm-mode colocate`,
+  vLLM giữ 25% VRAM), chuỗi `run_all_v1.sh` = setup → dataset (assert số
+  dòng) → train.
+- Eval: `serve_grpo_model.sh` chiếm lại GPU đó sau khi train xong; service
+  `telelogs-rl-vllm` định tuyến từ client bench4 qua mạng cụm.
 
 ## Checklist khi được lệnh launch
 

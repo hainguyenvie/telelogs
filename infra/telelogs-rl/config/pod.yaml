@@ -1,24 +1,62 @@
+# telelogs-rl v2 — single free GPU on hgx47, node-local storage, bootstrap over
+# the cluster network (weights from HF, code/data from the bench4 client
+# fileserver at BOOTSTRAP_URL). Survives restarts: fetch is skipped once done.
 apiVersion: v1
 kind: Pod
 metadata:
   name: telelogs-rl
+  namespace: tensara
   labels:
     app: telelogs-rl
+    owner: h2n
 spec:
-  nodeName: hgx046
+  nodeName: hla9104p1-escn8-smt-hgx47
   restartPolicy: Always
   containers:
     - name: main
       image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      env:
+        - name: BOOTSTRAP_URL
+          value: "http://192.168.207.77:8111"
       command: ["/bin/bash", "-c"]
       args:
         - |
           set -u
           ROOT=/workspace/telelogs-rl
-          mkdir -p "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/cache" "$ROOT/data" "$ROOT/checkpoints" "$ROOT/models"
+          mkdir -p "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/cache" "$ROOT/data" "$ROOT/code" "$ROOT/checkpoints" "$ROOT/models"
           chmod -R 0777 "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/cache" 2>/dev/null || true
 
-          # Resume a persistent serving job after a pod/container restart.
+          if [ ! -f "$ROOT/done/.bootstrap_ok" ]; then
+            echo "bootstrap: fetching code+data from $BOOTSTRAP_URL"
+            python3 - <<'PYEOF'
+          import os, time, urllib.request
+          base = os.environ["BOOTSTRAP_URL"]
+          root = "/workspace/telelogs-rl"
+          files = {
+              "code/neutral_tools.py": "code/neutral_tools.py",
+              "data/train.json": "data/train.json",
+              "rl_staging/setup_env.sh": "setup_env.sh",
+              "rl_staging/make_grpo_dataset.py": "make_grpo_dataset.py",
+              "rl_staging/grpo_train.py": "grpo_train.py",
+              "rl_staging/run_all_v1.sh": "run_all_v1.sh",
+              "rl_staging/serve_grpo_model.sh": "serve_grpo_model.sh",
+          }
+          for src, dst in files.items():
+              target = os.path.join(root, dst)
+              while True:
+                  try:
+                      urllib.request.urlretrieve(f"{base}/{src}", target)
+                      print("fetched", src, os.path.getsize(target), "bytes", flush=True)
+                      break
+                  except Exception as exc:
+                      print("retry", src, exc, flush=True)
+                      time.sleep(20)
+          PYEOF
+            touch "$ROOT/done/.bootstrap_ok"
+            echo "bootstrap complete"
+          fi
+
+          # Resume the persistent serving job after a pod/container restart.
           if [ -f "$ROOT/done/serve_grpo_model.running" ]; then
             mv "$ROOT/done/serve_grpo_model.running" "$ROOT/jobs/serve_grpo_model.sh"
           fi
@@ -51,31 +89,17 @@ spec:
           done
       resources:
         limits:
-          nvidia.com/gpu: 2
+          nvidia.com/gpu: 1
       volumeMounts:
         - mountPath: /workspace/telelogs-rl
           name: project
-        - mountPath: /workspace/telelogs
-          name: telelogs-base
-          readOnly: true
-        - mountPath: /workspace/telelogs-bench4
-          name: bench4
-          readOnly: true
         - mountPath: /dev/shm
           name: shm
   volumes:
     - name: project
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs-rl
+        path: /mnt/tensara-home/projects/telelogs-rl
         type: DirectoryOrCreate
-    - name: telelogs-base
-      hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs
-        type: Directory
-    - name: bench4
-      hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs-bench4
-        type: Directory
     - name: shm
       emptyDir:
         medium: Memory

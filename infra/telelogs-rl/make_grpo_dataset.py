@@ -18,6 +18,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, "/workspace/telelogs-rl/code")
 sys.path.insert(0, "/workspace/telelogs-bench4/dspy-tools/code")
 from neutral_tools import TOOL_FUNCTIONS, assert_label_neutral, parse_case  # noqa: E402
 
@@ -87,7 +88,7 @@ def build_prompt(question: str, observations: dict) -> list[dict[str, str]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--raw", default="/workspace/telelogs-bench4/dspy-tools/data/train.json")
+    parser.add_argument("--raw", default="/workspace/telelogs-rl/data/train.json")
     parser.add_argument("--out", default="/workspace/telelogs-rl/data/grpo_train.jsonl")
     parser.add_argument("--residual-repeat", type=int, default=2,
                         help="how many times residual-stage prompts are repeated (gated stay at 1)")

@@ -13,7 +13,16 @@ PYBIN=$(command -v python3 || echo /opt/conda/bin/python3)
   "peft==0.17.0" \
   "accelerate==1.9.0" \
   "datasets==4.0.0" \
-  "vllm==0.10.0"
+  "vllm==0.10.0" \
+  "huggingface_hub[hf_transfer]"
+
+export HF_HOME="$ROOT/cache/hf"
+export HF_HUB_ENABLE_HF_TRANSFER=1
+"$ROOT/venv/bin/python" -c "
+from huggingface_hub import snapshot_download
+path = snapshot_download('Qwen/Qwen3-8B')
+print('weights at', path)
+"
 
 "$ROOT/venv/bin/python" - <<'EOF'
 import torch, transformers, trl, peft, vllm

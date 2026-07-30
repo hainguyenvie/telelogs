@@ -57,6 +57,9 @@ def main() -> None:
     parser.add_argument("--max-prompt-length", type=int, default=8192)
     parser.add_argument("--max-completion-length", type=int, default=768)
     parser.add_argument("--temperature", type=float, default=0.9)
+    parser.add_argument("--vllm-mode", choices=("server", "colocate"), default="colocate")
+    parser.add_argument("--vllm-gpu-mem", type=float, default=0.25,
+                        help="colocate mode: fraction of the GPU handed to the vLLM rollout engine")
     parser.add_argument("--vllm-host", default="127.0.0.1")
     parser.add_argument("--vllm-port", type=int, default=8700)
     args = parser.parse_args()
@@ -82,11 +85,14 @@ def main() -> None:
         save_steps=50,
         save_total_limit=3,
         use_vllm=True,
-        vllm_mode="server",
-        vllm_server_host=args.vllm_host,
-        vllm_server_port=args.vllm_port,
+        vllm_mode=args.vllm_mode,
         report_to=[],
     )
+    if args.vllm_mode == "server":
+        config_kwargs["vllm_server_host"] = args.vllm_host
+        config_kwargs["vllm_server_port"] = args.vllm_port
+    else:
+        config_kwargs["vllm_gpu_memory_utilization"] = args.vllm_gpu_mem
     valid_fields = {field.name for field in dataclasses.fields(GRPOConfig)}
     if "chat_template_kwargs" in valid_fields:
         config_kwargs["chat_template_kwargs"] = {"enable_thinking": False}
