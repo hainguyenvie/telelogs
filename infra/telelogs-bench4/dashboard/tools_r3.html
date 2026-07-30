@@ -461,13 +461,31 @@
   </div>
 
   <h2 id="r4">Round 4 — bỏ ensemble: siết một chương trình đơn tới đâu?</h2>
-  <div class="muted">Câu hỏi: không dùng bầu phiếu thì một chương trình có vượt được 82.99% không, và trục prompt đã cạn thật chưa. Round 4 trả lời bằng bốn thí nghiệm, trong đó <b style="color:var(--text)">cái có headroom lớn nhất lại về số 0</b> — và chính kết quả âm đó là phát hiện quan trọng nhất.</div>
+  <div class="muted">Câu hỏi: không dùng bầu phiếu thì một chương trình có vượt được 82.99% không, và trục prompt đã cạn thật chưa. Round 4 trả lời bằng năm thí nghiệm, trong đó <b style="color:var(--text)">cái có headroom lớn nhất lại về số 0</b> — và chính kết quả âm đó dẫn thẳng tới đòn thắng.</div>
+
+  <div class="panel" style="margin-top:12px;border-left:3px solid var(--green)">
+    <h3 style="color:var(--green)">Kết luận round 4 — CÓ, và còn rẻ hơn</h3>
+    <div class="muted"><b style="color:var(--text)">Residual specialist: 745/864 = 86.23% trên official</b>, bằng MỘT chương trình, pre-register trước khi chạy. Vượt ensemble 3 phiếu (82.99%) <b style="color:var(--text)">+3,24 điểm</b> với McNemar <b style="color:var(--text)">81:53, p=0,019</b> — và chỉ tốn 11,3 LM call thay vì 25,3, 26,5 phút thay vì 89,3 phút cho cả 864 câu. Holdout-96 <b style="color:var(--text)">87,50%</b>, cao nhất từ đầu dự án.</div>
+    <div class="table-wrap" style="margin-top:10px"><table>
+      <thead><tr><th style="text-align:left">Cấu hình</th><th>dev-96</th><th>sel200</th><th>holdout-96</th><th>official-864</th><th>LM calls</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left"><b>Residual specialist (ship)</b></td><td>92.71%</td><td>83.00%</td><td class="ok"><b>87.50%</b></td><td class="ok"><b>86.23%</b></td><td class="ok"><b>11.3</b></td></tr>
+        <tr><td style="text-align:left">Ensemble 3 phiếu (cũ)</td><td>82.71%</td><td>—</td><td>83.33%</td><td>82.99%</td><td class="bad">25.3</td></tr>
+        <tr><td style="text-align:left">s11 + verifier v2.1</td><td>72.92%</td><td>73.00%</td><td>80.21%</td><td>76.85%</td><td>12.0</td></tr>
+        <tr><td style="text-align:left">s11 + forced</td><td>80.21%</td><td>76.00%</td><td>79.17%</td><td>76.27%</td><td>10.7</td></tr>
+        <tr><td style="text-align:left"><i class="muted">Symbolic reference (trần)</i></td><td>96.88%</td><td>—</td><td>—</td><td style="color:var(--purple)">89.93%</td><td>0</td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">Chỗ điểm thực sự đến: <b style="color:var(--text)">nửa residual (432 ca) đi từ 53,7% lên 72,5%</b>, trần symbolic trên đúng 432 ca đó là 79,9% → <b style="color:var(--text)">lấp được 72% toàn bộ khoảng cách LM-với-Python</b>. Nửa gate vẫn 432/432. Đổi lại: C3 +33,3 điểm, C4 +13,0 điểm, nhưng <b class="bad">C1 −18,5 điểm</b> — luật 1 (<code>min_diff ≥ 142,5 → C3</code>) chỉ chính xác 73% nên cướp mất C1 trước khi tới luật C1.</div>
+    <div class="muted" style="margin-top:8px">Vì sao nó thắng, đã kiểm bằng thí nghiệm đối chứng: <b style="color:var(--text)">không phải nhờ giúp làm phép so sánh</b>. Đưa sẵn các so sánh có dấu (pre-written comparisons) chỉ được 79,05% pooled — bằng forced (p=0,52), thua specialist (p=0,004). Cái specialist gỡ bỏ là <b style="color:var(--text)">ngữ cảnh</b>: cùng luật đó, nhưng trong một prompt không phải cùng lúc gánh 4 gate + 8 định nghĩa + bảng drive-test.</div>
+    <div class="muted" style="margin-top:8px">Ngân sách lỗi còn lại (119 ca): <b>44</b> policy đúng mà model không thi hành được (đích của GRPO) · <b>62</b> policy sai nhưng một run khác đã có nhãn đúng (đích của routing/vote trên specialist — chưa từng thử) · <b>13</b> không gì trong tay lấy được. Oracle trên toàn bộ những gì đã chạy: <b style="color:var(--text)">98,50%</b>.</div>
+  </div>
 
   <section class="grid" style="margin-top:14px">
     <div class="panel"><div class="label">Phiếu đơn tốt nhất (official)</div><div class="value">76.85%</div><div class="muted">s11 + verifier v2.1 · 664/864</div></div>
     <div class="panel"><div class="label">+ Forced measurement</div><div class="value bad">76.27%</div><div class="muted">659/864 — <b>không tăng</b>, dù dev-96 báo +7,3 điểm</div></div>
-    <div class="panel"><div class="label">Ensemble 3 phiếu</div><div class="value ok">82.99%</div><div class="muted">chương trình đơn vẫn kém <b>6,1 điểm</b></div></div>
-    <div class="panel"><div class="label">Vùng residual: LM vs Python</div><div class="value warn">47.9% / 76.9%</div><div class="muted">cùng 376 ca, cùng 6 observation, cùng luật in trong prompt</div></div>
+    <div class="panel"><div class="label">Ensemble 3 phiếu</div><div class="value">82.99%</div><div class="muted">mốc phải vượt — <b class="ok">đã vượt: 86.23%</b></div></div>
+    <div class="panel"><div class="label">Vùng residual: LM vs Python</div><div class="value warn">47.9% / 76.9%</div><div class="muted">cùng 376 ca, cùng 6 observation, cùng luật in trong prompt — <b class="ok">specialist kéo lên 72,5%</b></div></div>
     <div class="panel"><div class="label">Oracle 2 phiếu (v2.1 + forced)</div><div class="value" style="color:var(--purple)">84.14%</div><div class="muted">chỉ trùng nhãn 80.0% → forcing tạo ĐA DẠNG dù không tạo điểm</div></div>
   </section>
 
@@ -515,9 +533,9 @@
           <tr><td style="text-align:left">GEPA (reflector Qwen)</td><td style="text-align:left">45.83% dev</td><td style="text-align:left" class="muted">thất bại</td></tr>
           <tr><td style="text-align:left">Verifier v1 → v2 → v2.1</td><td style="text-align:left">72.92 → 76.85% official</td><td style="text-align:left" class="ok">có tác dụng (mechanism, không phải câu chữ)</td></tr>
           <tr><td style="text-align:left"><b>Forced measurement</b></td><td style="text-align:left"><b>76.27% official</b></td><td style="text-align:left" class="bad">bằng 0 — xóa được lỗi đo, không mua được điểm</td></tr>
-          <tr><td style="text-align:left">MIPROv2</td><td style="text-align:left"><i class="muted">đang chạy</i></td><td style="text-align:left" class="warn">optimizer DSPy DUY NHẤT chưa từng chạy (26 program compiled đều là seed/bootstrap/GEPA); lần 1 chết vì thiếu <code>optuna</code></td></tr>
-          <tr><td style="text-align:left">Residual specialist</td><td style="text-align:left"><i class="muted">đang chạy</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
-          <tr><td style="text-align:left">GRPO (trọng số)</td><td style="text-align:left"><i class="muted">đang train</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
+          <tr><td style="text-align:left">MIPROv2</td><td style="text-align:left"><b>72.92% dev</b> (81.25% có audit)</td><td style="text-align:left" class="bad">bằng 0 — optimizer đắt nhất, ngang hệt bootstrap 2 demo; pooled 296 ca p=0.086 vs baseline</td></tr>
+          <tr><td style="text-align:left"><b>Residual specialist</b></td><td style="text-align:left"><b class="ok">86.23% official · 87.50% holdout</b></td><td style="text-align:left" class="ok"><b>THẮNG</b> — vượt ensemble 82.99% (McNemar 81:53, p=0.019) bằng MỘT chương trình, 45% số LM call</td></tr>
+          <tr><td style="text-align:left">Pre-written comparisons</td><td style="text-align:left">79.05% pooled-296</td><td style="text-align:left" class="bad">bằng 0 — bằng forced (p=0.52), thua specialist (p=0.004): cái specialist mua KHÔNG phải phép so sánh</td></tr><tr><td style="text-align:left">GRPO (trọng số)</td><td style="text-align:left"><i class="muted">đang train</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
         </tbody>
       </table></div>
     </div>

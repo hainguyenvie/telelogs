@@ -223,6 +223,8 @@
 
   .note{border-left:3px solid var(--blue);background:color-mix(in srgb,var(--blue) 6%,transparent);
     border-radius:0 12px 12px 0;padding:14px 16px}
+  .note.ok{border-left-color:var(--green);background:color-mix(in srgb,var(--green) 7%,transparent)}
+  .note.ok h4{color:var(--green)}
   ul{margin:6px 0 0;padding-left:20px}li{margin:5px 0}
   footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
     font-size:12.5px;color:var(--faint)}
@@ -268,8 +270,9 @@
     <div class="grid g5" style="margin-top:16px">
       <div class="card kpi">
         <div class="label">Official test · 864 cases</div>
-        <div class="value ok">82.99%</div>
-        <div class="sub">Weighted-vote ensemble, shipped. Journey: 79.75 → 79.98 → 82.64 → 82.99</div>
+        <div class="value ok">86.23%</div>
+        <div class="sub">Residual specialist, a <b>single</b> program, pre-registered.
+          Journey: 79.75 → 82.64 → 82.99 → <b>86.23</b></div>
       </div>
       <div class="card kpi">
         <div class="label">Exact-criterion gates</div>
@@ -277,9 +280,9 @@
         <div class="sub">C2 / C5 / C7 / C8 — solved, no remaining error</div>
       </div>
       <div class="card kpi">
-        <div class="label">Best single program</div>
-        <div class="value" style="color:var(--blue)">86.15%</div>
-        <div class="sub">Residual specialist, on the 296-case selection set. Official run pre-registered and pending</div>
+        <div class="label">Previous best · 3-voter ensemble</div>
+        <div class="value" style="color:var(--blue)">82.99%</div>
+        <div class="sub">Beaten by the single program: McNemar <b>81 : 53, p = 0.019</b>, at 45% of its LM calls</div>
       </div>
       <div class="card kpi">
         <div class="label">Execution ceiling</div>
@@ -287,9 +290,9 @@
         <div class="sub">The same decision flow in plain Python — every residual rule is only 73–79% precise</div>
       </div>
       <div class="card kpi">
-        <div class="label">Ballot-selection ceiling</div>
-        <div class="value pur">96.06%</div>
-        <div class="sub">830/864 cases already carry the gold label on one of three ballots</div>
+        <div class="label">The hard half · 432 residual cases</div>
+        <div class="value" style="color:var(--amber)">72.5%</div>
+        <div class="sub">Up from 53.7%. The symbolic ceiling on the same cases is 79.9% — 72% of the gap closed</div>
       </div>
     </div>
 
@@ -316,10 +319,12 @@
         <h4>What actually moved the number</h4>
         <p>Not prompt wording. Instruction seeds and bootstrapped demos plateaued early and stayed flat.
         Every subsequent gain came from <b>mechanism</b>: an audit-and-retry loop, a decorrelated third
-        voter, a precision-weighted aggregator, and — largest of all — giving the hard decision its own
+        voter with a precision-weighted aggregator, and — largest of all — giving the hard decision its own
         undistracted call.</p>
-        <p class="muted" style="margin:0">Two mechanisms that looked promising delivered nothing. Both are
-        reported below with the measurements that killed them.</p>
+        <p class="muted" style="margin:0">The last of those made the ensemble unnecessary: one program with
+        a residual specialist beats three programs voting, by 3.24 points, at 45% of the cost. Two other
+        mechanisms that looked promising delivered nothing; both are reported below with the measurements
+        that killed them.</p>
       </div>
     </div>
   </section>
@@ -328,9 +333,10 @@
     <h2>Architecture</h2>
     <p class="lede">Everything here is one tool-calling procedure used more than once. Figure 1 is that
     procedure — the only place raw data is ever touched. Figures 2 and 3 are the two configurations built
-    around it: run it three times and vote, or run it once and add a focused second decision. Nothing is
-    modelled on an external architecture; the only off-the-shelf part is the ReAct loop itself, taken from
-    <code>dspy.ReAct</code>.</p>
+    around it: run it three times and vote, or run it once and add a focused second decision. Figure 3 is
+    what ships; Figure 2 is kept because it was the shipped system for three rounds and its measurements
+    are what motivated Figure 3. Nothing is modelled on an external architecture; the only off-the-shelf
+    part is the ReAct loop itself, taken from <code>dspy.ReAct</code>.</p>
 
     <div class="card" style="margin-top:18px">
       <div class="fignum">Figure 1</div>
@@ -391,7 +397,7 @@
 
     <div class="grid g2" style="margin-top:20px;gap:20px">
       <div class="card">
-        <div class="fignum">Figure 2 · shipped</div>
+        <div class="fignum">Figure 2 · rounds 1–3</div>
         <h3>Run the core three times, then a precision-weighted vote</h3>
         <p class="muted" style="font-size:13.5px;margin:0 0 12px">Same six functions, same two-stage
         procedure. What differs between ballots is the compiled instruction, the bootstrapped demonstrations,
@@ -429,11 +435,12 @@
           </div>
           <div class="arrow">↓</div>
           <div class="abox out"><b>82.99% on official-864</b><div class="s">25.3 LM calls · 42 s per case in parallel, 60.3 s serial</div></div>
+          <div class="s" style="margin-top:8px;text-align:center;color:var(--muted)">superseded by Figure 3</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="fignum">Figure 3 · round 4</div>
+        <div class="fignum">Figure 3 · round 4 · shipped</div>
         <h3>Run the core once, then decide the residual step separately</h3>
         <p class="muted" style="font-size:13.5px;margin:0 0 12px">No voting. Two changes to what happens
         inside the residual branch of Figure 1: a skipped measurement is executed rather than requested
@@ -442,7 +449,7 @@
           <div class="abox src"><b>Raw case</b></div>
           <div class="arrow">↓<span>one run of Figure 1</span></div>
           <div class="abox"><b>seed v11 + audit</b><div class="s">the same ballot A program</div></div>
-          <div class="ttrace"><i>stage 1 · 100%</i><i class="g">stage 2 · 52.0% after forcing</i></div>
+          <div class="ttrace"><i>stage 1 · 100%</i><i class="g">stage 2 · 99.5% of residual answers</i></div>
           <div class="arrow">↓</div>
           <div class="abox out" style="max-width:none"><b>Gate answer · stop</b><div class="s">432/432 correct — unchanged</div></div>
           <div class="arrow">↓<span>residual branch only</span></div>
@@ -455,23 +462,39 @@
           <div class="abox stage" style="border-width:2px"><b>Residual specialist · a second, narrow call</b>
             <div class="s">sees the six observations and the ordered rules, and nothing else: no gate criteria,
               no cause definitions, no drive-test table</div>
-            <div class="chips"><i>runs on the residual zone only</i><i>changes the label in ~45%</i></div>
+            <div class="chips"><i>fires on 432/864 — exactly the residual zone</i><i>changes the label in ~45%</i></div>
           </div>
           <div class="arrow">↓</div>
-          <div class="abox out"><b>86.15% on the 296-case selection set</b>
-            <div class="s">11.4 LM calls · 18.6 s per case · official-864 pre-registered, still running</div></div>
+          <div class="abox out"><b>86.23% on official-864</b>
+            <div class="s">745/864 · 11.3 LM calls · 21.9 s per case · +3.24 points over the ensemble at
+              45% of its LM calls</div></div>
         </div>
       </div>
     </div>
 
-    <div class="note" style="margin-top:16px">
-      <h4>Why Figure 3 exists — the measurement that motivated it</h4>
-      <p style="margin:0">Take the 376 official residual cases, guarantee all six observations are present, and
-      leave the rule order printed verbatim in the prompt. The model scores <b>47.9%</b>. A plain-Python
-      executor of the same rules on the same numbers scores <b>76.9%</b>. That is 109 cases lost with nothing
-      missing — no absent measurement, no unstated rule. The prompt was simultaneously carrying four gate
-      criteria, eight cause definitions and the full drive-test table; moving the tie-break into its own call
-      recovered most of the gap.</p>
+    <div class="grid g2" style="margin-top:16px;gap:16px">
+      <div class="note">
+        <h4>Why Figure 3 exists — the measurement that motivated it</h4>
+        <p style="margin:0">Take the 376 official residual cases, guarantee all six observations are present,
+        and leave the rule order printed verbatim in the prompt. The model scores <b>47.9%</b>. A plain-Python
+        executor of the same rules on the same numbers scores <b>76.9%</b>. That is 109 cases lost with nothing
+        missing — no absent measurement, no unstated rule. The prompt was simultaneously carrying four gate
+        criteria, eight cause definitions and the full drive-test table. The hypothesis: the model can do the
+        arithmetic, but not while also holding everything else.</p>
+      </div>
+      <div class="note ok">
+        <h4>What Figure 3 delivered — confirmed on official-864</h4>
+        <p style="margin:0 0 10px">On the 432 cases whose true label is a residual class, accuracy went from
+        <b>53.7%</b> (audit-and-retry) to <b>72.5%</b>, against a symbolic ceiling of <b>79.9%</b> on the same
+        cases. Moving one decision into its own call recovered <b>72% of the entire LM-versus-Python gap</b>,
+        and the gate half stayed at 432/432.</p>
+        <dl class="kv">
+          <dt>Official-864</dt><dd class="ok"><b>745/864 = 86.23%</b></dd>
+          <dt>vs 3-voter ensemble</dt><dd>McNemar <b>81 : 53</b>, p = 0.019</dd>
+          <dt>vs audit-and-retry</dt><dd>McNemar 124 : 43, p = 2.7e-10</dd>
+          <dt>Cost</dt><dd>11.3 LM calls vs 25.3</dd>
+        </dl>
+      </div>
     </div>
   </section>
 
@@ -558,7 +581,8 @@
         functions — the only evidence for C4 and C6 — are called on roughly a quarter of cases by ballot A and
         a fifth by the thinking ballot, against a residual zone of 43.5%. Ballot B calls them on 50.9% because
         its bootstrapped demonstrations always do; the behaviour is inherited from examples, not from the
-        instruction, which is identical.</p>
+        instruction, which is identical. The shipped configuration reaches 52.4% by executing the skipped
+        call itself — <b>99.5%</b> of the cases that actually need it, and never on a gate case.</p>
       </div>
       <div class="card">
         <h4>Tool calls per case · ballot A</h4>
@@ -639,11 +663,14 @@
           <tr><td class="l"><code>GEPA</code> with a local reflector</td><td>1</td><td class="bad">45.83%</td><td class="l">
             The reflector rewrote the instruction into something the 8B model executed worse. A stronger
             reflector is the untried variant.</td></tr>
-          <tr><td class="l"><code>MIPROv2</code></td><td>3</td><td class="warn">75.0 on its own val-32</td><td class="l">
+          <tr><td class="l"><code>MIPROv2</code></td><td>3</td><td class="warn">72.92% raw · 81.25% audited</td><td class="l">
             Never run until round 4. Attempt 1 died on a missing optional dependency; attempt 2 completed the
-            search — 62.5 → 75.0 — and then lost the compile because its bootstrapped demos contain
-            non-string dict keys that the JSON serializer refuses. Now falls back to a pickle artifact; the
-            re-run is in flight.</td></tr>
+            search — 62.5 → 75.0 on its own val-32 — then lost the compile because its bootstrapped demos
+            contain non-string dict keys the JSON serializer refuses, so the saver now falls back to a pickle
+            artifact. Attempt 3 compiled (56.25 → 78.12 on val-32) and evaluated at <b>72.92%</b> raw on
+            dev-96 — identical to the plain 2-demo bootstrap. Pooled over the 296-case selection set it
+            reaches 78.04%, which is not distinguishable from the baseline (p = 0.086) or from forced
+            measurement (p = 0.90). The most expensive optimizer we ran bought nothing measurable.</td></tr>
         </tbody>
       </table></div>
       <p style="margin:12px 0 0;font-size:13.5px"><b>The honest summary of the DSPy axis.</b> It took the
@@ -671,19 +698,23 @@
 
     <div class="grid g2" style="margin-top:18px">
       <div class="card">
-        <h3>Error budget of the shipped ensemble</h3>
-        <p class="muted" style="font-size:13.5px">All 147 official errors, classified against the symbolic
-        reference and the three-ballot oracle.</p>
+        <h3>Error budget of the shipped single program</h3>
+        <p class="muted" style="font-size:13.5px">All 119 official errors, classified against the symbolic
+        reference and against every other configuration we have run on the same 864 cases.</p>
         <div id="budget"></div>
-        <p class="muted" style="margin:12px 0 0;font-size:13px">Nearly four fifths of what is left is not a
-        knowledge failure — the correct label was already on a ballot and lost the vote.</p>
+        <p class="muted" style="margin:12px 0 0;font-size:13px">Only 13 of 119 are genuinely out of reach:
+        an oracle over the symbolic policy plus every run on file would score <b>98.50%</b>. The remaining
+        error is split between execution (the specialist did not apply a rule the policy applies correctly)
+        and the policy itself being wrong where some other configuration happened to be right.</p>
       </div>
       <div class="card">
-        <h3>Confusion matrix · shipped ensemble on official-864</h3>
+        <h3>Confusion matrix · shipped single program on official-864</h3>
         <p class="muted" style="font-size:13.5px">Errors only. Rows are gold, columns are predicted.</p>
         <div class="tw" style="margin-top:10px"><table id="confmat"></table></div>
-        <p class="muted" style="margin:10px 0 0;font-size:13px">C4 is the weak class (66 errors), and the
-        C3↔C1 and C4↔C3 pairs are where the ordered tie-break runs out of discriminating power.</p>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">C4 is the weak class (52 errors) and the
+        C4→C3 and C4→C6 pairs are where the ordered tie-break runs out of discriminating power. The
+        C1 row (39 errors) is the price paid for C3: rule 1 fires on <code>min_diff ≥ 142.5</code> before
+        the C1 rule is ever reached.</p>
       </div>
     </div>
 
@@ -708,7 +739,7 @@
     </div>
 
     <h3 style="margin:40px 0 12px">Rejected mechanisms — built, measured, and dropped</h3>
-    <div class="grid g3">
+    <div class="grid g2">
       <div class="card">
         <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
           <span class="pill neg">no gain</span><b>Forced stage-2 measurement</b>
@@ -756,6 +787,23 @@
         merely explored — worth stating precisely, because "we tried more demos" and "more demos cannot fit"
         are different claims.</p>
       </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill neg">no gain</span><b>Pre-written comparisons</b>
+        </div>
+        <p style="font-size:13.5px">The diagnostic that isolates <i>why</i> the specialist works. If the
+        model loses residual cases because it mis-evaluates <code>146.38 ≥ 142.5</code>, then handing it the
+        signed comparisons already computed should recover the same ground. It does not.</p>
+        <dl class="kv" style="margin-top:10px">
+          <dt>Selection set (296)</dt><dd>79.05%</dd>
+          <dt>vs forced measurement</dt><dd>17 : 22, p = 0.52 — equal</dd>
+          <dt>vs residual specialist</dt><dd class="bad">14 : 35, p = 0.004 — clearly worse</dd>
+        </dl>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">So the specialist's gain is not arithmetic
+        help. What it removes is the <i>context</i>: the same rules, applied in a prompt that is not also
+        holding four gate criteria, eight cause definitions and the drive-test table. Kept as a diagnostic,
+        never shipped — it also sits closest to the tool-versus-answer boundary we set ourselves.</p>
+      </div>
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -787,21 +835,24 @@
         <tr><td class="l"><b>Ensemble · serial</b></td><td class="bad"><b>60.3 s</b></td><td colspan="4" class="l muted">sum of the three ballots — one machine, one thread</td><td><b>25.3</b></td><td>137 min</td></tr>
         <tr><td class="l"><b>Ensemble · parallel</b></td><td class="ok"><b>42.0 s</b></td><td colspan="4" class="l muted">equal to the slowest ballot; the two verifier ballots finish long before it</td><td>25.3</td><td>89.3 min</td></tr>
         <tr><td class="l">Cascade · accept ballot A when its trace is clean</td><td><b>25.1 s</b></td><td colspan="4" class="l muted">71% of cases cost 10.6 s; the rest pay for all three ballots</td><td>~11.7</td><td class="muted">—</td></tr>
-        <tr><td class="l"><b>Single program · residual specialist</b></td><td class="ok"><b>18.6 s</b></td><td colspan="4" class="l muted">one ballot, one extra focused call — no voting</td><td><b>11.4</b></td><td class="muted">pending</td></tr>
+        <tr><td class="l"><b>Single program · residual specialist · shipped</b></td><td class="ok"><b>18.6 s</b></td><td colspan="4" class="l muted">one ballot, one extra focused call — no voting</td><td class="ok"><b>11.3</b></td><td class="ok"><b>26.5 min</b></td></tr>
       </tbody>
     </table></div>
     <div class="grid g2" style="margin-top:16px">
-      <div class="note">
-        <h4>Quality per unit cost</h4>
-        <p style="margin:0">The cascade trades <b>1.4 points</b> for <b>58%</b> of the serial cost and needs
-        no tuning — the routing rule has no free parameter. The single-program pipeline is better still:
-        higher on the selection set at <b>45%</b> of the ensemble's LM calls.</p>
+      <div class="note ok">
+        <h4>Quality per unit cost — the unusual part of this result</h4>
+        <p style="margin:0">The shipped configuration is simultaneously the <b>most accurate</b> and the
+        <b>cheapest useful</b> one: 86.23% against the ensemble's 82.99% at <b>45%</b> of its LM calls and
+        <b>31%</b> of its serial wall-clock. Accuracy and cost usually trade against each other here; they
+        did not, because the ensemble was paying three times over to work around a defect —
+        one crowded decision — that the specialist removes outright.</p>
       </div>
       <div class="note">
         <h4>Where the wall-clock goes</h4>
         <p style="margin:0">The thinking ballot alone is about two thirds of the ensemble's serial time and
-        carries the widest variance (±4.6 points draw to draw). Removing it is the single biggest cost lever,
-        and the specialist pipeline does exactly that.</p>
+        carries the widest variance (±4.6 points draw to draw). Removing it was the single biggest cost lever,
+        and the specialist pipeline does exactly that. The full 864-case test now runs in <b>26.5 min</b> at
+        12 workers instead of 89.3 min.</p>
       </div>
     </div>
   </section>
@@ -859,20 +910,22 @@
     <h2>What is still open</h2>
     <div class="grid g4" style="margin-top:16px">
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill best">running</span><b>Specialist on official-864</b></div>
-        <p style="margin:0;font-size:13.5px">Pre-registered. If it lands near its selection-set estimate, a
-        single program beats the three-ballot ensemble at 45% of its cost.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill best">untried</span><b>Vote over specialists</b></div>
+        <p style="margin:0;font-size:13.5px">The two mechanisms are orthogonal and were never combined: every
+        ensemble measurement predates the specialist. 62 of the 119 remaining errors have the gold label on
+        some run already on file, and an oracle over everything scores <b>98.50%</b>.</p>
       </div>
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">ceiling</span><b>Trace-aware arbiter</b></div>
-        <p style="margin:0;font-size:13.5px">113 of 147 ensemble errors already hold the gold label on a
-        ballot. Weighting by class precision captured part of it; scoring each ballot's cited numbers against
-        the observations is the untried remainder.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">regression</span><b>The C1 the specialist gave away</b></div>
+        <p style="margin:0;font-size:13.5px">Against the ensemble it gains +42 C3 and +26 C4 but loses 20 net
+        on C1 (63.9% vs 82.4%). Rule 1 claims those cases for C3 before the C1 rule is reached, so a
+        C1-versus-C3 discriminator is worth about 2 points on its own.</p>
       </div>
       <div class="card">
         <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">feature gap</span><b>Separating C4</b></div>
-        <p style="margin:0;font-size:13.5px">42/108 on official and 18/37 on the selection set. The 33-case
-        overlap zone shows this needs a new discriminating measurement, not a better prompt.</p>
+        <p style="margin:0;font-size:13.5px">56/108 on official — the weak class in every configuration ever
+        run, and 52 of the 119 remaining errors. The 33-case overlap zone shows this needs a new
+        discriminating measurement, not a better prompt.</p>
       </div>
       <div class="card">
         <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">training</span><b>GRPO on the residual step</b></div>
@@ -892,11 +945,12 @@
 </main>
 
 <script>
-const DATA = {"solutions": [{"id": "ensemble", "name": "Weighted-vote ensemble", "tag": "3 voters", "family": "ensemble", "status": "shipped", "headline": "82.99%", "oneLine": "Three heterogeneous programs vote; per-voter-per-class weights are fitted on dev-96 only.", "scores": {"dev-96": 82.71, "holdout-96": 83.33, "official-864": 82.99}, "official": {"n": 864, "ok": 717, "acc": 82.99, "perLabel": {"C1": [89, 108], "C2": [108, 108], "C3": [57, 108], "C4": [42, 108], "C5": [108, 108], "C6": [97, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 34], ["C4", "C3", 27], ["C4", "C1", 25], ["C4", "C6", 14], ["C3", "C4", 11], ["C1", "C3", 9], ["C1", "C4", 7], ["C3", "C6", 5], ["C6", "C1", 4]], "lat": 42.0, "lm": 25.3, "stage2": null, "attempts": null, "attemptAcc": null, "agree": {"1": [463, 463], "2": [198, 280], "3": [56, 121]}}, "mechanism": [["Voters", "verifier-s11 + verifier-s4 + native-thinking"], ["Weight", "w(voter,class) = (correct+1)/(votes+2), fitted on dev-96"], ["Tie-break", "verifier-s11 (deterministic, strongest gates)"], ["Unanimous cases", "463/864 → 100.0% correct"], ["LM calls / question", "25.3"], ["Latency / question", "42.0 s in parallel, 60.3 s serial"]], "failure": "All 147 remaining errors sit in the residual zone. 113 of them had the gold label on one of the three ballots and lost the vote, so they are an aggregator problem, not a knowledge problem. Three-way splits (121 cases) are only 46.3% correct while their oracle is 94.2%.", "evalOn": "official-864"}, {"id": "specialist", "name": "Residual specialist", "tag": "single program", "family": "mechanism", "status": "best-single", "headline": "86.15%", "oneLine": "The residual decision gets its own LM call that sees only the six observations and the rule order.", "scores": {"dev-96": 92.71, "sel200": 83.0, "selection-296": 86.15}, "official": {"n": 296, "ok": 255, "acc": 86.15, "perLabel": {"C1": [24, 37], "C2": [37, 37], "C3": [31, 37], "C4": [18, 37], "C5": [37, 37], "C6": [34, 37], "C7": [37, 37], "C8": [37, 37]}, "conf": [["C4", "C3", 11], ["C1", "C3", 7], ["C4", "C6", 6], ["C1", "C4", 3], ["C3", "C4", 3], ["C3", "C6", 3], ["C1", "C6", 3], ["C6", "C3", 3], ["C4", "C1", 2]], "lat": 20.8, "lm": 11.4, "stage2": [148, 148], "attempts": {"1": 160, "2": 96, "3": 40}, "attemptAcc": {"1": 98.8, "2": 76.0, "3": 60.0}}, "mechanism": [["Routing", "LM decides: the specialist runs only if the first pass concluded a residual class"], ["What it sees", "six observations + the ordered rules, nothing else"], ["Invoked on", "48/96 dev and 100/200 sel200 — exactly the residual zone"], ["Label changed", "11/48 dev, 45/100 sel200"], ["McNemar vs forced", "13 : 39 over 296 cases, p = 4.1e-04"], ["McNemar vs verifier v2.1", "1 : 20 on dev-96, p = 2e-05"], ["LM calls / question", "11.4"], ["Latency / question", "18.6 s"]], "failure": "C4 remains the weak class (18/37 on the selection set) and C1 gives up ground (24/37): the ordered policy itself cannot separate C4 from C3/C6 when several witnesses fire at once. Official-864 is pre-registered and running — the number above is a selection-set estimate, not a test result.", "evalOn": "selection set (296 cases)"}, {"id": "verifier", "name": "Consistency verifier", "tag": "audit + retry", "family": "mechanism", "status": "shipped", "headline": "76.85%", "oneLine": "A label-neutral audit re-runs the program when its own trace contradicts its own measurements.", "scores": {"dev-96": 72.92, "sel200": 73.0, "holdout-96": 80.21, "official-864": 76.85}, "official": {"n": 864, "ok": 664, "acc": 76.85, "perLabel": {"C1": [85, 108], "C2": [108, 108], "C3": [59, 108], "C4": [16, 108], "C5": [108, 108], "C6": [72, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C3", 47], ["C3", "C1", 38], ["C4", "C1", 35], ["C6", "C3", 16], ["C1", "C3", 15], ["C6", "C1", 13], ["C4", "C6", 10], ["C3", "C4", 8], ["C6", "C4", 7]], "lat": 22.1, "lm": 12.0, "stage2": [202, 431], "attempts": {"1": 463, "2": 106, "3": 294}, "attemptAcc": {"1": 97.4, "2": 69.8, "3": 47.3}}, "mechanism": [["Checks", "false inequality, misquoted value, verdict contradicting its own comparison, stage-2 skip"], ["Never supplies", "a class label — every message points at the model's own text"], ["Retries", "up to 2"], ["Passed on attempt 1", "463 cases → 97.4% correct"], ["Exhausted 3 attempts", "294 cases → 47.3% correct"], ["Measurement discipline", "28% → 78% of residual cases"], ["LM calls / question", "12.0"], ["Latency / question", "19.1 s"]], "failure": "It can only detect self-contradiction, so a trace that is clean but wrong survives. 252/864 traces leave the loop still flagged, and the retry loop cannot rescue hard cases: the cases that burn all three attempts are the ones it gets wrong 53% of the time, while consuming 3.7x the compute of a first-pass case.", "evalOn": "official-864"}, {"id": "forced", "name": "Forced stage-2 measurement", "tag": "negative result", "family": "mechanism", "status": "negative", "headline": "76.27%", "oneLine": "When a residual answer appears without its measurements, run the missing tools and hand back the numbers.", "scores": {"dev-96": 80.21, "sel200": 76.0, "holdout-96": 79.17, "official-864": 76.27}, "official": {"n": 864, "ok": 659, "acc": 76.27, "perLabel": {"C1": [79, 108], "C2": [108, 108], "C3": [50, 108], "C4": [18, 108], "C5": [108, 108], "C6": [80, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 48], ["C4", "C1", 44], ["C4", "C3", 31], ["C1", "C3", 15], ["C4", "C6", 15], ["C6", "C1", 13], ["C1", "C4", 9], ["C6", "C3", 8], ["C6", "C4", 7]], "lat": 21.2, "lm": 10.7, "stage2": [432, 432], "attempts": {"1": 470, "2": 272, "3": 122}, "attemptAcc": {"1": 97.4, "2": 54.8, "3": 42.6}}, "mechanism": [["Target", "182/376 official residual cases answered without stage-2 numbers"], ["Stage-2 coverage", "52% → 100%"], ["Estimated headroom", "+10.2 points"], ["Delivered", "-0.6 points"], ["McNemar on official", "68 : 63, p = 0.73 — no difference"], ["Cheaper", "10.7 vs 12.0 LM calls, 16.7 s vs 19.1 s"]], "failure": "The defect was real and got fixed; the accuracy did not move. Error mass merely relocated: C4→C3 (37) became C3→C1 (48) and C4→C1 (44), and C1 turned into the new dumping ground (184 answers, 79 correct). This is the experiment that proved the bottleneck is not missing information.", "evalOn": "official-864"}, {"id": "thinking", "name": "Native thinking", "tag": "high variance", "family": "prompt", "status": "in-ensemble", "headline": "76.39%", "oneLine": "Qwen3 thinking mode on the same program: better residual reasoning, leaky gates, high variance.", "scores": {"dev-96": 75.21, "holdout-96": 73.96, "official-864": 76.39}, "official": {"n": 864, "ok": 660, "acc": 76.39, "perLabel": {"C1": [57, 108], "C2": [105, 108], "C3": [102, 108], "C4": [37, 108], "C5": [106, 108], "C6": [59, 108], "C7": [102, 108], "C8": [92, 108]}, "conf": [["C4", "C3", 60], ["C6", "C3", 48], ["C1", "C3", 42], ["C8", "C3", 12], ["C4", "C6", 11], ["C1", "C4", 6], ["C3", "C4", 4], ["C8", "C4", 3], ["C1", "C6", 3]], "lat": 74.2, "lm": 6.1, "stage2": [150, 453], "attempts": null, "attemptAcc": null}, "mechanism": [["Draw-to-draw spread", "80.21 / 69.79 / 77.08 / 70.83 / 78.12 on dev-96 (sd 4.6)"], ["Strength", "C3 102/108 on official"], ["Weakness", "talks itself past verified gates; skips stage-2 tools in 237/376 residual cases"], ["LM calls / question", "6.1"], ["Latency / question", "42.0 s"]], "failure": "Single-draw variance is +-4.6 points, so it cannot be selected on or shipped alone; it also violates decisive criteria it has already verified. Its value is as the third, decorrelated ballot.", "evalOn": "official-864"}, {"id": "prompt", "name": "Prompt + demo optimization", "tag": "exhausted", "family": "prompt", "status": "exhausted", "headline": "72.92%", "oneLine": "Eleven hand-written instruction seeds and DSPy bootstrapped demos — the axis that plateaued first.", "scores": {"dev-96 best raw seed": 63.54, "dev-96 + 2 demos": 72.92, "dev-96 + 4 demos": 73.96}, "official": {"n": 96, "ok": 70, "acc": 72.92, "perLabel": {"C1": [9, 12], "C2": [12, 12], "C3": [4, 12], "C4": [2, 12], "C5": [12, 12], "C6": [7, 12], "C7": [12, 12], "C8": [12, 12]}, "conf": [["C4", "C3", 6], ["C3", "C1", 5], ["C1", "C3", 3], ["C4", "C1", 3], ["C6", "C1", 3], ["C3", "C6", 2], ["C4", "C6", 1], ["C6", "C4", 1], ["C3", "C7", 1]], "lat": 19.1, "lm": 12.2, "stage2": [23, 47], "attempts": {"1": 53, "2": 8, "3": 35}, "attemptAcc": {"1": 98.1, "3": 34.3, "2": 75.0}}, "mechanism": [["Instruction seeds", "11 hand-written; best 63.54% on dev-96"], ["Bootstrapped demos", "+9.4 points, then flat since 2026-07-29"], ["Same optimizer, different seed", "34.38% – 72.92% — the seed lottery dominates any wording effect"], ["Demo budget 6", "0/96 — exceeds the context window outright"], ["GEPA with a local reflector", "45.83%"], ["MIPROv2", "62.5 → 75.0 on its own val-32; re-running after a save crash"]], "failure": "Wording is not the binding constraint. The measured spread across seeds under one optimizer is wider than any instruction edit, so further search on a 96-case set optimizes noise. The demo axis is capped by the context window, not by imagination.", "evalOn": "dev-96"}, {"id": "symbolic", "name": "Symbolic reference", "tag": "ceiling", "family": "reference", "status": "reference", "headline": "89.93%", "oneLine": "The same decision flow executed in plain Python — the ceiling the LM is measured against.", "scores": {"dev-96": 96.88, "official-864": 89.93}, "official": {"n": 864, "ok": 777, "acc": 89.93, "perLabel": {"C1": [83, 108], "C2": [108, 108], "C3": [87, 108], "C4": [79, 108], "C5": [108, 108], "C6": [96, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C6", 17], ["C4", "C3", 12], ["C6", "C3", 12], ["C1", "C4", 12], ["C3", "C4", 9], ["C3", "C1", 8], ["C1", "C3", 7], ["C1", "C6", 6], ["C3", "C6", 4]], "lat": null, "lm": 0, "stage2": null, "attempts": null, "attemptAcc": null}, "mechanism": [["Gates + strong-C1 witness", "488/488 on official"], ["Residual zone", "289/376 = 76.9%"], ["Rule 1 C3 (min_diff >= 142.5)", "111 fires, 73.0% precise"], ["Rule 2 C6 (equal mod-30 pair)", "123 fires, 78.0% precise"], ["Rule 3 C4 (gap >= -3 dB)", "100 fires, 79.0% precise"], ["Rule 4 C1 (row below lobe)", "35 fires, 77.1% precise"], ["Never an answer path", "used only as an audit and a ceiling"]], "failure": "Even perfect execution stops near 90%: every residual rule is only 73-79% precise, and 33 cases fire the C3 and C6 rules simultaneously with gold split 14/12/4/3. Beyond this line the task needs a new discriminating feature, not better execution.", "evalOn": "official-864"}]};
-const TOOLSTATS = {"verifier": {"analyze_throughput_segments": 99.9, "analyze_coverage_geometry": 99.9, "analyze_mobility": 99.9, "analyze_radio_resources": 99.9, "analyze_pci_relations": 25.0, "analyze_neighbor_overlap": 24.9}, "s4": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 50.9, "analyze_neighbor_overlap": 50.9}, "thinking": {"analyze_throughput_segments": 54.2, "analyze_coverage_geometry": 99.3, "analyze_mobility": 97.8, "analyze_radio_resources": 96.8, "analyze_pci_relations": 31.5, "analyze_neighbor_overlap": 19.2}, "forced": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 52.0, "analyze_neighbor_overlap": 51.9}};
+const DATA = {"solutions": [{"id": "specialist", "name": "Residual specialist", "tag": "single program · shipped", "family": "mechanism", "status": "shipped", "headline": "86.23%", "oneLine": "The residual decision gets its own LM call that sees only the six observations and the rule order. One program, no voting — and it beats the three-ballot ensemble.", "scores": {"dev-96": 92.71, "sel200": 83.0, "holdout-96": 87.5, "official-864": 86.23}, "official": {"n": 864, "ok": 745, "acc": 86.23, "perLabel": {"C1": [69, 108], "C2": [108, 108], "C3": [93, 108], "C4": [56, 108], "C5": [108, 108], "C6": [95, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C3", 26], ["C1", "C3", 17], ["C4", "C6", 17], ["C6", "C3", 13], ["C1", "C4", 11], ["C1", "C6", 11], ["C3", "C4", 9], ["C4", "C1", 9], ["C3", "C6", 4], ["C3", "C1", 2]], "lat": 21.9, "lm": 11.33, "stage2": [430, 432], "attempts": null, "attemptAcc": null}, "mechanism": [["Routing", "the LM decides: the specialist runs only if the first pass concluded a residual class"], ["What it sees", "the six observations + the ordered rules, nothing else"], ["Fired on official", "432/864 — exactly the residual zone, and never on a gate case"], ["Gate half", "432/432 correct, unchanged"], ["Residual half", "313/432 = 72.5%, up from 53.7% (symbolic ceiling on the same cases: 79.9%)"], ["McNemar vs 3-voter ensemble", "81 : 53 over 864, p = 0.019"], ["McNemar vs audit-and-retry", "124 : 43 over 864, p = 2.7e-10"], ["Pre-registration", "config frozen on the 296-case selection set before official ran"], ["LM calls / question", "11.3 — 45% of the ensemble"], ["Latency / question", "21.9 s mean, 17.2 s median, 42.5 s p90"]], "failure": "C4 is still the weak class (56/108) and C1 gave up ground to buy C3 and C4: against the ensemble the specialist wins +42 C3 and +26 C4 but loses 20 net on C1. The ordered policy cannot separate C4 from C3/C6 when several witnesses fire at once, and rule 1 (min_diff ≥ 142.5 → C3) is only 73% precise, so every C1 whose min_diff clears that bar is claimed by C3 before the C1 rule is ever reached. This is the symbolic reference's own ceiling, inherited: it is a missing feature, not a prompting problem.", "evalOn": "official-864"}, {"id": "ensemble", "name": "Weighted-vote ensemble", "tag": "3 voters · superseded", "family": "ensemble", "status": "superseded", "headline": "82.99%", "oneLine": "Three heterogeneous programs vote; per-voter-per-class weights are fitted on dev-96 only.", "scores": {"dev-96": 82.71, "holdout-96": 83.33, "official-864": 82.99}, "official": {"n": 864, "ok": 717, "acc": 82.99, "perLabel": {"C1": [89, 108], "C2": [108, 108], "C3": [57, 108], "C4": [42, 108], "C5": [108, 108], "C6": [97, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 34], ["C4", "C3", 27], ["C4", "C1", 25], ["C4", "C6", 14], ["C3", "C4", 11], ["C1", "C3", 9], ["C1", "C4", 7], ["C3", "C6", 5], ["C6", "C1", 4]], "lat": 42.0, "lm": 25.3, "stage2": null, "attempts": null, "attemptAcc": null, "agree": {"1": [463, 463], "2": [198, 280], "3": [56, 121]}}, "mechanism": [["Voters", "verifier-s11 + verifier-s4 + native-thinking"], ["Weight", "w(voter,class) = (correct+1)/(votes+2), fitted on dev-96"], ["Tie-break", "verifier-s11 (deterministic, strongest gates)"], ["Unanimous cases", "463/864 → 100.0% correct"], ["LM calls / question", "25.3"], ["Latency / question", "42.0 s in parallel, 60.3 s serial"]], "failure": "All 147 remaining errors sit in the residual zone. 113 of them had the gold label on one of the three ballots and lost the vote, so they are an aggregator problem, not a knowledge problem. Three-way splits (121 cases) are only 46.3% correct while their oracle is 94.2%. Superseded in round 4: the single-program residual specialist scores 86.23% on the same 864 cases (McNemar 81 : 53, p = 0.019) using 11.3 LM calls instead of 25.3.", "evalOn": "official-864"}, {"id": "verifier", "name": "Consistency verifier", "tag": "audit + retry · in the shipped pipeline", "family": "mechanism", "status": "component", "headline": "76.85%", "oneLine": "A label-neutral audit re-runs the program when its own trace contradicts its own measurements. Still the first stage of the shipped pipeline; the score below is what it reaches on its own.", "scores": {"dev-96": 72.92, "sel200": 73.0, "holdout-96": 80.21, "official-864": 76.85}, "official": {"n": 864, "ok": 664, "acc": 76.85, "perLabel": {"C1": [85, 108], "C2": [108, 108], "C3": [59, 108], "C4": [16, 108], "C5": [108, 108], "C6": [72, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C3", 47], ["C3", "C1", 38], ["C4", "C1", 35], ["C6", "C3", 16], ["C1", "C3", 15], ["C6", "C1", 13], ["C4", "C6", 10], ["C3", "C4", 8], ["C6", "C4", 7]], "lat": 22.1, "lm": 12.0, "stage2": [202, 431], "attempts": {"1": 463, "2": 106, "3": 294}, "attemptAcc": {"1": 97.4, "2": 69.8, "3": 47.3}}, "mechanism": [["Checks", "false inequality, misquoted value, verdict contradicting its own comparison, stage-2 skip"], ["Never supplies", "a class label — every message points at the model's own text"], ["Retries", "up to 2"], ["Passed on attempt 1", "463 cases → 97.4% correct"], ["Exhausted 3 attempts", "294 cases → 47.3% correct"], ["Measurement discipline", "28% → 78% of residual cases"], ["LM calls / question", "12.0"], ["Latency / question", "19.1 s"]], "failure": "It can only detect self-contradiction, so a trace that is clean but wrong survives. 252/864 traces leave the loop still flagged, and the retry loop cannot rescue hard cases: the cases that burn all three attempts are the ones it gets wrong 53% of the time, while consuming 3.7x the compute of a first-pass case.", "evalOn": "official-864"}, {"id": "forced", "name": "Forced stage-2 measurement", "tag": "negative result", "family": "mechanism", "status": "negative", "headline": "76.27%", "oneLine": "When a residual answer appears without its measurements, run the missing tools and hand back the numbers.", "scores": {"dev-96": 80.21, "sel200": 76.0, "holdout-96": 79.17, "official-864": 76.27}, "official": {"n": 864, "ok": 659, "acc": 76.27, "perLabel": {"C1": [79, 108], "C2": [108, 108], "C3": [50, 108], "C4": [18, 108], "C5": [108, 108], "C6": [80, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 48], ["C4", "C1", 44], ["C4", "C3", 31], ["C1", "C3", 15], ["C4", "C6", 15], ["C6", "C1", 13], ["C1", "C4", 9], ["C6", "C3", 8], ["C6", "C4", 7]], "lat": 21.2, "lm": 10.7, "stage2": [432, 432], "attempts": {"1": 470, "2": 272, "3": 122}, "attemptAcc": {"1": 97.4, "2": 54.8, "3": 42.6}}, "mechanism": [["Target", "182/376 official residual cases answered without stage-2 numbers"], ["Stage-2 coverage", "52% → 100%"], ["Estimated headroom", "+10.2 points"], ["Delivered", "-0.6 points"], ["McNemar on official", "68 : 63, p = 0.73 — no difference"], ["Cheaper", "10.7 vs 12.0 LM calls, 16.7 s vs 19.1 s"]], "failure": "The defect was real and got fixed; the accuracy did not move. Error mass merely relocated: C4→C3 (37) became C3→C1 (48) and C4→C1 (44), and C1 turned into the new dumping ground (184 answers, 79 correct). This is the experiment that proved the bottleneck is not missing information.", "evalOn": "official-864"}, {"id": "thinking", "name": "Native thinking", "tag": "high variance", "family": "prompt", "status": "in-ensemble", "headline": "76.39%", "oneLine": "Qwen3 thinking mode on the same program: better residual reasoning, leaky gates, high variance.", "scores": {"dev-96": 75.21, "holdout-96": 73.96, "official-864": 76.39}, "official": {"n": 864, "ok": 660, "acc": 76.39, "perLabel": {"C1": [57, 108], "C2": [105, 108], "C3": [102, 108], "C4": [37, 108], "C5": [106, 108], "C6": [59, 108], "C7": [102, 108], "C8": [92, 108]}, "conf": [["C4", "C3", 60], ["C6", "C3", 48], ["C1", "C3", 42], ["C8", "C3", 12], ["C4", "C6", 11], ["C1", "C4", 6], ["C3", "C4", 4], ["C8", "C4", 3], ["C1", "C6", 3]], "lat": 74.2, "lm": 6.1, "stage2": [150, 453], "attempts": null, "attemptAcc": null}, "mechanism": [["Draw-to-draw spread", "80.21 / 69.79 / 77.08 / 70.83 / 78.12 on dev-96 (sd 4.6)"], ["Strength", "C3 102/108 on official"], ["Weakness", "talks itself past verified gates; skips stage-2 tools in 237/376 residual cases"], ["LM calls / question", "6.1"], ["Latency / question", "42.0 s"]], "failure": "Single-draw variance is +-4.6 points, so it cannot be selected on or shipped alone; it also violates decisive criteria it has already verified. Its value is as the third, decorrelated ballot.", "evalOn": "official-864"}, {"id": "prompt", "name": "Prompt + demo optimization", "tag": "exhausted", "family": "prompt", "status": "exhausted", "headline": "72.92%", "oneLine": "Eleven hand-written instruction seeds and DSPy bootstrapped demos — the axis that plateaued first.", "scores": {"dev-96 best raw seed": 63.54, "dev-96 + 2 demos": 72.92, "dev-96 + 4 demos": 73.96}, "official": {"n": 96, "ok": 70, "acc": 72.92, "perLabel": {"C1": [9, 12], "C2": [12, 12], "C3": [4, 12], "C4": [2, 12], "C5": [12, 12], "C6": [7, 12], "C7": [12, 12], "C8": [12, 12]}, "conf": [["C4", "C3", 6], ["C3", "C1", 5], ["C1", "C3", 3], ["C4", "C1", 3], ["C6", "C1", 3], ["C3", "C6", 2], ["C4", "C6", 1], ["C6", "C4", 1], ["C3", "C7", 1]], "lat": 19.1, "lm": 12.2, "stage2": [23, 47], "attempts": {"1": 53, "2": 8, "3": 35}, "attemptAcc": {"1": 98.1, "3": 34.3, "2": 75.0}}, "mechanism": [["Instruction seeds", "11 hand-written; best 63.54% on dev-96"], ["Bootstrapped demos", "+9.4 points, then flat since 2026-07-29"], ["Same optimizer, different seed", "34.38% – 72.92% — the seed lottery dominates any wording effect"], ["Demo budget 6", "0/96 — exceeds the context window outright"], ["GEPA with a local reflector", "45.83%"], ["MIPROv2", "62.5 → 75.0 on its own val-32; re-running after a save crash"]], "failure": "Wording is not the binding constraint. The measured spread across seeds under one optimizer is wider than any instruction edit, so further search on a 96-case set optimizes noise. The demo axis is capped by the context window, not by imagination.", "evalOn": "dev-96"}, {"id": "symbolic", "name": "Symbolic reference", "tag": "ceiling", "family": "reference", "status": "reference", "headline": "89.93%", "oneLine": "The same decision flow executed in plain Python — the ceiling the LM is measured against.", "scores": {"dev-96": 96.88, "official-864": 89.93}, "official": {"n": 864, "ok": 777, "acc": 89.93, "perLabel": {"C1": [83, 108], "C2": [108, 108], "C3": [87, 108], "C4": [79, 108], "C5": [108, 108], "C6": [96, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C6", 17], ["C4", "C3", 12], ["C6", "C3", 12], ["C1", "C4", 12], ["C3", "C4", 9], ["C3", "C1", 8], ["C1", "C3", 7], ["C1", "C6", 6], ["C3", "C6", 4]], "lat": null, "lm": 0, "stage2": null, "attempts": null, "attemptAcc": null}, "mechanism": [["Gates + strong-C1 witness", "488/488 on official"], ["Residual zone", "289/376 = 76.9%"], ["Rule 1 C3 (min_diff >= 142.5)", "111 fires, 73.0% precise"], ["Rule 2 C6 (equal mod-30 pair)", "123 fires, 78.0% precise"], ["Rule 3 C4 (gap >= -3 dB)", "100 fires, 79.0% precise"], ["Rule 4 C1 (row below lobe)", "35 fires, 77.1% precise"], ["Never an answer path", "used only as an audit and a ceiling"]], "failure": "Even perfect execution stops near 90%: every residual rule is only 73-79% precise, and 33 cases fire the C3 and C6 rules simultaneously with gold split 14/12/4/3. Beyond this line the task needs a new discriminating feature, not better execution.", "evalOn": "official-864"}]};
+const TOOLSTATS = {"verifier": {"analyze_throughput_segments": 99.9, "analyze_coverage_geometry": 99.9, "analyze_mobility": 99.9, "analyze_radio_resources": 99.9, "analyze_pci_relations": 25.0, "analyze_neighbor_overlap": 24.9}, "s4": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 50.9, "analyze_neighbor_overlap": 50.9}, "thinking": {"analyze_throughput_segments": 54.2, "analyze_coverage_geometry": 99.3, "analyze_mobility": 97.8, "analyze_radio_resources": 96.8, "analyze_pci_relations": 31.5, "analyze_neighbor_overlap": 19.2}, "forced": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 52.0, "analyze_neighbor_overlap": 51.9}, "shipped": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 52.4, "analyze_neighbor_overlap": 52.2}};
 const LAB = ["C1","C2","C3","C4","C5","C6","C7","C8"];
 const PILL = {shipped:["ship","shipped"], "best-single":["best","best single"], negative:["neg","no gain"],
-              "in-ensemble":["flat","in ensemble"], exhausted:["flat","plateaued"], reference:["ref","reference"]};
+              "in-ensemble":["flat","in ensemble"], exhausted:["flat","plateaued"], reference:["ref","reference"],
+              superseded:["flat","superseded"], component:["best","pipeline component"]};
 const CSS = getComputedStyle(document.documentElement);
 const col = n => CSS.getPropertyValue("--"+n).trim() || "#888";
 
@@ -1013,10 +1067,9 @@ select(DATA.solutions[0].id);
 
 /* ---------- error budget bars ---------- */
 const BUDGET = [
-  ["A · a ballot held the gold label and lost the vote", 113, "red", "aggregator — no better model needed"],
-  ["B · the policy was right, all three ballots missed it", 19, "amber", "execution discipline / RL"],
-  ["C · the policy was followed and the policy is wrong", 8, "purple", "needs a new feature"],
-  ["D · no ballot and no rule gets it", 7, "slate", "no route yet"],
+  ["A · the policy is right here and the model did not execute it", 44, "amber", "execution discipline / RL — C4 23, C1 18"],
+  ["B · the policy is wrong here, but another run we have holds the gold", 62, "red", "routing or aggregation — C4 24, C1 18, C3 12"],
+  ["C · the policy is wrong and nothing we have gets it", 13, "purple", "needs a new discriminating feature"],
 ];
 (function(){
   const tot = BUDGET.reduce((a,b)=>a+b[1],0);
@@ -1031,9 +1084,9 @@ const BUDGET = [
     </div>`).join("");
 })();
 
-/* ---------- confusion matrix of the shipped ensemble ---------- */
+/* ---------- confusion matrix of the shipped single program ---------- */
 (function(){
-  const ens = DATA.solutions.find(s=>s.id==="ensemble").official;
+  const ens = DATA.solutions.find(s=>s.id==="specialist").official;
   const m = {}; let max = 0;
   ens.conf.forEach(([g,p,c])=>{ (m[g]=m[g]||{})[p]=c; max=Math.max(max,c); });
   const golds = LAB.filter(g=>m[g]);
@@ -1057,7 +1110,8 @@ const BUDGET = [
 /* ---------- tool-call rate: grouped bars, one row per tool ---------- */
 (function(){
   const TS = TOOLSTATS, tools = Object.keys(TS.verifier);
-  const series = [["Ballot A · verifier","verifier","blue"],["Ballot B · seed 4","s4","green"],["Thinking","thinking","amber"]];
+  const series = [["Shipped · specialist","shipped","green"],["Ballot A · verifier","verifier","blue"],
+                  ["Ballot B · seed 4","s4","slate"],["Thinking","thinking","amber"]];
   const rowH = 52, w = 560, padL = 208, padR = 54, h = tools.length*rowH + 22;
   const x = v => padL + (v/100)*(w-padL-padR);
   let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="tool call rate">`;
