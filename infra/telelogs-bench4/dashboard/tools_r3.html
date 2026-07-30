@@ -167,25 +167,45 @@
   </table></div>
   <div class="muted" style="margin-top:8px">Đậm màu = gần 12/12. Gates chính xác C2/C5/C7/C8 gần bão hòa ở mọi cấu hình no-think; toàn bộ trận địa còn lại nằm ở vùng residual C1/C3/C4/C6 (trần symbolic đạt 45/48 vùng này).</div>
 
-  <h2>Chẩn đoán bản BEST hiện tại — ensemble v2 trên official-864</h2>
+  <h2>Chẩn đoán bản BEST hiện tại — hệ R3-final (weighted vote + v2.1) trên official-864</h2>
   <section class="grid">
-    <div class="panel"><div class="label">Ensemble v2 · official</div><div class="value ok">79.98%</div><div class="muted">691/864 · gates 432/432</div></div>
+    <div class="panel"><div class="label">Hệ R3-final · official</div><div class="value ok">82.99%</div><div class="muted">717/864 · gates 432/432</div></div>
     <div class="panel"><div class="label">Symbolic cùng luồng · official</div><div class="value" style="color:var(--purple)">89.93%</div><div class="muted">777/864 — trần thực tế trên tập này (dev cho 96.88 là hào phóng)</div></div>
     <div class="panel"><div class="label">Gate + strong-C1 (symbolic)</div><div class="value ok">488/488</div><div class="muted">bắn 488 case, đúng 100% — kể cả witness C1 (56 case, precision tuyệt đối)</div></div>
-    <div class="panel"><div class="label">Residual (symbolic)</div><div class="value warn">76.9%</div><div class="muted">289/376 — toàn bộ khoảng cách 10 điểm nằm ở đây</div></div>
-    <div class="panel"><div class="label">3 phiếu trùng nhau</div><div class="value ok">99.8%</div><div class="muted">461/864 case đồng thuận tuyệt đối → gần chắc chắn đúng</div></div>
+    <div class="panel"><div class="label">Residual (symbolic)</div><div class="value warn">76.9%</div><div class="muted">289/376 — toàn bộ khoảng cách còn lại nằm ở đây</div></div>
+    <div class="panel"><div class="label">3 phiếu trùng nhau</div><div class="value ok">100.0%</div><div class="muted">463/463 case đồng thuận → chắc chắn tuyệt đối trên official</div></div>
   </section>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Cơ chế weighted vote — và cách tìm trọng số</h3>
+    <div class="cols2">
+      <div>
+        <div class="muted">Thay vì mỗi phiếu = 1 điểm (đa số đơn thuần), <b style="color:var(--text)">mỗi phiếu được cân theo "độ đáng tin của voter đó KHI bầu đúng lớp đó"</b>, đo trên dev-96 (không đụng holdout/official):</div>
+        <ul>
+          <li><b>w(voter, lớp) = (số lần bầu lớp đó và ĐÚNG + 1) / (tổng số lần bầu lớp đó + 2)</b> — chính là precision trên dev, làm mượt Laplace (+1/+2) để lớp ít phiếu không nhận trọng số cực đoan 0% hay 100%.</li>
+          <li>Điểm của mỗi lớp = tổng trọng số các phiếu bầu cho nó; lớp điểm cao nhất thắng; hòa → theo verifier-s11.</li>
+          <li>Phiếu thinking dùng đủ 5 lần gieo trên dev (480 phiếu) nên ước lượng chắc tay nhất.</li>
+        </ul>
+        <div class="muted"><b style="color:var(--text)">Ví dụ thật</b> (case kiểu C1): s4 bầu C4 (w=0.31) + s11 bầu C3 (w=0.31) + think bầu C1 (w=0.98) → C1 thắng dù chỉ có 1/3 phiếu — vì trên dev, think bầu C1 đúng 39/39 lần còn s4 bầu C4 chỉ đúng 9/30 lần. Đa số đơn thuần sẽ xử hòa/sai case này; đây là cách 91 case "có phiếu đúng nhưng thua vote" được cứu.</div>
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px">Bảng trọng số thật đang dùng (số trong ngoặc = đúng/tổng phiếu trên dev):</div>
+        <div class="table-wrap"><table id="wtable"></table></div>
+        <div class="muted" style="margin-top:6px">Đọc được ngay chiến lược nó tự học: tin tuyệt đối think ở C1 (39/39), tin s4 ở C6 (8/8), và <b style="color:var(--text)">không tin BẤT KỲ ai bầu C3</b> (0.31–0.35) — đúng bài học "C3 là hố đen" từ chẩn đoán, nhưng giờ là con số fit từ dữ liệu chứ không phải luật tay.</div>
+      </div>
+    </div>
+  </div>
 
   <div class="cols2" style="margin-top:12px">
     <div class="panel">
-      <h3>Ma trận nhầm lẫn của ensemble v2 (official-864, chỉ câu sai)</h3>
+      <h3>Ma trận nhầm lẫn của hệ R3-final (official-864, chỉ câu sai)</h3>
       <div class="table-wrap"><table id="offconf"></table></div>
-      <div class="muted" style="margin-top:8px">Thay đổi so chẩn đoán v1: hố đen C3 đã hẹp lại nhưng xuất hiện <b style="color:var(--text)">dòng chảy ngược C3→C1 (38 lỗi, lớn nhất)</b> — guard chống-C3 của v2 đẩy một phần case C3 thật sang C1 (luật hình học đúng ở ~51% mọi case). C4 vẫn là lớp residual yếu nhất (45/108). Symbolic cùng luồng cũng sai nhiều nhất ở C4→C6 (17) — giới hạn policy, không phải giới hạn model.</div>
+      <div class="muted" style="margin-top:8px">147 lỗi còn lại: <b style="color:var(--text)">C4 vẫn là lớp yếu nhất (66 lỗi, 42/108 đúng)</b> và C3→C1 34 lỗi. C1 (9 lỗi) và C6 (11 lỗi) gần như đã giải xong nhờ trọng số. Symbolic cùng luồng cũng sai nhiều nhất ở C4→C6 — phần lớn khối C4 còn lại là giới hạn policy, không phải giới hạn model.</div>
     </div>
     <div class="panel">
       <h3>Đồng thuận phiếu = tín hiệu độ tin cậy</h3>
       <div class="table-wrap"><table id="offagree"></table></div>
-      <div class="muted" style="margin-top:8px">Giá trị triển khai: khi 3 phiếu trùng (53% số case) kết quả gần chắc chắn đúng; case chia 2-1 đúng 68%; case vỡ 3 hướng (14% số case) chỉ còn 33.6% — chính là nhóm cần escalate (người xem, model lớn hơn, hoặc RL). </div>
+      <div class="muted" style="margin-top:8px">Giá trị triển khai: khi 3 phiếu trùng (54% số case) kết quả <b style="color:var(--text)">đúng 100.0%</b>; case chia 2-1 đúng 70.7%; case vỡ 3 hướng (14% số case) được weighted vote kéo từ 33.6% lên 46.3% — vẫn là nhóm cần escalate (người duyệt, model lớn, hoặc RL).</div>
       <h3 style="margin-top:14px">Kỷ luật gọi tool trên official (residual gọi đủ giai đoạn 2)</h3>
       <div class="bars" id="offtools"></div>
       <div class="muted" style="margin-top:8px">Bất ngờ: chương trình s4 gọi đủ 100% (demo của nó luôn gọi cả 6 tool); verifier-s11 51% (retry chỉ ép được một phần); thinking 37% — vẫn là kẻ lười đo nhất.</div>
@@ -356,9 +376,16 @@ document.getElementById("toolbars").innerHTML=FAMS.map(([f,n])=>{
     <div class="bar-name">${n} — đủ giai đoạn 2 khi residual</div>
     <div class="track"><i class="fill ${f==="verifier"?"ens":""}" style="width:${p.toFixed(1)}%"></i></div>
     <div class="bar-val"><b>${p.toFixed(0)}%</b></div></div>`;}).join("");
-const OFF={conf:[[0,0,16,8,0,2,0,0],[0,0,0,0,0,0,0,0],[38,0,0,13,0,2,0,0],[25,0,30,0,0,11,0,0],[0,0,0,0,0,0,0,0],[11,0,12,5,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],
-agree:[["3 phiếu trùng nhau",460,461],["Đa số 2–1",189,278],["Vỡ 3 hướng (hòa → verifier-s11)",42,125]],
-tools:[["verifier v2 + s11",191,376],["verifier v2 + s4",376,376],["thinking s11",139,376]]};
+const OFF={conf:[[0,0,9,7,0,3,0,0],[0,0,0,0,0,0,0,0],[34,0,0,11,0,5,0,1],[25,0,27,0,0,14,0,0],[0,0,0,0,0,0,0,0],[4,0,3,4,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],
+agree:[["3 phiếu trùng nhau",463,463],["Đa số 2–1 (weighted có thể lật)",198,280],["Vỡ 3 hướng (weighted chọn phiếu nặng nhất)",56,121]],
+tools:[["verifier v2 + s11",191,376],["verifier v2 + s4",376,376],["thinking s11",139,376]],
+W:[["verifier-s11",[.45,.93,.31,.60,.93,.67,.87,.93],["9/20","12/12","4/14","2/3","12/12","7/10","12/13","12/12"]],
+   ["verifier-s4",[.58,.93,.50,.31,.93,.90,.93,.93],["6/10","12/12","0/0","9/30","12/12","8/8","12/12","12/12"]],
+   ["thinking (5 lần gieo)",[.98,.98,.35,.69,.98,.78,.98,.98],["39/39","57/57","54/156","21/30","60/60","31/39","57/57","42/42"]]]};
+document.getElementById("wtable").innerHTML=
+  `<thead><tr><th style="text-align:left">Voter</th>${["C1","C2","C3","C4","C5","C6","C7","C8"].map(l=>`<th>${l}</th>`).join("")}</tr></thead><tbody>`+
+  OFF.W.map(([name,ws,ns])=>`<tr><td style="text-align:left">${name}</td>`+ws.map((w,i)=>
+    `<td><span class="cell" style="background:rgba(84,216,159,${(0.05+0.55*w).toFixed(2)})" title="đúng ${ns[i]} phiếu trên dev">${w.toFixed(2)}</span></td>`).join("")+`</tr>`).join("")+`</tbody>`;
 const OMAX=Math.max(...OFF.conf.flat());
 document.getElementById("offconf").innerHTML=
   `<thead><tr><th>gold ↓ · pred →</th>${L8.map(l=>`<th>${l}</th>`).join("")}<th>tổng sai</th></tr></thead><tbody>`+
