@@ -267,7 +267,16 @@ def main() -> None:
     optimized = evaluate(program, valset, args.workers)
     run_dir = ROOT / "results" / "optimized" / args.run_name
     run_dir.mkdir(parents=True, exist_ok=True)
-    program.save(run_dir / "program.json")
+    program_path = run_dir / "program.json"
+    try:
+        program.save(program_path)
+    except Exception as exc:
+        # MIPROv2's bootstrapped demos carry non-string dict keys, which orjson
+        # refuses. Losing a finished 20-minute compile to a serialization detail
+        # is not acceptable, so fall back to the pickle form dspy also reads.
+        print(json.dumps({"stage": "save_fallback", "error": f"{type(exc).__name__}: {exc}"}), flush=True)
+        program_path = run_dir / "program.pkl"
+        program.save(program_path)
     summary = {
         "run_name": args.run_name,
         "optimizer": args.optimizer,
@@ -280,7 +289,7 @@ def main() -> None:
         "reflection_usage": reflection_usage,
         "baseline_val": {key: baseline[key] for key in ("total", "correct", "accuracy", "errors")},
         "optimized_val": {key: optimized[key] for key in ("total", "correct", "accuracy", "errors")},
-        "program_path": str(run_dir / "program.json"),
+        "program_path": str(program_path),
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     (run_dir / "val_rows.json").write_text(
