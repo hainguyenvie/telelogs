@@ -1,1 +1,4 @@
+# LiteLLM 1.93.0 is source-only on Windows and currently requires a Rust
+# build. Pin the last tested wheel-based release before installing DSPy.
+litellm==1.80.17
 dspy==3.2.1

@@ -34,6 +34,7 @@ MODEL = os.environ.get("DSPY_MODEL", "openai/Qwen/Qwen3-8B")
 API_BASE = os.environ.get(
     "DSPY_API_BASE", "http://telelogs-bench4-vllm:8000/v1"
 )
+API_KEY = os.environ.get("DSPY_API_KEY", "local")
 
 
 def load_rows() -> list[dict]:
@@ -73,19 +74,25 @@ def evaluation_rows(rows: list[dict], split: str, per_label: int) -> list[dict]:
     if per_label > 0:
         return balanced(rows, split, per_label)
     return sorted(
-        (row for row in rows if row["split"] == split),
+        (
+            row
+            for row in rows
+            if split == "all" or row["split"] == split
+        ),
         key=lambda row: row["source_index"],
     )
 
 
 def example(row: dict, include_outputs: bool) -> dspy.Example:
     values = {"verified_facts": row["verified_facts"], "answer": row["label"]}
-    if include_outputs:
+    if include_outputs and row.get("gold_reasoning"):
         values["reasoning"] = row["gold_reasoning"]
     return dspy.Example(**values).with_inputs("verified_facts")
 
 
-def focused_train(rows: list[dict]) -> list[dict]:
+def focused_train(
+    rows: list[dict], *, require_demo_ready: bool = True
+) -> list[dict]:
     """Give GEPA enough named residual failures to reflect on.
 
     Exact-gate classes remain represented, while C3 and its three main competing
@@ -109,11 +116,70 @@ def focused_train(rows: list[dict]) -> list[dict]:
                 for row in rows
                 if row["split"] == "train"
                 and row["label"] == label
-                and row.get("demo_ready")
+                and (row.get("demo_ready") or not require_demo_ready)
             ),
             key=lambda row: row["source_index"],
         )
         selected.extend(pool[: quotas[label]])
+    return selected
+
+
+def is_residual_row(row: dict) -> bool:
+    facts = json.loads(row["verified_facts"])
+    return not (
+        facts["C2"]["distance_gate"] == "triggered"
+        or facts["C5"]["frequent_change_gate"]
+        or facts["C7"]["speed_gate"]
+        or facts["C8"]["affected_average_rb_gate"]
+        or facts["C1"]["affected_weak_rsrp_witness"]
+    )
+
+
+def focused_hybrid_residual_train(rows: list[dict]) -> list[dict]:
+    """Label-only residual examples; deterministic C1/C2/C5/C7/C8 stay frozen."""
+
+    quotas = {"C1": 12, "C3": 24, "C4": 12, "C6": 12}
+    selected = []
+    for label, quota in quotas.items():
+        pool = sorted(
+            (
+                row
+                for row in rows
+                if row["split"] == "train"
+                and row["label"] == label
+                and is_residual_row(row)
+            ),
+            key=lambda row: row["source_index"],
+        )
+        if len(pool) < quota:
+            raise RuntimeError(
+                f"Only {len(pool)} residual train rows for {label}; need {quota}"
+            )
+        selected.extend(pool[:quota])
+    return selected
+
+
+def balanced_residual(
+    rows: list[dict], split: str, per_label: int
+) -> list[dict]:
+    selected = []
+    for label in ("C1", "C3", "C4", "C6"):
+        pool = sorted(
+            (
+                row
+                for row in rows
+                if row["split"] == split
+                and row["label"] == label
+                and is_residual_row(row)
+            ),
+            key=lambda row: row["source_index"],
+        )
+        if len(pool) < per_label:
+            raise RuntimeError(
+                f"Only {len(pool)} residual {split} rows for {label}; "
+                f"need {per_label}"
+            )
+        selected.extend(pool[:per_label])
     return selected
 
 
@@ -136,7 +202,7 @@ def configure_lm(max_tokens: int) -> dspy.LM:
     lm = dspy.LM(
         MODEL,
         api_base=API_BASE,
-        api_key="local",
+        api_key=API_KEY,
         temperature=0.0,
         max_tokens=max_tokens,
         extra_body={"chat_template_kwargs": {"enable_thinking": False}},
@@ -147,11 +213,11 @@ def configure_lm(max_tokens: int) -> dspy.LM:
 
 
 def configure_reflection_lm(provider: str) -> dspy.LM:
-    if provider == "qwen":
+    if provider in {"task-model", "qwen"}:
         return dspy.LM(
             MODEL,
             api_base=API_BASE,
-            api_key="local",
+            api_key=API_KEY,
             temperature=0.7,
             max_tokens=2400,
             extra_body={"chat_template_kwargs": {"enable_thinking": False}},
@@ -275,7 +341,9 @@ def main() -> None:
     parser.add_argument("--eval-per-label", type=int, default=8)
     parser.add_argument("--eval-offset-per-label", type=int, default=0)
     parser.add_argument(
-        "--eval-split", choices=("dev", "holdout", "official"), default="dev"
+        "--eval-split",
+        choices=("train", "dev", "holdout", "official", "all"),
+        default="dev",
     )
     parser.add_argument("--train-per-label", type=int, default=4)
     parser.add_argument("--workers", type=int, default=16)
@@ -285,12 +353,14 @@ def main() -> None:
     parser.add_argument("--c3-advantage-threshold-mbps", type=float, default=142.5)
     parser.add_argument(
         "--reflection-provider",
-        choices=("qwen", "deepseek-pro", "deepseek-flash"),
-        default="qwen",
+        choices=("task-model", "qwen", "deepseek-pro", "deepseek-flash"),
+        default="task-model",
     )
     parser.add_argument("--train-focus", choices=("balanced", "residual"), default="balanced")
     parser.add_argument("--run-name")
     args = parser.parse_args()
+    if args.eval_split == "all" and args.eval_per_label > 0:
+        parser.error("--eval-split all requires --eval-per-label 0")
 
     configure_lm(args.max_tokens)
     rows = load_rows()
@@ -306,15 +376,29 @@ def main() -> None:
     if needs_trainset:
         if args.stage == "contrastive_fewshot":
             train_rows = contrastive_train(rows)
+        elif (
+            args.train_focus == "residual"
+            and args.stage in {"gepa_hybrid", "gepa_calibrated"}
+        ):
+            train_rows = focused_hybrid_residual_train(rows)
         else:
             train_rows = (
-                focused_train(rows)
+                focused_train(
+                    rows,
+                    require_demo_ready=args.stage
+                    not in {"gepa", "gepa_hybrid", "gepa_calibrated"},
+                )
                 if args.train_focus == "residual"
                 else balanced(
                     [row for row in rows if row.get("demo_ready")],
                     "train",
                     args.train_per_label,
                 )
+            )
+        if not train_rows:
+            raise RuntimeError(
+                "No training examples selected. GEPA can use label-only train "
+                "examples; few-shot stages require demo_ready examples."
             )
     eval_rows = (
         balanced_slice(
@@ -362,7 +446,11 @@ def main() -> None:
             num_threads=args.workers,
             track_stats=True,
         )
-        val_rows = balanced(rows, "dev", args.gepa_val_per_label)
+        val_rows = (
+            balanced_residual(rows, "dev", args.gepa_val_per_label)
+            if args.stage in {"gepa_hybrid", "gepa_calibrated"}
+            else balanced(rows, "dev", args.gepa_val_per_label)
+        )
         if {row["source_index"] for row in val_rows} & {
             row["source_index"] for row in eval_rows
         }:
