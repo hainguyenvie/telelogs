@@ -110,6 +110,49 @@
   .chips i{font-style:normal;font-size:11px;padding:3px 8px;border-radius:6px;background:var(--line2);
     color:var(--muted);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 
+
+  /* ---------- tool layer figure ---------- */
+  .toolflow{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:22px;align-items:start;margin-top:14px}
+  @media(max-width:900px){.toolflow{grid-template-columns:1fr}}
+  .tfcol{display:grid;gap:12px;justify-items:center;align-content:start}
+  .tfcol .abox{max-width:none}
+  .guard{border:1px dashed color-mix(in srgb,var(--purple) 45%,transparent);
+    background:color-mix(in srgb,var(--purple) 7%,transparent);border-radius:12px;
+    padding:11px 14px;font-size:12.5px;color:var(--muted);width:100%}
+  .guard b{color:var(--purple);font-family:ui-monospace,monospace;font-size:12.5px}
+  .tfgroup{display:grid;gap:9px;border:1px solid color-mix(in srgb,var(--blue) 32%,transparent);
+    border-radius:14px;padding:13px;background:color-mix(in srgb,var(--blue) 4%,transparent);width:100%}
+  .tfgroup.two{margin-top:12px;border-color:color-mix(in srgb,var(--amber) 40%,transparent);
+    background:color-mix(in srgb,var(--amber) 5%,transparent)}
+  .tfhead{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .tool{display:grid;gap:3px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px}
+  .tool .tn code{background:transparent;border:0;padding:0;font-size:12.5px;font-weight:700;color:var(--text)}
+  .tool .td{font-size:12.5px;color:var(--muted)}
+  .tool .tf{font-size:11.5px;color:var(--blue);font-weight:600}
+  .tfgroup.two .tool .tf{color:var(--amber)}
+
+  /* ---------- dspy boundary figure ---------- */
+  .dspy{display:grid;grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr);gap:0;align-items:stretch}
+  @media(max-width:900px){.dspy{grid-template-columns:1fr}.dmid{padding:10px 0}}
+  .dcol{display:grid;gap:9px;align-content:start;border-radius:14px;padding:16px;border:1px solid var(--line);
+    background:var(--panel);box-shadow:var(--shadow)}
+  .dframe{border-color:color-mix(in srgb,var(--purple) 40%,transparent);
+    background:color-mix(in srgb,var(--purple) 5%,transparent)}
+  .ours{border-color:color-mix(in srgb,var(--green) 40%,transparent);
+    background:color-mix(in srgb,var(--green) 5%,transparent)}
+  .dhd{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    margin-bottom:2px}
+  .dframe .dhd{color:var(--purple)}.ours .dhd{color:var(--green)}
+  .ditem{display:grid;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px}
+  .ditem b{font-size:13.5px}
+  .ditem span{font-size:12.5px;color:var(--muted)}
+  .dmid{display:grid;place-items:center;color:var(--faint);font-size:11px;text-transform:uppercase;
+    letter-spacing:.08em}
+  .dmid span{writing-mode:vertical-rl;transform:rotate(180deg)}
+  @media(max-width:900px){.dmid span{writing-mode:horizontal-tb;transform:none}}
+
   /* ---------- solution explorer ---------- */
   .explorer{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;align-items:start}
   @media(max-width:1000px){.explorer{grid-template-columns:1fr}}
@@ -161,6 +204,8 @@
   <span class="navlinks">
     <a href="#summary">Summary</a>
     <a href="#architecture">Architecture</a>
+    <a href="#tools">Tool layer</a>
+    <a href="#dspy">DSPy</a>
     <a href="#solutions">Solutions</a>
     <a href="#failures">Failure analysis</a>
     <a href="#cost">Cost</a>
@@ -242,7 +287,9 @@
 
   <section id="architecture">
     <h2>Architecture</h2>
-    <p class="lede">Two configurations are live. The ensemble is what produced the official 82.99%; the
+    <p class="lede">Both configurations are tool-calling pipelines: the boxes below are decision stages,
+    and every one of them reaches the data only through the six measurement functions detailed in
+    <a href="#tools">the tool layer</a>. The ensemble is what produced the official 82.99%; the
     single-program pipeline is the round-4 result whose test run is pending.</p>
 
     <div class="grid g2" style="margin-top:18px;gap:22px">
@@ -316,6 +363,185 @@
       executor of the same rules scored <b>76.9%</b>. That is 109 cases lost with nothing missing but
       attention — the prompt was simultaneously carrying four gate criteria, eight cause definitions and the
       full drive-test table. Splitting the decision out recovered most of the gap.</p>
+    </div>
+  </section>
+
+  <section id="tools">
+    <h2>The tool layer — what the model may look at</h2>
+    <p class="lede">Nothing in the pipeline reads the raw tables except the tools. The model is handed the
+    case text and a catalog of six functions; it decides which to call, in what order, and when it has
+    enough. Each function returns measurements only — an automated check rejects any output that contains a
+    class token or a verdict-like field name, so a tool cannot leak the answer even by accident.</p>
+
+    <div class="card" style="margin-top:18px">
+      <h3>ReAct loop and the six measurement functions</h3>
+      <div class="toolflow">
+        <div class="tfcol">
+          <div class="abox src"><b>Case text</b><div class="s">drive-test table, engineering parameters,
+            beam-scenario rules, the eight cause definitions</div></div>
+          <div class="arrow">↓</div>
+          <div class="abox stage"><b>ReAct step</b>
+            <div class="s">thought → pick one function → read its observation → decide whether to continue</div>
+            <div class="chips"><i>up to 8 iterations</i><i>no arguments: each function measures this case</i></div>
+          </div>
+          <div class="arrow">↺<span>loop until the model stops</span></div>
+          <div class="abox out"><b>One class + an auditable trace</b>
+            <div class="s">every number in the trace must appear in an observation</div></div>
+          <div class="guard">
+            <b>assert_label_neutral</b> runs on every observation: it rejects any <code>C1</code>–<code>C8</code>
+            token and any field named <code>answer</code>, <code>label</code>, <code>gate</code>,
+            <code>triggered</code>, <code>diagnosis</code> or <code>root_cause</code>.
+          </div>
+        </div>
+
+        <div class="tfcol">
+          <div class="tfgroup">
+            <div class="tfhead">Stage 1 · four decisive criteria</div>
+            <div class="tool">
+              <div class="tn"><code>analyze_throughput_segments</code></div>
+              <div class="td">throughput per serving segment, the rows under the stated criterion, and
+                <code>minimum_difference_mbps</code> between the worst segment and the next</div>
+              <div class="tf">defines the affected rows every other tool reports on · feeds the C3 rule</div>
+            </div>
+            <div class="tool">
+              <div class="tn"><code>analyze_coverage_geometry</code></div>
+              <div class="td"><code>maximum_distance_km</code>, per-row serving RSRP, UE elevation against the
+                main-lobe edges, and <code>rows_below_main_lobe_lower_edge</code></div>
+              <div class="tf">decides C2 (&gt; 1 km) · supplies the C1 witness</div>
+            </div>
+            <div class="tool">
+              <div class="tn"><code>analyze_mobility</code></div>
+              <div class="td"><code>maximum_speed_kmh</code>, <code>transition_count</code>, the serving-PCI
+                sequence and each handover event</div>
+              <div class="tf">decides C5 (≥ 3 changes) and C7 (&gt; 40 km/h)</div>
+            </div>
+            <div class="tool">
+              <div class="tn"><code>analyze_radio_resources</code></div>
+              <div class="td">scheduled resource blocks overall and
+                <code>low_throughput_rows_mean_scheduled_rbs</code></div>
+              <div class="tf">decides C8 (&lt; 160 RB)</div>
+            </div>
+          </div>
+          <div class="tfgroup two">
+            <div class="tfhead">Stage 2 · only when no criterion fires</div>
+            <div class="tool">
+              <div class="tn"><code>analyze_pci_relations</code></div>
+              <div class="td">serving and neighbour PCI modulo-30 residues on the affected rows, and
+                <code>equal_residue_pairs</code></div>
+              <div class="tf">the only evidence for C6</div>
+            </div>
+            <div class="tool">
+              <div class="tn"><code>analyze_neighbor_overlap</code></div>
+              <div class="td">non-colocated neighbour beam RSRP relative to serving RSRP per affected row, and
+                <code>best_noncolocated_gap</code></div>
+              <div class="tf">the only evidence for C4</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts" style="margin-top:16px">
+      <div class="card">
+        <h4>How often each function is actually called · official-864</h4>
+        <div id="toolRate"></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">Stage 1 is near-universal, but the two stage-2
+        functions — the only evidence for C4 and C6 — are called on roughly a quarter of cases by ballot A and
+        a fifth by the thinking ballot, against a residual zone of 43.5%. Ballot B calls them on 50.9% because
+        its bootstrapped demonstrations always do; the behaviour is inherited from examples, not from the
+        instruction, which is identical.</p>
+      </div>
+      <div class="card">
+        <h4>Tool calls per case · ballot A</h4>
+        <div id="toolCount"></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">Four calls is the gate path and it accounts for
+        480 of 864 cases. Seven and eight calls are audit retries re-measuring, not richer exploration: the
+        retry re-runs the whole trajectory, which is why a flagged case costs 3.7× a clean one.</p>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>Why tool discipline is the recurring theme of this project</h4>
+      <p style="margin:0">Three of the four mechanisms in this report exist because the model skips
+      measurements it was told to take. The verifier detects the skip and asks; the forced-measurement variant
+      executes the missing call itself; the specialist decides only after the numbers exist. Measured on
+      official-864, a residual answer backed by both stage-2 observations is <b>63.9%</b> correct, and one
+      without them is <b>34.1%</b> — the same model, the same prompt, the same case.</p>
+    </div>
+  </section>
+
+  <section id="dspy">
+    <h2>Where DSPy is used — and where it is not</h2>
+    <p class="lede">DSPy supplies the program abstraction and the prompt optimizers. It does not supply the
+    tools, the audit, the aggregator, or the evaluation protocol — those are ours, and they are where the
+    measured gains came from. The boundary matters for reproducing this work, so it is drawn explicitly.</p>
+
+    <div class="dspy" style="margin-top:18px">
+      <div class="dcol dframe">
+        <div class="dhd">DSPy 2.x provides</div>
+        <div class="ditem"><b>Signature</b><span>Typed input/output contract plus the instruction block. Our
+          diagnosis signature declares <code>raw_question</code> in, <code>reasoning</code> and
+          <code>answer</code> out — the instruction text is the "seed" we iterate on.</span></div>
+        <div class="ditem"><b>dspy.Tool</b><span>Wraps each measurement function with its name and description
+          so the model can select it by name. Six tools, no arguments.</span></div>
+        <div class="ditem"><b>dspy.ReAct</b><span>The agentic loop: thought, tool choice, observation, repeat,
+          then a final answer. Gives us the trajectory we later audit.</span></div>
+        <div class="ditem"><b>Teleprompters</b><span><code>BootstrapFewShot</code> collects successful
+          trajectories as demonstrations; <code>MIPROv2</code> proposes instruction candidates and searches
+          instruction × demo combinations; <code>GEPA</code> uses a reflector model to rewrite the
+          instruction.</span></div>
+        <div class="ditem"><b>Compile → artifact → load</b><span>Compilation writes a
+          <code>program.json</code> holding the instruction and the chosen demonstrations. Every evaluation
+          loads a frozen artifact, so a score always maps to a file on disk.</span></div>
+      </div>
+      <div class="dmid" aria-hidden="true"><span>built on</span></div>
+      <div class="dcol ours">
+        <div class="dhd">We built</div>
+        <div class="ditem"><b>Six label-neutral tools</b><span>Deterministic parsers over the raw tables plus
+          <code>assert_label_neutral</code>. DSPy never sees the case data itself.</span></div>
+        <div class="ditem"><b>Consistency verifier + retry</b><span>Reads the finished trajectory, flags
+          self-contradiction, re-runs the DSPy program with the flags appended. Never names a class.</span></div>
+        <div class="ditem"><b>Forced measurement</b><span>Executes a skipped stage-2 tool and re-asks, instead
+          of requesting it again.</span></div>
+        <div class="ditem"><b>Residual specialist</b><span>A second, narrow DSPy predictor for the tie-break
+          step — the round-4 gain.</span></div>
+        <div class="ditem"><b>Weighted aggregator</b><span>Per-voter-per-class precision weights fitted on
+          dev-96 only, applied out of sample.</span></div>
+        <div class="ditem"><b>Harness &amp; protocol</b><span>Split construction, pre-registered runs, paired
+          McNemar tests, per-case prediction logs, the symbolic reference used as a ceiling.</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Every DSPy optimizer we ran, and what it was worth</h3>
+      <div class="tw" style="margin-top:12px"><table>
+        <thead><tr><th class="l">Optimizer</th><th>Runs</th><th>Best dev-96</th><th class="l">Verdict</th></tr></thead>
+        <tbody>
+          <tr><td class="l">None — hand-written instruction only</td><td>11</td><td>63.54%</td><td class="l">The
+            instruction is where the domain schema lives; wording changes stopped paying early.</td></tr>
+          <tr><td class="l"><code>BootstrapFewShot</code>, 2 demos</td><td>13</td><td class="ok">72.92%</td><td class="l">
+            The single largest prompt-side gain, +9.4 points. Also the source of the tool-discipline
+            differences between ballots — demos, not instructions, decide whether all six tools get called.</td></tr>
+          <tr><td class="l"><code>BootstrapFewShot</code>, 4 demos</td><td>1</td><td>73.96%</td><td class="l">+1
+            point. Six demos do not run at all: each ReAct demonstration carries its own observations and the
+            prompt exceeds the context window.</td></tr>
+          <tr><td class="l"><code>BootstrapFewShot</code>, class-balanced</td><td>2</td><td>65.62%</td><td class="l">
+            Forcing one demo per target class was worse than letting the optimizer pick.</td></tr>
+          <tr><td class="l"><code>GEPA</code> with a local reflector</td><td>1</td><td class="bad">45.83%</td><td class="l">
+            The reflector rewrote the instruction into something the 8B model executed worse. A stronger
+            reflector is the untried variant.</td></tr>
+          <tr><td class="l"><code>MIPROv2</code></td><td>3</td><td class="warn">75.0 on its own val-32</td><td class="l">
+            Never run until round 4. Attempt 1 died on a missing optional dependency; attempt 2 completed the
+            search — 62.5 → 75.0 — and then lost the compile because its bootstrapped demos contain
+            non-string dict keys that the JSON serializer refuses. Now falls back to a pickle artifact; the
+            re-run is in flight.</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin:12px 0 0;font-size:13.5px"><b>The honest summary of the DSPy axis.</b> It took the
+      program from 63.5% to 72.9% on dev-96 and then flattened. Under one optimizer, changing only the random
+      seed produced dev-96 scores from <b>34.4% to 72.9%</b> — a spread wider than any instruction edit we
+      made, which is why further prompt search on a 96-case set optimizes noise rather than the task. Every
+      point after that came from the mechanisms in the right-hand column above.</p>
     </div>
   </section>
 
@@ -558,6 +784,7 @@
 
 <script>
 const DATA = {"solutions": [{"id": "ensemble", "name": "Weighted-vote ensemble", "tag": "3 voters", "family": "ensemble", "status": "shipped", "headline": "82.99%", "oneLine": "Three heterogeneous programs vote; per-voter-per-class weights are fitted on dev-96 only.", "scores": {"dev-96": 82.71, "holdout-96": 83.33, "official-864": 82.99}, "official": {"n": 864, "ok": 717, "acc": 82.99, "perLabel": {"C1": [89, 108], "C2": [108, 108], "C3": [57, 108], "C4": [42, 108], "C5": [108, 108], "C6": [97, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 34], ["C4", "C3", 27], ["C4", "C1", 25], ["C4", "C6", 14], ["C3", "C4", 11], ["C1", "C3", 9], ["C1", "C4", 7], ["C3", "C6", 5], ["C6", "C1", 4]], "lat": 42.0, "lm": 25.3, "stage2": null, "attempts": null, "attemptAcc": null, "agree": {"1": [463, 463], "2": [198, 280], "3": [56, 121]}}, "mechanism": [["Voters", "verifier-s11 + verifier-s4 + native-thinking"], ["Weight", "w(voter,class) = (correct+1)/(votes+2), fitted on dev-96"], ["Tie-break", "verifier-s11 (deterministic, strongest gates)"], ["Unanimous cases", "463/864 → 100.0% correct"], ["LM calls / question", "25.3"], ["Latency / question", "42.0 s in parallel, 60.3 s serial"]], "failure": "All 147 remaining errors sit in the residual zone. 113 of them had the gold label on one of the three ballots and lost the vote, so they are an aggregator problem, not a knowledge problem. Three-way splits (121 cases) are only 46.3% correct while their oracle is 94.2%.", "evalOn": "official-864"}, {"id": "specialist", "name": "Residual specialist", "tag": "single program", "family": "mechanism", "status": "best-single", "headline": "86.15%", "oneLine": "The residual decision gets its own LM call that sees only the six observations and the rule order.", "scores": {"dev-96": 92.71, "sel200": 83.0, "selection-296": 86.15}, "official": {"n": 296, "ok": 255, "acc": 86.15, "perLabel": {"C1": [24, 37], "C2": [37, 37], "C3": [31, 37], "C4": [18, 37], "C5": [37, 37], "C6": [34, 37], "C7": [37, 37], "C8": [37, 37]}, "conf": [["C4", "C3", 11], ["C1", "C3", 7], ["C4", "C6", 6], ["C1", "C4", 3], ["C3", "C4", 3], ["C3", "C6", 3], ["C1", "C6", 3], ["C6", "C3", 3], ["C4", "C1", 2]], "lat": 20.8, "lm": 11.4, "stage2": [148, 148], "attempts": {"1": 160, "2": 96, "3": 40}, "attemptAcc": {"1": 98.8, "2": 76.0, "3": 60.0}}, "mechanism": [["Routing", "LM decides: the specialist runs only if the first pass concluded a residual class"], ["What it sees", "six observations + the ordered rules, nothing else"], ["Invoked on", "48/96 dev and 100/200 sel200 — exactly the residual zone"], ["Label changed", "11/48 dev, 45/100 sel200"], ["McNemar vs forced", "13 : 39 over 296 cases, p = 4.1e-04"], ["McNemar vs verifier v2.1", "1 : 20 on dev-96, p = 2e-05"], ["LM calls / question", "11.4"], ["Latency / question", "18.6 s"]], "failure": "C4 remains the weak class (18/37 on the selection set) and C1 gives up ground (24/37): the ordered policy itself cannot separate C4 from C3/C6 when several witnesses fire at once. Official-864 is pre-registered and running — the number above is a selection-set estimate, not a test result.", "evalOn": "selection set (296 cases)"}, {"id": "verifier", "name": "Consistency verifier", "tag": "audit + retry", "family": "mechanism", "status": "shipped", "headline": "76.85%", "oneLine": "A label-neutral audit re-runs the program when its own trace contradicts its own measurements.", "scores": {"dev-96": 72.92, "sel200": 73.0, "holdout-96": 80.21, "official-864": 76.85}, "official": {"n": 864, "ok": 664, "acc": 76.85, "perLabel": {"C1": [85, 108], "C2": [108, 108], "C3": [59, 108], "C4": [16, 108], "C5": [108, 108], "C6": [72, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C3", 47], ["C3", "C1", 38], ["C4", "C1", 35], ["C6", "C3", 16], ["C1", "C3", 15], ["C6", "C1", 13], ["C4", "C6", 10], ["C3", "C4", 8], ["C6", "C4", 7]], "lat": 22.1, "lm": 12.0, "stage2": [202, 431], "attempts": {"1": 463, "2": 106, "3": 294}, "attemptAcc": {"1": 97.4, "2": 69.8, "3": 47.3}}, "mechanism": [["Checks", "false inequality, misquoted value, verdict contradicting its own comparison, stage-2 skip"], ["Never supplies", "a class label — every message points at the model's own text"], ["Retries", "up to 2"], ["Passed on attempt 1", "463 cases → 97.4% correct"], ["Exhausted 3 attempts", "294 cases → 47.3% correct"], ["Measurement discipline", "28% → 78% of residual cases"], ["LM calls / question", "12.0"], ["Latency / question", "19.1 s"]], "failure": "It can only detect self-contradiction, so a trace that is clean but wrong survives. 252/864 traces leave the loop still flagged, and the retry loop cannot rescue hard cases: the cases that burn all three attempts are the ones it gets wrong 53% of the time, while consuming 3.7x the compute of a first-pass case.", "evalOn": "official-864"}, {"id": "forced", "name": "Forced stage-2 measurement", "tag": "negative result", "family": "mechanism", "status": "negative", "headline": "76.27%", "oneLine": "When a residual answer appears without its measurements, run the missing tools and hand back the numbers.", "scores": {"dev-96": 80.21, "sel200": 76.0, "holdout-96": 79.17, "official-864": 76.27}, "official": {"n": 864, "ok": 659, "acc": 76.27, "perLabel": {"C1": [79, 108], "C2": [108, 108], "C3": [50, 108], "C4": [18, 108], "C5": [108, 108], "C6": [80, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 48], ["C4", "C1", 44], ["C4", "C3", 31], ["C1", "C3", 15], ["C4", "C6", 15], ["C6", "C1", 13], ["C1", "C4", 9], ["C6", "C3", 8], ["C6", "C4", 7]], "lat": 21.2, "lm": 10.7, "stage2": [432, 432], "attempts": {"1": 470, "2": 272, "3": 122}, "attemptAcc": {"1": 97.4, "2": 54.8, "3": 42.6}}, "mechanism": [["Target", "182/376 official residual cases answered without stage-2 numbers"], ["Stage-2 coverage", "52% → 100%"], ["Estimated headroom", "+10.2 points"], ["Delivered", "-0.6 points"], ["McNemar on official", "68 : 63, p = 0.73 — no difference"], ["Cheaper", "10.7 vs 12.0 LM calls, 16.7 s vs 19.1 s"]], "failure": "The defect was real and got fixed; the accuracy did not move. Error mass merely relocated: C4→C3 (37) became C3→C1 (48) and C4→C1 (44), and C1 turned into the new dumping ground (184 answers, 79 correct). This is the experiment that proved the bottleneck is not missing information.", "evalOn": "official-864"}, {"id": "thinking", "name": "Native thinking", "tag": "high variance", "family": "prompt", "status": "in-ensemble", "headline": "76.39%", "oneLine": "Qwen3 thinking mode on the same program: better residual reasoning, leaky gates, high variance.", "scores": {"dev-96": 75.21, "holdout-96": 73.96, "official-864": 76.39}, "official": {"n": 864, "ok": 660, "acc": 76.39, "perLabel": {"C1": [57, 108], "C2": [105, 108], "C3": [102, 108], "C4": [37, 108], "C5": [106, 108], "C6": [59, 108], "C7": [102, 108], "C8": [92, 108]}, "conf": [["C4", "C3", 60], ["C6", "C3", 48], ["C1", "C3", 42], ["C8", "C3", 12], ["C4", "C6", 11], ["C1", "C4", 6], ["C3", "C4", 4], ["C8", "C4", 3], ["C1", "C6", 3]], "lat": 74.2, "lm": 6.1, "stage2": [150, 453], "attempts": null, "attemptAcc": null}, "mechanism": [["Draw-to-draw spread", "80.21 / 69.79 / 77.08 / 70.83 / 78.12 on dev-96 (sd 4.6)"], ["Strength", "C3 102/108 on official"], ["Weakness", "talks itself past verified gates; skips stage-2 tools in 237/376 residual cases"], ["LM calls / question", "6.1"], ["Latency / question", "42.0 s"]], "failure": "Single-draw variance is +-4.6 points, so it cannot be selected on or shipped alone; it also violates decisive criteria it has already verified. Its value is as the third, decorrelated ballot.", "evalOn": "official-864"}, {"id": "prompt", "name": "Prompt + demo optimization", "tag": "exhausted", "family": "prompt", "status": "exhausted", "headline": "72.92%", "oneLine": "Eleven hand-written instruction seeds and DSPy bootstrapped demos — the axis that plateaued first.", "scores": {"dev-96 best raw seed": 63.54, "dev-96 + 2 demos": 72.92, "dev-96 + 4 demos": 73.96}, "official": {"n": 96, "ok": 70, "acc": 72.92, "perLabel": {"C1": [9, 12], "C2": [12, 12], "C3": [4, 12], "C4": [2, 12], "C5": [12, 12], "C6": [7, 12], "C7": [12, 12], "C8": [12, 12]}, "conf": [["C4", "C3", 6], ["C3", "C1", 5], ["C1", "C3", 3], ["C4", "C1", 3], ["C6", "C1", 3], ["C3", "C6", 2], ["C4", "C6", 1], ["C6", "C4", 1], ["C3", "C7", 1]], "lat": 19.1, "lm": 12.2, "stage2": [23, 47], "attempts": {"1": 53, "2": 8, "3": 35}, "attemptAcc": {"1": 98.1, "3": 34.3, "2": 75.0}}, "mechanism": [["Instruction seeds", "11 hand-written; best 63.54% on dev-96"], ["Bootstrapped demos", "+9.4 points, then flat since 2026-07-29"], ["Same optimizer, different seed", "34.38% – 72.92% — the seed lottery dominates any wording effect"], ["Demo budget 6", "0/96 — exceeds the context window outright"], ["GEPA with a local reflector", "45.83%"], ["MIPROv2", "62.5 → 75.0 on its own val-32; re-running after a save crash"]], "failure": "Wording is not the binding constraint. The measured spread across seeds under one optimizer is wider than any instruction edit, so further search on a 96-case set optimizes noise. The demo axis is capped by the context window, not by imagination.", "evalOn": "dev-96"}, {"id": "symbolic", "name": "Symbolic reference", "tag": "ceiling", "family": "reference", "status": "reference", "headline": "89.93%", "oneLine": "The same decision flow executed in plain Python — the ceiling the LM is measured against.", "scores": {"dev-96": 96.88, "official-864": 89.93}, "official": {"n": 864, "ok": 777, "acc": 89.93, "perLabel": {"C1": [83, 108], "C2": [108, 108], "C3": [87, 108], "C4": [79, 108], "C5": [108, 108], "C6": [96, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C6", 17], ["C4", "C3", 12], ["C6", "C3", 12], ["C1", "C4", 12], ["C3", "C4", 9], ["C3", "C1", 8], ["C1", "C3", 7], ["C1", "C6", 6], ["C3", "C6", 4]], "lat": null, "lm": 0, "stage2": null, "attempts": null, "attemptAcc": null}, "mechanism": [["Gates + strong-C1 witness", "488/488 on official"], ["Residual zone", "289/376 = 76.9%"], ["Rule 1 C3 (min_diff >= 142.5)", "111 fires, 73.0% precise"], ["Rule 2 C6 (equal mod-30 pair)", "123 fires, 78.0% precise"], ["Rule 3 C4 (gap >= -3 dB)", "100 fires, 79.0% precise"], ["Rule 4 C1 (row below lobe)", "35 fires, 77.1% precise"], ["Never an answer path", "used only as an audit and a ceiling"]], "failure": "Even perfect execution stops near 90%: every residual rule is only 73-79% precise, and 33 cases fire the C3 and C6 rules simultaneously with gold split 14/12/4/3. Beyond this line the task needs a new discriminating feature, not better execution.", "evalOn": "official-864"}]};
+const TOOLSTATS = {"verifier": {"analyze_throughput_segments": 99.9, "analyze_coverage_geometry": 99.9, "analyze_mobility": 99.9, "analyze_radio_resources": 99.9, "analyze_pci_relations": 25.0, "analyze_neighbor_overlap": 24.9}, "s4": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 50.9, "analyze_neighbor_overlap": 50.9}, "thinking": {"analyze_throughput_segments": 54.2, "analyze_coverage_geometry": 99.3, "analyze_mobility": 97.8, "analyze_radio_resources": 96.8, "analyze_pci_relations": 31.5, "analyze_neighbor_overlap": 19.2}, "forced": {"analyze_throughput_segments": 100.0, "analyze_coverage_geometry": 100.0, "analyze_mobility": 100.0, "analyze_radio_resources": 100.0, "analyze_pci_relations": 52.0, "analyze_neighbor_overlap": 51.9}};
 const LAB = ["C1","C2","C3","C4","C5","C6","C7","C8"];
 const PILL = {shipped:["ship","shipped"], "best-single":["best","best single"], negative:["neg","no gain"],
               "in-ensemble":["flat","in ensemble"], exhausted:["flat","plateaued"], reference:["ref","reference"]};
@@ -715,6 +942,56 @@ const BUDGET = [
       }).join("")
     + LAB.filter(g=>!m[g]).map(g=>`<tr><td class="l"><b>${g}</b></td>${LAB.map(p=>`<td class="muted">${p===g?"·":""}</td>`).join("")}<td class="ok">0</td></tr>`).join("")
     + `</tbody>`;
+})();
+
+
+/* ---------- tool-call rate: grouped bars, one row per tool ---------- */
+(function(){
+  const TS = TOOLSTATS, tools = Object.keys(TS.verifier);
+  const series = [["Ballot A · verifier","verifier","blue"],["Ballot B · seed 4","s4","green"],["Thinking","thinking","amber"]];
+  const rowH = 52, w = 560, padL = 208, padR = 54, h = tools.length*rowH + 22;
+  const x = v => padL + (v/100)*(w-padL-padR);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="tool call rate">`;
+  [0,50,100].forEach(g=>{
+    s += `<line x1="${x(g)}" y1="4" x2="${x(g)}" y2="${h-20}" stroke="${col('line')}" stroke-width="1"/>`;
+    s += `<text x="${x(g)}" y="${h-6}" font-size="9.5" fill="${col('faint')}" text-anchor="middle">${g}%</text>`;
+  });
+  tools.forEach((t,i)=>{
+    const y0 = 6 + i*rowH, stage2 = /pci_relations|neighbor_overlap/.test(t);
+    s += `<text x="${padL-10}" y="${y0+12}" font-size="11" fill="${col('text')}" text-anchor="end"
+            font-family="ui-monospace,monospace">${t.replace('analyze_','')}</text>`;
+    s += `<text x="${padL-10}" y="${y0+25}" font-size="9.5" fill="${stage2?col('amber'):col('blue')}"
+            text-anchor="end">${stage2?'stage 2':'stage 1'}</text>`;
+    series.forEach(([nm,key,c],j)=>{
+      const v = TS[key][t], y = y0 + 2 + j*11;
+      s += `<rect x="${padL}" y="${y}" width="${Math.max(1.5,x(v)-padL)}" height="8" rx="2.5"
+              fill="${col(c)}" opacity=".85"><title>${nm}: ${v}%</title></rect>`;
+      s += `<text x="${x(v)+6}" y="${y+7.5}" font-size="9.5" fill="${col('muted')}">${v}</text>`;
+    });
+  });
+  s += `</svg><div class="chips" style="justify-content:flex-start;margin-top:8px">`
+     + series.map(([nm,,c])=>`<i style="border-color:${col(c)};color:${col(c)}">${nm}</i>`).join("")
+     + `</div>`;
+  document.getElementById("toolRate").innerHTML = s;
+})();
+
+/* ---------- tool calls per case ---------- */
+(function(){
+  const D = [[4,480,"gate path"],[5,162,"+1 residual tool"],[6,67,"full stage 2"],[7,89,"retry"],[8,65,"retry"]];
+  const w = 560, h = 200, padB = 44, padT = 24, slot = (w-40)/D.length;
+  const max = Math.max(...D.map(d=>d[1]));
+  const y = v => padT + (1-v/max)*(h-padT-padB);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="tool calls per case">`;
+  s += `<line x1="34" y1="${y(0)}" x2="${w-6}" y2="${y(0)}" stroke="${col('line')}" stroke-width="1"/>`;
+  D.forEach((d,i)=>{
+    const cx = 40 + i*slot + slot/2, bw = Math.min(52, slot*0.62);
+    const c = d[0]>=7 ? col('red') : d[0]>=5 ? col('amber') : col('green');
+    s += `<rect x="${cx-bw/2}" y="${y(d[1])}" width="${bw}" height="${Math.max(1,y(0)-y(d[1]))}" rx="4" fill="${c}" opacity=".85"/>`;
+    s += `<text x="${cx}" y="${y(d[1])-6}" font-size="11" font-weight="700" fill="${col('text')}" text-anchor="middle">${d[1]}</text>`;
+    s += `<text x="${cx}" y="${h-26}" font-size="12" font-weight="700" fill="${col('text')}" text-anchor="middle">${d[0]} calls</text>`;
+    s += `<text x="${cx}" y="${h-11}" font-size="9.5" fill="${col('faint')}" text-anchor="middle">${d[2]}</text>`;
+  });
+  document.getElementById("toolCount").innerHTML = s+`</svg>`;
 })();
 
 /* ---------- attempts charts ---------- */
