@@ -32,6 +32,23 @@
     .chip.dead{background:#3a1d27;color:var(--red)}.chip.live{background:#173a2e;color:var(--green)}.chip.info{background:#19334f;color:var(--cyan)}
     code{background:#07101c;border:1px solid #1b2e47;border-radius:5px;padding:1px 5px;font-size:12px}
     @media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.cols2{grid-template-columns:1fr}.bar-row{grid-template-columns:150px 1fr 120px}}
+    .arch{display:grid;gap:0;justify-items:center}
+    .abox{border:1px solid var(--line);background:#0c1828;border-radius:11px;padding:10px 14px;text-align:center;max-width:640px}
+    .abox b{display:block}.abox .muted{font-size:12px}
+    .abox.src{border-color:#2c4a6e;background:#102038}
+    .abox.stop{border-color:#2b5a45;background:#0e2a20}
+    .abox.vote{border-color:#3ba57e;background:linear-gradient(180deg,#12303a,#0e2a26);box-shadow:0 0 24px #54d89f22}
+    .aarrow{color:var(--muted);font-size:15px;padding:3px 0;text-align:center}
+    .aarrow small{display:block;font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+    .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;width:100%;align-items:start}
+    .lane{border:1px dashed #2c4a6e;border-radius:13px;padding:11px;display:grid;gap:0;justify-items:center}
+    .lane>.tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:7px;margin-bottom:8px}
+    .lane.det>.tag{background:#19334f;color:var(--cyan)}.lane.sto>.tag{background:#3a2f18;color:var(--amber)}
+    .lane .abox{width:100%;font-size:12.5px;padding:8px 10px}
+    .gate{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+    .gate span{font-size:10.5px;padding:2px 6px;border-radius:6px;background:#19334f;color:var(--cyan);font-variant-numeric:tabular-nums}
+    .vbadge{font-size:11px;padding:2px 8px;border-radius:7px;background:#173a2e;color:var(--green);font-weight:800}
+    @media(max-width:1000px){.lanes{grid-template-columns:1fr}}
   </style>
 </head>
 <body><main>
@@ -51,6 +68,42 @@
     <div class="panel"><div class="label">Trần symbolic</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
     <div class="panel"><div class="label">GRPO v1c</div><div class="value warn">đang chạy</div><div class="muted">1×H200 colocate · ~74s/step · ETA ~21h · reward 0.625 @step5</div></div>
   </section>
+
+  <h2>Kiến trúc pipeline R3 (ensemble 3 phiếu)</h2>
+  <div class="panel">
+    <div class="arch">
+      <div class="abox src"><b>Câu hỏi TeleLogs</b><span class="muted">bảng drive-test + tham số kỹ thuật + 8 định nghĩa lớp — model không bao giờ thấy nhãn</span></div>
+      <div class="aarrow">▼ <small>parse_case tất định · audit label-neutral tự động</small></div>
+      <div class="abox"><b>6 tool đo lường label-neutral</b><span class="muted">throughput_segments · coverage_geometry · mobility · radio_resources · pci_relations · neighbor_overlap — chỉ trả số đo, không ngưỡng, không tên lớp</span></div>
+      <div class="aarrow">▼ <small>ba voter độc lập, chạy song song</small></div>
+      <div class="lanes">
+        <div class="lane det">
+          <span class="tag">Voter A · verifier + s11 (no-think, temp 0 — tất định)</span>
+          <div class="abox"><b>Giai đoạn 1 — 4 tool quyết định</b>
+            <div class="gate"><span>C2: dist &gt; 1 km</span><span>C5: đổi PCI ≥ 3</span><span>C7: tốc độ &gt; 40</span><span>C8: RB &lt; 160</span></div>
+            <span class="muted">checklist từng dòng, verdict "triggered / not triggered"</span></div>
+          <div class="aarrow">▼ <small>trigger → trả lời ngay · không thì ▼</small></div>
+          <div class="abox"><b>Giai đoạn 2 — residual C1/C3/C4/C6</b><span class="muted">strong-C1 (dưới búp sóng + RSRP ≤ −90) → gọi pci + overlap → thứ tự hiệu chỉnh: C3 (chênh ≥ 142.5 Mbps) → C6 (đụng mod-30) → C4 (gap ≥ −3 dB) → C1 → C3</span></div>
+          <div class="aarrow">▼ <small>audit sau mỗi lượt</small></div>
+          <div class="abox stop"><b>Verifier chống tự-mâu-thuẫn</b><span class="muted">bất đẳng thức sai số học · verdict ngược bất đẳng thức · misquote số liệu · kết luận thiếu tool → bắt làm lại (≤ 2 retry), không bao giờ gợi ý nhãn</span></div>
+        </div>
+        <div class="lane det">
+          <span class="tag">Voter B · verifier + s4 (no-think, temp 0 — tất định)</span>
+          <div class="abox"><b>Cùng kiến trúc Voter A</b><span class="muted">nhưng dùng chương trình seed4-checklist + 2 demo C4 (selected round 1)</span></div>
+          <div class="abox" style="margin-top:8px"><b>Vai trò trong ensemble</b><span class="muted">bù trừ residual với Voter A: mạnh C4/C6 nơi A mạnh C1/C8 — hai mỏ neo tất định giữ gates 48/48</span></div>
+        </div>
+        <div class="lane sto">
+          <span class="tag">Voter C · s11 native thinking (temp 0.6)</span>
+          <div class="abox"><b>Cùng chương trình s11, bật chuỗi suy nghĩ Qwen3</b><span class="muted">±4.6 điểm nếu đứng một mình, nhưng mở khóa C3 (12/12) mà no-think không đạt được</span></div>
+          <div class="abox" style="margin-top:8px"><b>Vai trò trong ensemble</b><span class="muted">bơm tín hiệu C3/C6 — nhiễu sampling bị hai mỏ neo A/B hấp thụ khi bỏ phiếu</span></div>
+        </div>
+      </div>
+      <div class="aarrow">▼ <small>gộp phiếu theo từng câu</small></div>
+      <div class="abox vote"><b>Majority vote · hòa phiếu → theo Voter A</b>
+        <span class="muted">dev-96 kỳ vọng <b style="color:var(--green)">80.62% ± 1.7</b> qua 5 lần gieo phiếu C · holdout-96 và official-864 đang chạy</span>
+        <div style="margin-top:6px"><span class="vbadge">gates 48/48</span> <span class="vbadge">tất định 2/3 phiếu</span> <span class="vbadge">~2.6× compute</span></div></div>
+    </div>
+  </div>
 
   <h2>Bảng xếp hạng dev-96</h2>
   <div class="panel">

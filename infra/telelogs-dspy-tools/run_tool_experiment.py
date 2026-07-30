@@ -170,7 +170,9 @@ def dashboard_payload(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--methods", default="b0_raw,b1_all_tools,b2_planned_tools")
-    parser.add_argument("--eval-split", choices=("train", "dev", "holdout"), default="dev")
+    parser.add_argument("--eval-split", choices=("train", "dev", "holdout", "all"), default="dev")
+    parser.add_argument("--raw-data", type=Path, default=RAW_DATA,
+                        help="question file; with --eval-split all, every row of this file is evaluated")
     parser.add_argument("--eval-per-label", type=int, default=4)
     parser.add_argument("--eval-offset-per-label", type=int, default=0)
     parser.add_argument("--workers", type=int, default=8)
@@ -214,8 +216,11 @@ def main() -> None:
         if method in programs:
             programs[method].load(path)
 
-    rows = load_rows(RAW_DATA)
-    eval_rows = balanced_slice(rows, args.eval_split, args.eval_per_label, args.eval_offset_per_label)
+    rows = load_rows(args.raw_data)
+    if args.eval_split == "all":
+        eval_rows = rows
+    else:
+        eval_rows = balanced_slice(rows, args.eval_split, args.eval_per_label, args.eval_offset_per_label)
     contexts = {row["source_index"]: parse_case(row["question"]) for row in eval_rows}
     # Audit all measurements before making any LM request.
     for case in contexts.values():
