@@ -165,7 +165,32 @@
   </table></div>
   <div class="muted" style="margin-top:8px">Đậm màu = gần 12/12. Gates chính xác C2/C5/C7/C8 gần bão hòa ở mọi cấu hình no-think; toàn bộ trận địa còn lại nằm ở vùng residual C1/C3/C4/C6 (trần symbolic đạt 45/48 vùng này).</div>
 
-  <h2>Phân tích lỗi — 768 prediction (8 run × dev-96)</h2>
+  <h2>Chẩn đoán bản BEST hiện tại — ensemble v2 trên official-864</h2>
+  <section class="grid">
+    <div class="panel"><div class="label">Ensemble v2 · official</div><div class="value ok">79.98%</div><div class="muted">691/864 · gates 432/432</div></div>
+    <div class="panel"><div class="label">Symbolic cùng luồng · official</div><div class="value" style="color:var(--purple)">89.93%</div><div class="muted">777/864 — trần thực tế trên tập này (dev cho 96.88 là hào phóng)</div></div>
+    <div class="panel"><div class="label">Gate + strong-C1 (symbolic)</div><div class="value ok">488/488</div><div class="muted">bắn 488 case, đúng 100% — kể cả witness C1 (56 case, precision tuyệt đối)</div></div>
+    <div class="panel"><div class="label">Residual (symbolic)</div><div class="value warn">76.9%</div><div class="muted">289/376 — toàn bộ khoảng cách 10 điểm nằm ở đây</div></div>
+    <div class="panel"><div class="label">3 phiếu trùng nhau</div><div class="value ok">99.8%</div><div class="muted">461/864 case đồng thuận tuyệt đối → gần chắc chắn đúng</div></div>
+  </section>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>Ma trận nhầm lẫn của ensemble v2 (official-864, chỉ câu sai)</h3>
+      <div class="table-wrap"><table id="offconf"></table></div>
+      <div class="muted" style="margin-top:8px">Thay đổi so chẩn đoán v1: hố đen C3 đã hẹp lại nhưng xuất hiện <b style="color:var(--text)">dòng chảy ngược C3→C1 (38 lỗi, lớn nhất)</b> — guard chống-C3 của v2 đẩy một phần case C3 thật sang C1 (luật hình học đúng ở ~51% mọi case). C4 vẫn là lớp residual yếu nhất (45/108). Symbolic cùng luồng cũng sai nhiều nhất ở C4→C6 (17) — giới hạn policy, không phải giới hạn model.</div>
+    </div>
+    <div class="panel">
+      <h3>Đồng thuận phiếu = tín hiệu độ tin cậy</h3>
+      <div class="table-wrap"><table id="offagree"></table></div>
+      <div class="muted" style="margin-top:8px">Giá trị triển khai: khi 3 phiếu trùng (53% số case) kết quả gần chắc chắn đúng; case chia 2-1 đúng 68%; case vỡ 3 hướng (14% số case) chỉ còn 33.6% — chính là nhóm cần escalate (người xem, model lớn hơn, hoặc RL). </div>
+      <h3 style="margin-top:14px">Kỷ luật gọi tool trên official (residual gọi đủ giai đoạn 2)</h3>
+      <div class="bars" id="offtools"></div>
+      <div class="muted" style="margin-top:8px">Bất ngờ: chương trình s4 gọi đủ 100% (demo của nó luôn gọi cả 6 tool); verifier-s11 51% (retry chỉ ép được một phần); thinking 37% — vẫn là kẻ lười đo nhất.</div>
+    </div>
+  </div>
+
+  <h2>Phân tích lỗi thế hệ v1 (dev-96, 8 run) — bộ dữ liệu đã dẫn tới thiết kế v2</h2>
   <div class="cols2">
     <div class="panel">
       <h3>Nhầm với lớp nào? (ma trận nhầm lẫn, chỉ đếm câu sai)</h3>
@@ -329,6 +354,30 @@ document.getElementById("toolbars").innerHTML=FAMS.map(([f,n])=>{
     <div class="bar-name">${n} — đủ giai đoạn 2 khi residual</div>
     <div class="track"><i class="fill ${f==="verifier"?"ens":""}" style="width:${p.toFixed(1)}%"></i></div>
     <div class="bar-val"><b>${p.toFixed(0)}%</b></div></div>`;}).join("");
+const OFF={conf:[[0,0,16,8,0,2,0,0],[0,0,0,0,0,0,0,0],[38,0,0,13,0,2,0,0],[25,0,30,0,0,11,0,0],[0,0,0,0,0,0,0,0],[11,0,12,5,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]],
+agree:[["3 phiếu trùng nhau",460,461],["Đa số 2–1",189,278],["Vỡ 3 hướng (hòa → verifier-s11)",42,125]],
+tools:[["verifier v2 + s11",191,376],["verifier v2 + s4",376,376],["thinking s11",139,376]]};
+const OMAX=Math.max(...OFF.conf.flat());
+document.getElementById("offconf").innerHTML=
+  `<thead><tr><th>gold ↓ · pred →</th>${L8.map(l=>`<th>${l}</th>`).join("")}<th>tổng sai</th></tr></thead><tbody>`+
+  L8.map((g,i)=>{
+    const rowsum=OFF.conf[i].reduce((a,b)=>a+b,0);
+    if(!rowsum)return `<tr><td><b>${g}</b></td>${L8.map((p,j)=>`<td class="muted">${i===j?"·":""}</td>`).join("")}<td class="ok">0</td></tr>`;
+    return `<tr><td><b>${g}</b></td>`+L8.map((p,j)=>{
+      if(i===j)return `<td class="muted">·</td>`;
+      const n=OFF.conf[i][j];
+      return n?`<td><span class="cell" style="background:rgba(255,113,128,${(0.10+0.65*n/OMAX).toFixed(2)})" title="${g} bị đoán thành ${p}: ${n}/864">${n}</span></td>`:`<td class="muted"></td>`;
+    }).join("")+`<td><b>${rowsum}</b></td></tr>`;}).join("")+`</tbody>`;
+document.getElementById("offagree").innerHTML=
+  `<thead><tr><th style="text-align:left">Mức đồng thuận</th><th>Số case</th><th>Đúng</th><th>Accuracy</th></tr></thead><tbody>`+
+  OFF.agree.map(([name,ok,n])=>`<tr><td style="text-align:left">${name}</td><td>${n}</td><td>${ok}</td><td><b>${(ok/n*100).toFixed(1)}%</b><span class="mini"><i style="width:${(ok/n*100).toFixed(0)}%"></i></span></td></tr>`).join("")+`</tbody>`;
+document.getElementById("offtools").innerHTML=OFF.tools.map(([name,ok,n])=>{
+  const p=ok/n*100;
+  return `<div class="bar-row" title="${ok}/${n} case residual gọi đủ pci_relations + neighbor_overlap">
+    <div class="bar-name">${name}</div>
+    <div class="track"><i class="fill ${p>90?"ens":""}" style="width:${p.toFixed(1)}%"></i></div>
+    <div class="bar-val"><b>${p.toFixed(0)}%</b></div></div>`;}).join("");
+
 document.getElementById("toolmisc").innerHTML=
   `<thead><tr><th style="text-align:left">Hành vi lệch chuẩn</th>${FAMS.map(([,n])=>`<th>${n}</th>`).join("")}</tr></thead><tbody>`+
   [["Gọi thừa tool residual khi đã có gate (overcall)",f=>`${EA.tools[f].gated_overcall}/${EA.tools[f].gated_total}`],
