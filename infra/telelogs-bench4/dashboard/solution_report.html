@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TeleLogs Tool-Calling Track — Solution Report</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --panel:#ffffff; --line:#dde5ef; --line2:#eef2f7;
+    --text:#12202f; --muted:#5d7183; --faint:#8697a8;
+    --blue:#1f6feb; --blue2:#4c94ff; --green:#0f9d58; --amber:#c07b00; --red:#d43f4f;
+    --purple:#7048c8; --slate:#8ba0b4;
+    --shadow:0 1px 2px rgba(16,32,48,.06), 0 8px 24px rgba(16,32,48,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0b1220;--panel:#111c2d;--line:#22344b;--line2:#1a293c;
+      --text:#e8f0fa;--muted:#9db0c6;--faint:#7d91a8;--blue:#4c94ff;--blue2:#7cb3ff;
+      --green:#3ecf8e;--amber:#ffc65c;--red:#ff7a88;--purple:#b494ff;--slate:#7b90a6;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);}
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.62 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  main{width:min(1280px,94vw);margin:0 auto;padding:0 0 96px}
+  h1{font-size:clamp(28px,3.6vw,44px);line-height:1.12;letter-spacing:-.02em;margin:0 0 10px}
+  h2{font-size:clamp(20px,2.2vw,27px);letter-spacing:-.015em;margin:56px 0 6px}
+  h3{font-size:17px;margin:0 0 10px;letter-spacing:-.01em}
+  h4{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;font-weight:700}
+  p{margin:0 0 12px}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
+    background:var(--line2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .muted{color:var(--muted)}
+  .lede{font-size:17px;color:var(--muted);max-width:80ch}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin-bottom:32px}
+  .navin{width:min(1280px,94vw);margin:0 auto;display:flex;align-items:center;gap:20px;
+    padding:12px 0;flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+  .navlinks{display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px}
+  .navlinks a{color:var(--muted)}
+  .navlinks a:hover{color:var(--text);text-decoration:none}
+
+  /* ---------- layout primitives (grid only — nothing overlaps) ---------- */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+  @media(max-width:1100px){.g5,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}}
+  @media(max-width:620px){.g5,.g4{grid-template-columns:1fr}}
+
+  .kpi .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .kpi .value{font-size:31px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;
+    font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:12.5px;color:var(--muted)}
+  .ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}.pur{color:var(--purple)}
+
+  .pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;
+    text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid transparent}
+  .pill.ship{background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);
+    border-color:color-mix(in srgb,var(--green) 30%,transparent)}
+  .pill.best{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue);
+    border-color:color-mix(in srgb,var(--blue) 30%,transparent)}
+  .pill.neg{background:color-mix(in srgb,var(--red) 13%,transparent);color:var(--red);
+    border-color:color-mix(in srgb,var(--red) 30%,transparent)}
+  .pill.ref{background:color-mix(in srgb,var(--purple) 13%,transparent);color:var(--purple);
+    border-color:color-mix(in srgb,var(--purple) 30%,transparent)}
+  .pill.flat{background:var(--line2);color:var(--muted);border-color:var(--line)}
+
+  /* ---------- tables ---------- */
+  .tw{border:1px solid var(--line);border-radius:12px;overflow-x:auto;background:var(--panel)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13.5px}
+  th,td{padding:10px 13px;text-align:right;border-bottom:1px solid var(--line2);white-space:nowrap}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+    background:var(--line2);font-weight:700}
+  th:first-child,td:first-child{text-align:left;white-space:normal;min-width:190px}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:color-mix(in srgb,var(--blue) 5%,transparent)}
+  td.l,th.l{text-align:left;white-space:normal}
+
+  /* ---------- architecture diagram: fixed grid rows, generous gaps ---------- */
+  .arch{display:grid;gap:14px;justify-items:center}
+  .abox{border:1px solid var(--line);background:var(--panel);border-radius:12px;
+    padding:12px 16px;text-align:center;width:100%;max-width:660px;box-shadow:var(--shadow)}
+  .abox b{display:block;font-size:14px;margin-bottom:3px}
+  .abox .s{font-size:12.5px;color:var(--muted)}
+  .abox.src{border-color:color-mix(in srgb,var(--slate) 55%,transparent);background:var(--line2);box-shadow:none}
+  .abox.out{border-color:color-mix(in srgb,var(--green) 45%,transparent);
+    background:color-mix(in srgb,var(--green) 8%,transparent)}
+  .abox.stage{border-color:color-mix(in srgb,var(--blue) 45%,transparent);
+    background:color-mix(in srgb,var(--blue) 6%,transparent)}
+  .arrow{display:grid;justify-items:center;gap:2px;color:var(--faint);font-size:16px;line-height:1}
+  .arrow span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+  .lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:100%;align-items:start}
+  @media(max-width:900px){.lanes{grid-template-columns:1fr}}
+  .lane{border:1px dashed var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;
+    justify-items:center;background:color-mix(in srgb,var(--panel) 60%,transparent)}
+  .lane .tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 10px;border-radius:999px;background:var(--line2);color:var(--muted)}
+  .lane .abox{max-width:none;padding:10px 12px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .chips i{font-style:normal;font-size:11px;padding:3px 8px;border-radius:6px;background:var(--line2);
+    color:var(--muted);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+
+  /* ---------- solution explorer ---------- */
+  .explorer{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;align-items:start}
+  @media(max-width:1000px){.explorer{grid-template-columns:1fr}}
+  .picker{display:grid;gap:8px;position:sticky;top:74px}
+  @media(max-width:1000px){.picker{position:static}}
+  .opt{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;
+    text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:11px 13px;cursor:pointer;font:inherit;color:inherit;transition:border-color .15s,background .15s}
+  .opt:hover{border-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+  .opt[aria-selected="true"]{border-color:var(--blue);
+    background:color-mix(in srgb,var(--blue) 8%,transparent);box-shadow:var(--shadow)}
+  .opt .nm{font-weight:700;font-size:14px}
+  .opt .sc{font-variant-numeric:tabular-nums;font-weight:800;font-size:15px}
+  .opt .ln{grid-column:1/-1;font-size:12px;color:var(--muted)}
+  .detail{display:grid;gap:16px;min-width:0}
+  .dhead{display:grid;gap:8px}
+  .dhead .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .dhead h3{margin:0;font-size:22px;letter-spacing:-.015em}
+  .charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+  @media(max-width:900px){.charts{grid-template-columns:1fr}}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .fail{border-left:3px solid var(--red);
+    background:color-mix(in srgb,var(--red) 6%,transparent);
+    border-radius:0 12px 12px 0;padding:14px 16px}
+  .fail h4{color:var(--red)}
+  .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;font-size:13.5px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0;font-variant-numeric:tabular-nums}
+
+  .note{border-left:3px solid var(--blue);background:color-mix(in srgb,var(--blue) 6%,transparent);
+    border-radius:0 12px 12px 0;padding:14px 16px}
+  ul{margin:6px 0 0;padding-left:20px}li{margin:5px 0}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--faint)}
+
+  @media print{
+    nav{position:static;backdrop-filter:none}
+    body{background:#fff;color:#000}
+    .card,.tw{box-shadow:none;break-inside:avoid}
+    h2{break-after:avoid}
+    .picker{display:none}
+    .explorer{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<nav><div class="navin">
+  <span class="brand">TeleLogs · Tool-Calling Track</span>
+  <span class="navlinks">
+    <a href="#summary">Summary</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#solutions">Solutions</a>
+    <a href="#failures">Failure analysis</a>
+    <a href="#cost">Cost</a>
+    <a href="#method">Method</a>
+    <a href="#next">Next</a>
+    <a href="tools_r3.html">Working log (VI)</a>
+  </span>
+</div></nav>
+
+<main>
+  <header>
+    <h1>Diagnosing 5G drive-test degradation<br>with LM function calling</h1>
+    <p class="lede">Eight root causes, one label per case. The model may not read a verdict from anywhere:
+    every number it uses must come from a deterministic, label-neutral measurement tool that it chooses and
+    calls itself. This report covers what was built, what each component is worth in measured points, and —
+    separately and in full — what failed.</p>
+  </header>
+
+  <section id="summary">
+    <h2>Where the system stands</h2>
+    <div class="grid g5" style="margin-top:16px">
+      <div class="card kpi">
+        <div class="label">Official test · 864 cases</div>
+        <div class="value ok">82.99%</div>
+        <div class="sub">Weighted-vote ensemble, shipped. Journey: 79.75 → 79.98 → 82.64 → 82.99</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Exact-criterion gates</div>
+        <div class="value ok">432/432</div>
+        <div class="sub">C2 / C5 / C7 / C8 — solved, no remaining error</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Best single program</div>
+        <div class="value" style="color:var(--blue)">86.15%</div>
+        <div class="sub">Residual specialist, on the 296-case selection set. Official run pre-registered and pending</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Execution ceiling</div>
+        <div class="value pur">89.93%</div>
+        <div class="sub">The same decision flow in plain Python — every residual rule is only 73–79% precise</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">Ballot-selection ceiling</div>
+        <div class="value pur">96.06%</div>
+        <div class="sub">830/864 cases already carry the gold label on one of three ballots</div>
+      </div>
+    </div>
+
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card">
+        <h4>The task</h4>
+        <p>Each case is a drive-test table plus engineering parameters, and a question: why does throughput
+        fall below the stated criterion on some road sections? Exactly one of eight causes is correct.</p>
+        <p class="muted" style="margin:0">Four causes are decided by an exact criterion — serving distance
+        &gt; 1 km, ≥ 3 PCI changes, speed &gt; 40 km/h, mean scheduled RBs &lt; 160. The other four (weak
+        far-end coverage, better neighbour throughput, overlapping co-frequency neighbours, PCI mod-30
+        collision) have no exact criterion and must be tie-broken from measurements.</p>
+      </div>
+      <div class="card">
+        <h4>The constraint we imposed</h4>
+        <p>Six tools return measurements only. An automated check (<code>assert_label_neutral</code>) fails
+        any tool output that contains a class token or a field named like a verdict, so no tool can leak an
+        answer — not even accidentally.</p>
+        <p class="muted" style="margin:0">Consequence: the model owns tool choice, tool order, and the
+        decision. Nothing in the pipeline may hand it a label, including the consistency verifier, which
+        only ever points at the model's own text.</p>
+      </div>
+      <div class="card">
+        <h4>What actually moved the number</h4>
+        <p>Not prompt wording. Instruction seeds and bootstrapped demos plateaued early and stayed flat.
+        Every subsequent gain came from <b>mechanism</b>: an audit-and-retry loop, a decorrelated third
+        voter, a precision-weighted aggregator, and — largest of all — giving the hard decision its own
+        undistracted call.</p>
+        <p class="muted" style="margin:0">Two mechanisms that looked promising delivered nothing. Both are
+        reported below with the measurements that killed them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>Architecture</h2>
+    <p class="lede">Two configurations are live. The ensemble is what produced the official 82.99%; the
+    single-program pipeline is the round-4 result whose test run is pending.</p>
+
+    <div class="grid g2" style="margin-top:18px;gap:22px">
+      <div class="card">
+        <h3>A · Shipped: three ballots, precision-weighted vote</h3>
+        <div class="arch" style="margin-top:14px">
+          <div class="abox src"><b>Raw case</b><div class="s">drive-test table + engineering parameters + 8 cause definitions</div></div>
+          <div class="arrow">↓</div>
+          <div class="lanes">
+            <div class="lane">
+              <span class="tag">Ballot A</span>
+              <div class="abox"><b>ReAct + verifier</b><div class="s">seed v11 · deterministic</div></div>
+              <div class="arrow">↓</div>
+              <div class="abox"><b>Audit &amp; retry</b><div class="s">≤ 2 retries on self-contradiction</div></div>
+            </div>
+            <div class="lane">
+              <span class="tag">Ballot B</span>
+              <div class="abox"><b>ReAct + verifier</b><div class="s">seed 4 · always calls all six tools</div></div>
+              <div class="arrow">↓</div>
+              <div class="abox"><b>Audit &amp; retry</b><div class="s">rarely triggers — its demos already measure</div></div>
+            </div>
+            <div class="lane">
+              <span class="tag">Ballot C</span>
+              <div class="abox"><b>Native thinking</b><div class="s">temp 0.6 · decorrelated</div></div>
+              <div class="arrow">↓</div>
+              <div class="abox"><b>Single pass</b><div class="s">strong on C3, leaks on gates</div></div>
+            </div>
+          </div>
+          <div class="arrow">↓<span>three labels</span></div>
+          <div class="abox stage"><b>Precision-weighted vote</b>
+            <div class="s">score(class) = Σ w(voter, class) · w = (correct + 1) / (votes + 2), fitted on dev-96 only</div>
+            <div class="chips"><i>unanimous 463 → 100.0%</i><i>2–1 → 70.7%</i><i>3-way → 46.3%</i></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="abox out"><b>82.99% on official-864</b><div class="s">25.3 LM calls · 42 s per case in parallel</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>B · Round 4: one program, two decision stages</h3>
+        <div class="arch" style="margin-top:14px">
+          <div class="abox src"><b>Raw case</b><div class="s">same input, no voting anywhere</div></div>
+          <div class="arrow">↓</div>
+          <div class="abox stage"><b>Stage 1 — exact criteria</b>
+            <div class="s">the model calls the four decisive tools and writes one verification line each</div>
+            <div class="chips"><i>C2 &gt; 1 km</i><i>C5 ≥ 3</i><i>C7 &gt; 40 km/h</i><i>C8 &lt; 160 RB</i></div>
+          </div>
+          <div class="arrow">↓<span>first criterion that fires is the answer</span></div>
+          <div class="abox out" style="max-width:660px"><b>Gate answer · 432/432 correct</b><div class="s">stops here; no further tool call</div></div>
+          <div class="arrow">↓<span>otherwise: residual zone</span></div>
+          <div class="abox stage"><b>Stage 2 — measurement, then audit</b>
+            <div class="s">two more tools; a missing measurement is executed rather than requested again</div>
+            <div class="chips"><i>stage-2 coverage 52% → 100%</i><i>audit ≤ 2 retries</i></div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="abox stage"><b>Stage 3 — residual specialist</b>
+            <div class="s">a dedicated call that sees the six observations and the ordered rules — and nothing
+            else: no gate criteria, no cause definitions, no drive-test table</div>
+          </div>
+          <div class="arrow">↓</div>
+          <div class="abox out"><b>86.15% on the 296-case selection set</b>
+            <div class="s">11.4 LM calls · 18.6 s per case · official run pre-registered</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>Why stage 3 exists</h4>
+      <p style="margin:0">With all six observations guaranteed on the table and the rule order printed
+      verbatim in the prompt, the model scored <b>47.9%</b> on the 376 residual cases while a plain-Python
+      executor of the same rules scored <b>76.9%</b>. That is 109 cases lost with nothing missing but
+      attention — the prompt was simultaneously carrying four gate criteria, eight cause definitions and the
+      full drive-test table. Splitting the decision out recovered most of the gap.</p>
+    </div>
+  </section>
+
+  <section id="solutions">
+    <h2>Solution explorer</h2>
+    <p class="lede">Select a component to see its own scores across every split, its per-class breakdown, its
+    mechanism numbers, and how it fails. Failure is shown for every option, including the ones that worked.</p>
+    <div class="explorer" style="margin-top:18px">
+      <div class="picker" id="picker" role="tablist" aria-label="Solutions"></div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </section>
+
+  <section id="failures">
+    <h2>Failure analysis</h2>
+    <p class="lede">Three separate questions: where the shipped system's errors are, why the policy itself
+    cannot go past ~90%, and which mechanisms were built, measured, and rejected.</p>
+
+    <div class="grid g2" style="margin-top:18px">
+      <div class="card">
+        <h3>Error budget of the shipped ensemble</h3>
+        <p class="muted" style="font-size:13.5px">All 147 official errors, classified against the symbolic
+        reference and the three-ballot oracle.</p>
+        <div id="budget"></div>
+        <p class="muted" style="margin:12px 0 0;font-size:13px">Nearly four fifths of what is left is not a
+        knowledge failure — the correct label was already on a ballot and lost the vote.</p>
+      </div>
+      <div class="card">
+        <h3>Confusion matrix · shipped ensemble on official-864</h3>
+        <p class="muted" style="font-size:13.5px">Errors only. Rows are gold, columns are predicted.</p>
+        <div class="tw" style="margin-top:10px"><table id="confmat"></table></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">C4 is the weak class (66 errors), and the
+        C3↔C1 and C4↔C3 pairs are where the ordered tie-break runs out of discriminating power.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Why the policy ceiling is ~90%: per-rule precision</h3>
+      <p class="muted" style="font-size:13.5px">Each residual rule, evaluated on the official residual zone
+      in the order it is applied. Even flawless execution inherits these precisions.</p>
+      <div class="tw" style="margin-top:12px"><table>
+        <thead><tr><th class="l">Rule, in priority order</th><th>Fires</th><th>Correct</th><th>Precision</th><th class="l">What the gold label actually is</th></tr></thead>
+        <tbody>
+          <tr><td class="l">1 · C3 if <code>min_diff ≥ 142.5</code></td><td>111</td><td>81</td><td class="warn">73.0%</td><td class="l">C3 81 · <b class="bad">C4 12 · C6 12 · C1 6</b></td></tr>
+          <tr><td class="l">2 · C6 if a mod-30 pair exists</td><td>123</td><td>96</td><td class="warn">78.0%</td><td class="l">C6 96 · <b class="bad">C4 17 · C1 6 · C3 4</b></td></tr>
+          <tr><td class="l">3 · C4 if <code>gap ≥ −3 dB</code></td><td>100</td><td>79</td><td class="warn">79.0%</td><td class="l">C4 79 · <b class="bad">C1 12 · C3 9</b></td></tr>
+          <tr><td class="l">4 · C1 if a row sits below the lobe</td><td>35</td><td>27</td><td class="warn">77.1%</td><td class="l">C1 27 · <b class="bad">C3 8</b></td></tr>
+          <tr><td class="l">5 · otherwise C3</td><td>7</td><td>6</td><td class="ok">85.7%</td><td class="l">C3 6 · C1 1</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin:12px 0 0;font-size:13.5px"><b>The overlap zone.</b> In 33 cases rule 1 and rule 2
+      both fire, and the gold label splits <b>14 C3 / 12 C6 / 4 C4 / 3 C1</b>. No priority order can beat
+      about 45% there. This is a missing feature, not a missing prompt: the task needs a quantity that
+      separates "a neighbour genuinely serves this stretch better" from "a mod-30 neighbour is interfering".</p>
+    </div>
+
+    <h3 style="margin:40px 0 12px">Rejected mechanisms — built, measured, and dropped</h3>
+    <div class="grid g3">
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill neg">no gain</span><b>Forced stage-2 measurement</b>
+        </div>
+        <p style="font-size:13.5px">Targeted 182 official cases that answered a residual class without ever
+        taking the stage-2 measurement — all of which had already burned three audit retries. Coverage went
+        <b>52% → 100%</b>. Accuracy went <b>76.85% → 76.27%</b>.</p>
+        <dl class="kv" style="margin-top:10px">
+          <dt>Estimated headroom</dt><dd>+10.2 pts</dd>
+          <dt>Delivered</dt><dd class="bad">−0.6 pts</dd>
+          <dt>McNemar (official)</dt><dd>68 : 63, p = 0.73</dd>
+        </dl>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">Lesson kept: the estimate assumed the model
+        would produce the policy's answer once the numbers existed. It does not — the error mass simply moved
+        from C4→C3 to C3→C1 and C4→C1.</p>
+      </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill neg">worse</span><b>Audit flags as vote weights</b>
+        </div>
+        <p style="font-size:13.5px">The audit flag is a strong per-ballot confidence signal — a clean trace
+        is <b>90.2%</b> correct, a flagged one <b>44.4%</b>. Using it to discount votes still failed.</p>
+        <dl class="kv" style="margin-top:10px">
+          <dt>dev-96</dt><dd>84.38% → 84.38%</dd>
+          <dt>holdout-96</dt><dd class="bad">83.33% → 80.21%</dd>
+          <dt>official-864</dt><dd class="bad">82.99% → 81.13%</dd>
+        </dl>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">In a contested case the correct ballot is
+        usually flagged too: only 41 of 113 recoverable errors have a strictly cleaner gold-holder. The dev
+        grid was perfectly flat, so tuning on it selected noise.</p>
+      </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill neg">capped</span><b>More few-shot demos</b>
+        </div>
+        <p style="font-size:13.5px">Every compiled program used two bootstrapped demos. Four gives
+        <b>73.96%</b>. Six does not run at all: each ReAct demo carries its own observations, so the prompt
+        exceeds the context window.</p>
+        <dl class="kv" style="margin-top:10px">
+          <dt>2 demos</dt><dd>72.92%</dd>
+          <dt>4 demos</dt><dd>73.96%</dd>
+          <dt>6 demos</dt><dd class="bad">0/96 — context overflow</dd>
+        </dl>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">This axis is physically capped rather than
+        merely explored — worth stating precisely, because "we tried more demos" and "more demos cannot fit"
+        are different claims.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>The retry loop spends the most compute where it helps least</h3>
+      <p class="muted" style="font-size:13.5px">Cases grouped by how many audit attempts they consumed,
+      on official-864. The pattern reproduces on dev-96 (98.1 / 75.0 / 34.3) and holdout-96 (100 / 55.6 / 61.5).</p>
+      <div class="charts" style="margin-top:12px">
+        <div><h4>Accuracy by attempts consumed</h4><div id="attAcc"></div></div>
+        <div><h4>Cost by attempts consumed</h4><div id="attCost"></div></div>
+      </div>
+      <p style="margin:12px 0 0;font-size:13.5px">A case that clears the audit immediately is <b>97.4%</b>
+      correct for 10.4 s. A case that exhausts all three attempts is <b>47.3%</b> correct for 38.5 s and
+      19.4 LM calls. Retrying the same program does not rescue a hard case; the compute should change
+      mechanism instead — which is exactly what stage 3 does.</p>
+    </div>
+  </section>
+
+  <section id="cost">
+    <h2>Cost and latency</h2>
+    <p class="lede">Measured with a single worker on 16 cases, so each number is one real request rather than
+    a throughput average. The production column is the observed rate of the 864-case runs at 12 workers.</p>
+    <div class="tw" style="margin-top:16px"><table>
+      <thead><tr><th class="l">Configuration</th><th>Mean</th><th>Median</th><th>Range</th><th>Gate cases</th><th>Residual cases</th><th>LM calls</th><th>864 cases @ 12 workers</th></tr></thead>
+      <tbody>
+        <tr><td class="l">ReAct + tools, single pass</td><td><b>5.9 s</b></td><td>5.9 s</td><td>4.2 – 8.3 s</td><td>5.3 s</td><td>7.3 s</td><td>6.9</td><td class="muted">—</td></tr>
+        <tr><td class="l">Ballot A · seed v11 + verifier</td><td><b>10.6 s</b></td><td>11.6 s</td><td>3.8 – 20.3 s</td><td>8.6 s</td><td>15.1 s</td><td>12.8</td><td>26.7 min</td></tr>
+        <tr><td class="l">Ballot B · seed 4 + verifier</td><td><b>7.7 s</b></td><td>9.2 s</td><td>5.2 – 11.0 s</td><td>5.5 s</td><td>9.8 s</td><td>7.0</td><td>21.2 min</td></tr>
+        <tr><td class="l">Ballot C · native thinking</td><td class="warn"><b>42.0 s</b></td><td>41.6 s</td><td>28.0 – 64.2 s</td><td>38.9 s</td><td>51.0 s</td><td>6.1</td><td>89.3 min</td></tr>
+        <tr><td class="l"><b>Ensemble · serial</b></td><td class="bad"><b>60.3 s</b></td><td colspan="4" class="l muted">sum of the three ballots — one machine, one thread</td><td><b>25.3</b></td><td>137 min</td></tr>
+        <tr><td class="l"><b>Ensemble · parallel</b></td><td class="ok"><b>42.0 s</b></td><td colspan="4" class="l muted">equal to the slowest ballot; the two verifier ballots finish long before it</td><td>25.3</td><td>89.3 min</td></tr>
+        <tr><td class="l">Cascade · accept ballot A when its trace is clean</td><td><b>25.1 s</b></td><td colspan="4" class="l muted">71% of cases cost 10.6 s; the rest pay for all three ballots</td><td>~11.7</td><td class="muted">—</td></tr>
+        <tr><td class="l"><b>Single program · residual specialist</b></td><td class="ok"><b>18.6 s</b></td><td colspan="4" class="l muted">one ballot, one extra focused call — no voting</td><td><b>11.4</b></td><td class="muted">pending</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="note">
+        <h4>Quality per unit cost</h4>
+        <p style="margin:0">The cascade trades <b>1.4 points</b> for <b>58%</b> of the serial cost and needs
+        no tuning — the routing rule has no free parameter. The single-program pipeline is better still:
+        higher on the selection set at <b>45%</b> of the ensemble's LM calls.</p>
+      </div>
+      <div class="note">
+        <h4>Where the wall-clock goes</h4>
+        <p style="margin:0">The thinking ballot alone is about two thirds of the ensemble's serial time and
+        carries the widest variance (±4.6 points draw to draw). Removing it is the single biggest cost lever,
+        and the specialist pipeline does exactly that.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="method">
+    <h2>Method and statistical discipline</h2>
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card">
+        <h4>Splits</h4>
+        <ul style="padding-left:18px">
+          <li><b>dev-96</b> — 12 per class, hash-split from the training pool. Used for selection.</li>
+          <li><b>sel200</b> — 200 further training-pool cases, past the window the demo bootstrapper drew
+          from. Added in round 4 after dev-96 selected noise three times.</li>
+          <li><b>holdout-96</b> — untouched confirmation set.</li>
+          <li><b>official-864</b> — the frozen test file. Every run against it is pre-registered with its
+          configuration before it starts.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Why selection moved off dev-96</h4>
+        <p style="font-size:13.5px">At p ≈ 0.8 a 96-case set has 1σ ≈ ±4.4 points. Three times a change that
+        looked decisive on dev-96 did not survive: the audit-weighted aggregator, the size of the
+        forced-measurement gain, and the forced-measurement gain itself.</p>
+        <p class="muted" style="margin:0;font-size:13px">Selection now uses dev-96 + sel200 = 296 cases and
+        every comparison is a paired McNemar test, not a difference of two accuracies.</p>
+      </div>
+      <div class="card">
+        <h4>Where the evidence disagrees, trust the bigger sample</h4>
+        <div class="tw" style="margin-top:6px"><table style="font-size:13px">
+          <thead><tr><th class="l">Forced vs verifier</th><th>base</th><th>new</th><th>p</th></tr></thead>
+          <tbody>
+            <tr><td class="l">dev-96</td><td>5</td><td>12</td><td>0.143</td></tr>
+            <tr><td class="l">sel200</td><td>10</td><td>16</td><td>0.327</td></tr>
+            <tr><td class="l">pooled 296</td><td>15</td><td>28</td><td>0.066</td></tr>
+            <tr><td class="l"><b>official-864</b></td><td>68</td><td>63</td><td class="bad"><b>0.73</b></td></tr>
+          </tbody>
+        </table></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">131 discordant pairs on official against 43
+        on the selection set. The selection set hinted at a gain; the test set, with three times the power,
+        says there is none.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h4>Label neutrality, enforced rather than promised</h4>
+      <p style="margin:0;font-size:13.5px">Every tool output passes <code>assert_label_neutral</code>, which
+      rejects any class token and any field named <code>answer</code>, <code>label</code>, <code>gate</code>,
+      <code>triggered</code>, <code>diagnosis</code> or <code>root_cause</code>. The consistency verifier
+      never names a class: each retry message quotes the model's own sentence or names a tool it skipped. The
+      RL reward function is the only place a gold label appears, and it is never visible in a prompt. The
+      symbolic reference is used as an audit and a ceiling, never as an answer path.</p>
+    </div>
+  </section>
+
+  <section id="next">
+    <h2>What is still open</h2>
+    <div class="grid g4" style="margin-top:16px">
+      <div class="card">
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill best">running</span><b>Specialist on official-864</b></div>
+        <p style="margin:0;font-size:13.5px">Pre-registered. If it lands near its selection-set estimate, a
+        single program beats the three-ballot ensemble at 45% of its cost.</p>
+      </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">ceiling</span><b>Trace-aware arbiter</b></div>
+        <p style="margin:0;font-size:13.5px">113 of 147 ensemble errors already hold the gold label on a
+        ballot. Weighting by class precision captured part of it; scoring each ballot's cited numbers against
+        the observations is the untried remainder.</p>
+      </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">feature gap</span><b>Separating C4</b></div>
+        <p style="margin:0;font-size:13.5px">42/108 on official and 18/37 on the selection set. The 33-case
+        overlap zone shows this needs a new discriminating measurement, not a better prompt.</p>
+      </div>
+      <div class="card">
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">training</span><b>GRPO on the residual step</b></div>
+        <p style="margin:0;font-size:13.5px">Label-free prompts, gold used only inside the reward. It targets
+        the same rule-application gap the specialist attacks — the two are complementary rather than
+        alternatives.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Qwen3-8B served locally · DSPy programs · six label-neutral measurement tools · all numbers on this page
+    come from stored per-case predictions, and every official-864 run was pre-registered before it started.
+    Working log with the full Vietnamese commentary: <a href="tools_r3.html">tools_r3.html</a> ·
+    live runs: <a href="tools.html">tools.html</a>.
+  </footer>
+</main>
+
+<script>
+const DATA = {"solutions": [{"id": "ensemble", "name": "Weighted-vote ensemble", "tag": "3 voters", "family": "ensemble", "status": "shipped", "headline": "82.99%", "oneLine": "Three heterogeneous programs vote; per-voter-per-class weights are fitted on dev-96 only.", "scores": {"dev-96": 82.71, "holdout-96": 83.33, "official-864": 82.99}, "official": {"n": 864, "ok": 717, "acc": 82.99, "perLabel": {"C1": [89, 108], "C2": [108, 108], "C3": [57, 108], "C4": [42, 108], "C5": [108, 108], "C6": [97, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 34], ["C4", "C3", 27], ["C4", "C1", 25], ["C4", "C6", 14], ["C3", "C4", 11], ["C1", "C3", 9], ["C1", "C4", 7], ["C3", "C6", 5], ["C6", "C1", 4]], "lat": 42.0, "lm": 25.3, "stage2": null, "attempts": null, "attemptAcc": null, "agree": {"1": [463, 463], "2": [198, 280], "3": [56, 121]}}, "mechanism": [["Voters", "verifier-s11 + verifier-s4 + native-thinking"], ["Weight", "w(voter,class) = (correct+1)/(votes+2), fitted on dev-96"], ["Tie-break", "verifier-s11 (deterministic, strongest gates)"], ["Unanimous cases", "463/864 → 100.0% correct"], ["LM calls / question", "25.3"], ["Latency / question", "42.0 s in parallel, 60.3 s serial"]], "failure": "All 147 remaining errors sit in the residual zone. 113 of them had the gold label on one of the three ballots and lost the vote, so they are an aggregator problem, not a knowledge problem. Three-way splits (121 cases) are only 46.3% correct while their oracle is 94.2%.", "evalOn": "official-864"}, {"id": "specialist", "name": "Residual specialist", "tag": "single program", "family": "mechanism", "status": "best-single", "headline": "86.15%", "oneLine": "The residual decision gets its own LM call that sees only the six observations and the rule order.", "scores": {"dev-96": 92.71, "sel200": 83.0, "selection-296": 86.15}, "official": {"n": 296, "ok": 255, "acc": 86.15, "perLabel": {"C1": [24, 37], "C2": [37, 37], "C3": [31, 37], "C4": [18, 37], "C5": [37, 37], "C6": [34, 37], "C7": [37, 37], "C8": [37, 37]}, "conf": [["C4", "C3", 11], ["C1", "C3", 7], ["C4", "C6", 6], ["C1", "C4", 3], ["C3", "C4", 3], ["C3", "C6", 3], ["C1", "C6", 3], ["C6", "C3", 3], ["C4", "C1", 2]], "lat": 20.8, "lm": 11.4, "stage2": [148, 148], "attempts": {"1": 160, "2": 96, "3": 40}, "attemptAcc": {"1": 98.8, "2": 76.0, "3": 60.0}}, "mechanism": [["Routing", "LM decides: the specialist runs only if the first pass concluded a residual class"], ["What it sees", "six observations + the ordered rules, nothing else"], ["Invoked on", "48/96 dev and 100/200 sel200 — exactly the residual zone"], ["Label changed", "11/48 dev, 45/100 sel200"], ["McNemar vs forced", "13 : 39 over 296 cases, p = 4.1e-04"], ["McNemar vs verifier v2.1", "1 : 20 on dev-96, p = 2e-05"], ["LM calls / question", "11.4"], ["Latency / question", "18.6 s"]], "failure": "C4 remains the weak class (18/37 on the selection set) and C1 gives up ground (24/37): the ordered policy itself cannot separate C4 from C3/C6 when several witnesses fire at once. Official-864 is pre-registered and running — the number above is a selection-set estimate, not a test result.", "evalOn": "selection set (296 cases)"}, {"id": "verifier", "name": "Consistency verifier", "tag": "audit + retry", "family": "mechanism", "status": "shipped", "headline": "76.85%", "oneLine": "A label-neutral audit re-runs the program when its own trace contradicts its own measurements.", "scores": {"dev-96": 72.92, "sel200": 73.0, "holdout-96": 80.21, "official-864": 76.85}, "official": {"n": 864, "ok": 664, "acc": 76.85, "perLabel": {"C1": [85, 108], "C2": [108, 108], "C3": [59, 108], "C4": [16, 108], "C5": [108, 108], "C6": [72, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C3", 47], ["C3", "C1", 38], ["C4", "C1", 35], ["C6", "C3", 16], ["C1", "C3", 15], ["C6", "C1", 13], ["C4", "C6", 10], ["C3", "C4", 8], ["C6", "C4", 7]], "lat": 22.1, "lm": 12.0, "stage2": [202, 431], "attempts": {"1": 463, "2": 106, "3": 294}, "attemptAcc": {"1": 97.4, "2": 69.8, "3": 47.3}}, "mechanism": [["Checks", "false inequality, misquoted value, verdict contradicting its own comparison, stage-2 skip"], ["Never supplies", "a class label — every message points at the model's own text"], ["Retries", "up to 2"], ["Passed on attempt 1", "463 cases → 97.4% correct"], ["Exhausted 3 attempts", "294 cases → 47.3% correct"], ["Measurement discipline", "28% → 78% of residual cases"], ["LM calls / question", "12.0"], ["Latency / question", "19.1 s"]], "failure": "It can only detect self-contradiction, so a trace that is clean but wrong survives. 252/864 traces leave the loop still flagged, and the retry loop cannot rescue hard cases: the cases that burn all three attempts are the ones it gets wrong 53% of the time, while consuming 3.7x the compute of a first-pass case.", "evalOn": "official-864"}, {"id": "forced", "name": "Forced stage-2 measurement", "tag": "negative result", "family": "mechanism", "status": "negative", "headline": "76.27%", "oneLine": "When a residual answer appears without its measurements, run the missing tools and hand back the numbers.", "scores": {"dev-96": 80.21, "sel200": 76.0, "holdout-96": 79.17, "official-864": 76.27}, "official": {"n": 864, "ok": 659, "acc": 76.27, "perLabel": {"C1": [79, 108], "C2": [108, 108], "C3": [50, 108], "C4": [18, 108], "C5": [108, 108], "C6": [80, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C3", "C1", 48], ["C4", "C1", 44], ["C4", "C3", 31], ["C1", "C3", 15], ["C4", "C6", 15], ["C6", "C1", 13], ["C1", "C4", 9], ["C6", "C3", 8], ["C6", "C4", 7]], "lat": 21.2, "lm": 10.7, "stage2": [432, 432], "attempts": {"1": 470, "2": 272, "3": 122}, "attemptAcc": {"1": 97.4, "2": 54.8, "3": 42.6}}, "mechanism": [["Target", "182/376 official residual cases answered without stage-2 numbers"], ["Stage-2 coverage", "52% → 100%"], ["Estimated headroom", "+10.2 points"], ["Delivered", "-0.6 points"], ["McNemar on official", "68 : 63, p = 0.73 — no difference"], ["Cheaper", "10.7 vs 12.0 LM calls, 16.7 s vs 19.1 s"]], "failure": "The defect was real and got fixed; the accuracy did not move. Error mass merely relocated: C4→C3 (37) became C3→C1 (48) and C4→C1 (44), and C1 turned into the new dumping ground (184 answers, 79 correct). This is the experiment that proved the bottleneck is not missing information.", "evalOn": "official-864"}, {"id": "thinking", "name": "Native thinking", "tag": "high variance", "family": "prompt", "status": "in-ensemble", "headline": "76.39%", "oneLine": "Qwen3 thinking mode on the same program: better residual reasoning, leaky gates, high variance.", "scores": {"dev-96": 75.21, "holdout-96": 73.96, "official-864": 76.39}, "official": {"n": 864, "ok": 660, "acc": 76.39, "perLabel": {"C1": [57, 108], "C2": [105, 108], "C3": [102, 108], "C4": [37, 108], "C5": [106, 108], "C6": [59, 108], "C7": [102, 108], "C8": [92, 108]}, "conf": [["C4", "C3", 60], ["C6", "C3", 48], ["C1", "C3", 42], ["C8", "C3", 12], ["C4", "C6", 11], ["C1", "C4", 6], ["C3", "C4", 4], ["C8", "C4", 3], ["C1", "C6", 3]], "lat": 74.2, "lm": 6.1, "stage2": [150, 453], "attempts": null, "attemptAcc": null}, "mechanism": [["Draw-to-draw spread", "80.21 / 69.79 / 77.08 / 70.83 / 78.12 on dev-96 (sd 4.6)"], ["Strength", "C3 102/108 on official"], ["Weakness", "talks itself past verified gates; skips stage-2 tools in 237/376 residual cases"], ["LM calls / question", "6.1"], ["Latency / question", "42.0 s"]], "failure": "Single-draw variance is +-4.6 points, so it cannot be selected on or shipped alone; it also violates decisive criteria it has already verified. Its value is as the third, decorrelated ballot.", "evalOn": "official-864"}, {"id": "prompt", "name": "Prompt + demo optimization", "tag": "exhausted", "family": "prompt", "status": "exhausted", "headline": "72.92%", "oneLine": "Eleven hand-written instruction seeds and DSPy bootstrapped demos — the axis that plateaued first.", "scores": {"dev-96 best raw seed": 63.54, "dev-96 + 2 demos": 72.92, "dev-96 + 4 demos": 73.96}, "official": {"n": 96, "ok": 70, "acc": 72.92, "perLabel": {"C1": [9, 12], "C2": [12, 12], "C3": [4, 12], "C4": [2, 12], "C5": [12, 12], "C6": [7, 12], "C7": [12, 12], "C8": [12, 12]}, "conf": [["C4", "C3", 6], ["C3", "C1", 5], ["C1", "C3", 3], ["C4", "C1", 3], ["C6", "C1", 3], ["C3", "C6", 2], ["C4", "C6", 1], ["C6", "C4", 1], ["C3", "C7", 1]], "lat": 19.1, "lm": 12.2, "stage2": [23, 47], "attempts": {"1": 53, "2": 8, "3": 35}, "attemptAcc": {"1": 98.1, "3": 34.3, "2": 75.0}}, "mechanism": [["Instruction seeds", "11 hand-written; best 63.54% on dev-96"], ["Bootstrapped demos", "+9.4 points, then flat since 2026-07-29"], ["Same optimizer, different seed", "34.38% – 72.92% — the seed lottery dominates any wording effect"], ["Demo budget 6", "0/96 — exceeds the context window outright"], ["GEPA with a local reflector", "45.83%"], ["MIPROv2", "62.5 → 75.0 on its own val-32; re-running after a save crash"]], "failure": "Wording is not the binding constraint. The measured spread across seeds under one optimizer is wider than any instruction edit, so further search on a 96-case set optimizes noise. The demo axis is capped by the context window, not by imagination.", "evalOn": "dev-96"}, {"id": "symbolic", "name": "Symbolic reference", "tag": "ceiling", "family": "reference", "status": "reference", "headline": "89.93%", "oneLine": "The same decision flow executed in plain Python — the ceiling the LM is measured against.", "scores": {"dev-96": 96.88, "official-864": 89.93}, "official": {"n": 864, "ok": 777, "acc": 89.93, "perLabel": {"C1": [83, 108], "C2": [108, 108], "C3": [87, 108], "C4": [79, 108], "C5": [108, 108], "C6": [96, 108], "C7": [108, 108], "C8": [108, 108]}, "conf": [["C4", "C6", 17], ["C4", "C3", 12], ["C6", "C3", 12], ["C1", "C4", 12], ["C3", "C4", 9], ["C3", "C1", 8], ["C1", "C3", 7], ["C1", "C6", 6], ["C3", "C6", 4]], "lat": null, "lm": 0, "stage2": null, "attempts": null, "attemptAcc": null}, "mechanism": [["Gates + strong-C1 witness", "488/488 on official"], ["Residual zone", "289/376 = 76.9%"], ["Rule 1 C3 (min_diff >= 142.5)", "111 fires, 73.0% precise"], ["Rule 2 C6 (equal mod-30 pair)", "123 fires, 78.0% precise"], ["Rule 3 C4 (gap >= -3 dB)", "100 fires, 79.0% precise"], ["Rule 4 C1 (row below lobe)", "35 fires, 77.1% precise"], ["Never an answer path", "used only as an audit and a ceiling"]], "failure": "Even perfect execution stops near 90%: every residual rule is only 73-79% precise, and 33 cases fire the C3 and C6 rules simultaneously with gold split 14/12/4/3. Beyond this line the task needs a new discriminating feature, not better execution.", "evalOn": "official-864"}]};
+const LAB = ["C1","C2","C3","C4","C5","C6","C7","C8"];
+const PILL = {shipped:["ship","shipped"], "best-single":["best","best single"], negative:["neg","no gain"],
+              "in-ensemble":["flat","in ensemble"], exhausted:["flat","plateaued"], reference:["ref","reference"]};
+const CSS = getComputedStyle(document.documentElement);
+const col = n => CSS.getPropertyValue("--"+n).trim() || "#888";
+
+/* ---------- chart 1: scores across splits (horizontal bars, labels outside) ---------- */
+function splitChart(scores){
+  const keys = Object.keys(scores);
+  const rowH = 34, padL = 152, padR = 62, w = 560, h = keys.length*rowH + 16;
+  const x = v => padL + (v/100)*(w-padL-padR);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="scores by split">`;
+  [25,50,75,100].forEach(g=>{
+    s += `<line x1="${x(g)}" y1="6" x2="${x(g)}" y2="${h-16}" stroke="${col('line')}" stroke-width="1"/>`;
+    s += `<text x="${x(g)}" y="${h-4}" font-size="9.5" fill="${col('faint')}" text-anchor="middle">${g}</text>`;
+  });
+  keys.forEach((k,i)=>{
+    const v = scores[k], y = 10 + i*rowH;
+    const isOff = /official/.test(k);
+    s += `<text x="${padL-10}" y="${y+15}" font-size="11.5" fill="${col('muted')}" text-anchor="end">${k}</text>`;
+    s += `<rect x="${padL}" y="${y+4}" width="${Math.max(1,x(v)-padL)}" height="16" rx="4"
+            fill="${isOff?col('green'):col('blue')}" opacity="${isOff?0.95:0.7}"/>`;
+    s += `<text x="${x(v)+8}" y="${y+16}" font-size="12" font-weight="700" fill="${col('text')}">${v.toFixed(2)}%</text>`;
+  });
+  return s+`</svg>`;
+}
+
+/* ---------- chart 2: per-class accuracy (vertical bars, one slot per class) ---------- */
+function classChart(perLabel){
+  const cls = LAB.filter(c=>perLabel[c]);
+  if(!cls.length) return `<p class="muted">no per-class data</p>`;
+  const w = 560, h = 210, padB = 46, padT = 26, slot = (w-30)/cls.length;
+  const y = v => padT + (1-v/100)*(h-padT-padB);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="per-class accuracy">`;
+  [0,50,100].forEach(g=>{
+    s += `<line x1="26" y1="${y(g)}" x2="${w-4}" y2="${y(g)}" stroke="${col('line')}" stroke-width="1"/>`;
+    s += `<text x="20" y="${y(g)+3.5}" font-size="9.5" fill="${col('faint')}" text-anchor="end">${g}</text>`;
+  });
+  cls.forEach((c,i)=>{
+    const [ok,tot] = perLabel[c], pct = 100*ok/tot;
+    const bw = Math.min(46, slot*0.6), cx = 30 + i*slot + slot/2;
+    const hue = pct>=90?col('green'):pct>=70?col('blue'):pct>=50?col('amber'):col('red');
+    s += `<rect x="${cx-bw/2}" y="${y(pct)}" width="${bw}" height="${Math.max(1,y(0)-y(pct))}" rx="4" fill="${hue}" opacity=".88"/>`;
+    s += `<text x="${cx}" y="${y(pct)-6}" font-size="10.5" font-weight="700" fill="${col('text')}" text-anchor="middle">${pct.toFixed(0)}%</text>`;
+    s += `<text x="${cx}" y="${h-26}" font-size="12" font-weight="700" fill="${col('text')}" text-anchor="middle">${c}</text>`;
+    s += `<text x="${cx}" y="${h-11}" font-size="10" fill="${col('faint')}" text-anchor="middle">${ok}/${tot}</text>`;
+  });
+  return s+`</svg>`;
+}
+
+/* ---------- chart 3: how it fails (top confusions as a ranked flow) ---------- */
+function confChart(conf){
+  if(!conf || !conf.length) return `<p class="muted">no errors recorded on this split</p>`;
+  const rows = conf.slice(0,8), max = Math.max(...rows.map(r=>r[2]));
+  const rowH = 27, w = 560, h = rows.length*rowH + 8, padL = 116, padR = 46;
+  const bw = v => Math.max(2, (v/max)*(w-padL-padR));
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="top confusions">`;
+  rows.forEach((r,i)=>{
+    const y = 4 + i*rowH;
+    s += `<text x="${padL-12}" y="${y+15}" font-size="12" fill="${col('text')}" text-anchor="end">`
+       + `<tspan font-weight="700">${r[0]}</tspan><tspan fill="${col('faint')}"> → </tspan>`
+       + `<tspan font-weight="700" fill="${col('red')}">${r[1]}</tspan></text>`;
+    s += `<rect x="${padL}" y="${y+4}" width="${bw(r[2])}" height="15" rx="3.5" fill="${col('red')}" opacity=".55"/>`;
+    s += `<text x="${padL+bw(r[2])+8}" y="${y+16}" font-size="11.5" font-weight="700" fill="${col('text')}">${r[2]}</text>`;
+  });
+  return s+`</svg>`;
+}
+
+/* ---------- explorer ---------- */
+const picker = document.getElementById("picker"), detail = document.getElementById("detail");
+DATA.solutions.forEach((s,i)=>{
+  const b = document.createElement("button");
+  b.className = "opt"; b.role = "tab"; b.id = "opt-"+s.id;
+  b.setAttribute("aria-selected", i===0 ? "true" : "false");
+  b.innerHTML = `<span class="nm">${s.name}</span><span class="sc">${s.headline}</span>`
+              + `<span class="ln">${s.tag}</span>`;
+  b.onclick = ()=>select(s.id);
+  picker.appendChild(b);
+});
+
+function select(id){
+  const s = DATA.solutions.find(x=>x.id===id);
+  [...picker.children].forEach(b=>b.setAttribute("aria-selected", b.id==="opt-"+id ? "true":"false"));
+  const [cls,txt] = PILL[s.status] || ["flat", s.status];
+  const off = s.official;
+  detail.innerHTML = `
+    <div class="card dhead">
+      <div class="row"><h3>${s.name}</h3><span class="pill ${cls}">${txt}</span></div>
+      <p class="muted" style="margin:0;max-width:82ch">${s.oneLine}</p>
+    </div>
+    <div class="charts">
+      <div class="card">
+        <h4>Accuracy by split</h4>
+        ${splitChart(s.scores)}
+      </div>
+      <div class="card">
+        <h4>Per-class accuracy${s.evalOn?` · ${s.evalOn}`:""}</h4>
+        ${off ? classChart(off.perLabel) : `<p class="muted">not measured per class</p>`}
+      </div>
+    </div>
+    <div class="charts">
+      <div class="card">
+        <h4>How it fails${s.evalOn?` · ${s.evalOn}`:""}</h4>
+        ${off ? confChart(off.conf) : `<p class="muted">—</p>`}
+      </div>
+      <div class="card">
+        <h4>Mechanism</h4>
+        <dl class="kv">${s.mechanism.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+      </div>
+    </div>
+    <div class="card fail">
+      <h4>Failure mode</h4>
+      <p style="margin:0;max-width:92ch">${s.failure}</p>
+    </div>`;
+}
+select(DATA.solutions[0].id);
+
+/* ---------- error budget bars ---------- */
+const BUDGET = [
+  ["A · a ballot held the gold label and lost the vote", 113, "red", "aggregator — no better model needed"],
+  ["B · the policy was right, all three ballots missed it", 19, "amber", "execution discipline / RL"],
+  ["C · the policy was followed and the policy is wrong", 8, "purple", "needs a new feature"],
+  ["D · no ballot and no rule gets it", 7, "slate", "no route yet"],
+];
+(function(){
+  const tot = BUDGET.reduce((a,b)=>a+b[1],0);
+  document.getElementById("budget").innerHTML = BUDGET.map(([n,v,c,fix])=>`
+    <div style="display:grid;grid-template-columns:1fr auto;gap:2px 12px;margin:10px 0">
+      <div style="font-size:13.5px">${n}</div>
+      <div style="font-variant-numeric:tabular-nums;font-weight:800">${v} <span class="muted" style="font-weight:400">(${(100*v/tot).toFixed(1)}%)</span></div>
+      <div style="grid-column:1/-1;height:9px;border-radius:5px;background:var(--line2);overflow:hidden">
+        <div style="height:100%;width:${100*v/tot}%;background:${col(c)};opacity:.8"></div>
+      </div>
+      <div class="muted" style="grid-column:1/-1;font-size:12px">${fix}</div>
+    </div>`).join("");
+})();
+
+/* ---------- confusion matrix of the shipped ensemble ---------- */
+(function(){
+  const ens = DATA.solutions.find(s=>s.id==="ensemble").official;
+  const m = {}; let max = 0;
+  ens.conf.forEach(([g,p,c])=>{ (m[g]=m[g]||{})[p]=c; max=Math.max(max,c); });
+  const golds = LAB.filter(g=>m[g]);
+  document.getElementById("confmat").innerHTML =
+    `<thead><tr><th class="l">gold ↓ / pred →</th>${LAB.map(l=>`<th>${l}</th>`).join("")}<th>errors</th></tr></thead><tbody>`
+    + golds.map(g=>{
+        const row = m[g], sum = Object.values(row).reduce((a,b)=>a+b,0);
+        return `<tr><td class="l"><b>${g}</b></td>` + LAB.map(p=>{
+          if(p===g) return `<td class="muted">·</td>`;
+          const n = row[p];
+          return n ? `<td><span style="display:inline-block;min-width:30px;padding:2px 6px;border-radius:6px;
+                       background:color-mix(in srgb, var(--red) ${Math.round(12+55*n/max)}%, transparent)">${n}</span></td>`
+                   : `<td class="muted"></td>`;
+        }).join("") + `<td><b>${sum}</b></td></tr>`;
+      }).join("")
+    + LAB.filter(g=>!m[g]).map(g=>`<tr><td class="l"><b>${g}</b></td>${LAB.map(p=>`<td class="muted">${p===g?"·":""}</td>`).join("")}<td class="ok">0</td></tr>`).join("")
+    + `</tbody>`;
+})();
+
+/* ---------- attempts charts ---------- */
+function attemptChart(target, rows, unit, fmt){
+  const w = 520, rowH = 40, h = rows.length*rowH + 24, padL = 132, padR = 74;
+  const max = Math.max(...rows.map(r=>r[1]));
+  const bw = v => Math.max(2, (v/max)*(w-padL-padR));
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${unit} by attempts">`;
+  rows.forEach((r,i)=>{
+    const y = 8 + i*rowH;
+    s += `<text x="${padL-12}" y="${y+14}" font-size="12" fill="${col('text')}" text-anchor="end">${r[0]}</text>`;
+    s += `<text x="${padL-12}" y="${y+28}" font-size="10.5" fill="${col('faint')}" text-anchor="end">${r[2]}</text>`;
+    s += `<rect x="${padL}" y="${y+6}" width="${bw(r[1])}" height="17" rx="4" fill="${col(r[3])}" opacity=".82"/>`;
+    s += `<text x="${padL+bw(r[1])+8}" y="${y+19}" font-size="12" font-weight="700" fill="${col('text')}">${fmt(r[1])}</text>`;
+  });
+  document.getElementById(target).innerHTML = s+`</svg>`;
+}
+attemptChart("attAcc", [
+  ["Clean on attempt 1", 97.4, "463 cases", "green"],
+  ["Needed 1 retry", 69.8, "106 cases", "amber"],
+  ["Exhausted 3 attempts", 47.3, "294 cases", "red"],
+], "accuracy", v=>v.toFixed(1)+"%");
+attemptChart("attCost", [
+  ["Clean on attempt 1", 10.4, "6.7 LM calls", "green"],
+  ["Needed 1 retry", 27.0, "15.3 LM calls", "amber"],
+  ["Exhausted 3 attempts", 38.5, "19.4 LM calls", "red"],
+], "seconds", v=>v.toFixed(1)+" s");
+</script>
+</body>
+</html>
