@@ -36,6 +36,7 @@ DISPLAY_NAMES = {
     "b3_react_tools": "B3 · DSPy ReAct agentic tool calling",
     "b3_react_verified": "B3v · ReAct + consistency-audit retries",
     "b3_react_forced": "B3f · ReAct + audit + forced stage-2 measurement",
+    "b3_react_specialist": "B3s · forced + dedicated residual decider",
 }
 
 
