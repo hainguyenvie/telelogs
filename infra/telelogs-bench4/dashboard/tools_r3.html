@@ -58,7 +58,7 @@
       <div class="muted">Track tool-calling (b3 ReAct + tools label-neutral) · Qwen3-8B · dev-96 · 2026-07-30</div>
       <div><a href="tools.html">Live run dashboard</a> · <a href="dspy.html">Prompt study cũ</a> · <a href="./">Full 4 benchmarks</a></div>
     </div>
-    <div class="status"><span class="dot"></span><span>Official-864: <b style="color:var(--green)">79.75%</b> (ensemble v1) · verifier v2 + GRPO đang chạy</span></div>
+    <div class="status"><span class="dot"></span><span>Official-864: <b style="color:var(--green)">82.99%</b> (R3-final) · latency đã đo · GRPO đang train</span></div>
   </header>
 
   <section class="grid" style="margin-top:20px">
@@ -66,7 +66,7 @@
     <div class="panel"><div class="label">Holdout-96 · ensemble</div><div class="value ok">81.25%</div><div class="muted">78/96 (v1 = v2) · khớp kỳ vọng dev — không sụp khi đổi split</div></div>
     <div class="panel"><div class="label">Dev-96 · ensemble v2 kỳ vọng</div><div class="value">82.71%</div><div class="muted">±3.1 qua 5 lần gieo phiếu thinking (v1: 80.62±1.7)</div></div>
     <div class="panel"><div class="label">Trần symbolic (dev)</div><div class="value" style="color:var(--purple)">96.88%</div><div class="muted">cùng luồng quyết định, chạy bằng Python thuần</div></div>
-    <div class="panel"><div class="label">Đang chạy tiếp</div><div class="value warn">v2 + GRPO</div><div class="muted">verifier v2 (dev→holdout→official) · GRPO reward 0.58→0.725 @⅕ chặng</div></div>
+    <div class="panel"><div class="label">Độ trễ 1 request (đo thật)</div><div class="value">10,6s</div><div class="muted">một phiếu verifier · cả hệ 3 phiếu: 60,3s tuần tự / 42,0s song song · GRPO reward 0.62→0.817</div></div>
   </section>
 
   <h2>Kết quả trên cả ba tập (ensemble v1 — cấu hình đăng ký trước khi chạy)</h2>
@@ -264,6 +264,91 @@
       <li><b>Giới hạn policy: prompt vô can.</b> Chạy quy trình HOÀN HẢO bằng Python cũng chỉ 96.88% dev (74.96% trên residual train) và sai đúng các cặp C3↔C4/C6 mà model sai — muốn qua phải có feature phân tách tốt hơn hoặc policy học được (GRPO đang train).</li>
     </ul>
     <div class="muted">DSPy còn đúng một nước chưa thử: GEPA/MIPRO với reflector mạnh (Qwen3.5-122B qua gateway, cần key) — kỳ vọng một-vài điểm, thấp hơn nhiều so với verifier v2 + ensemble + RL đang chạy.</div>
+    <div class="muted" style="margin-top:10px"><b style="color:var(--text)">Cập nhật sau khi có official-864 của hệ R3-final:</b> phân rã lại 147 lỗi trên tập official (bảng ngay dưới) xác nhận kết luận này bằng số lớn hơn — chỉ <b style="color:var(--text)">15/147 lỗi (10%)</b> là chỗ mà "biết thêm/nói khác đi" có thể cứu; <b style="color:var(--text)">113/147 (77%)</b> là lỗi chọn phiếu. Chuỗi 30+ run seed cũng cho thấy phần chữ nghĩa đã hết: 11 seed viết tay, tốt nhất <b style="color:var(--text)">63,54%</b> dev; thêm demo DSPy bootstrap lên <b style="color:var(--text)">72,92%</b> rồi đứng im từ 29/07; và cùng một optimizer, chỉ đổi seed đã cho phổ <b style="color:var(--text)">34,38% – 72,92%</b> — <b style="color:var(--text)">phương sai của xổ số seed lớn hơn mọi hiệu ứng câu chữ</b>, nên tìm tiếp trên dev-96 là đang tối ưu nhiễu.</div>
+  </div>
+
+  <h2>Còn bao nhiêu đất để đi? — ngân sách lỗi &amp; trần của kiến trúc (đo trên official-864)</h2>
+  <section class="grid">
+    <div class="panel"><div class="label">Hệ R3-final đang có</div><div class="value ok">82.99%</div><div class="muted">717/864</div></div>
+    <div class="panel"><div class="label">Trần THỰC THI</div><div class="value" style="color:var(--purple)">89.93%</div><div class="muted">777/864 · cùng luật, chạy bằng Python thuần → <b style="color:var(--text)">+6.94 điểm</b> nằm ở chỗ thực thi sai</div></div>
+    <div class="panel"><div class="label">Trần CHỌN PHIẾU (oracle)</div><div class="value" style="color:var(--purple)">96.06%</div><div class="muted">830/864 đã có ít nhất 1 phiếu đúng trong tay → <b style="color:var(--text)">+13.07 điểm</b> nằm ở chỗ chọn phiếu</div></div>
+    <div class="panel"><div class="label">Vùng gate (C2/C5/C7/C8)</div><div class="value ok">487/488</div><div class="muted">99.8% — coi như đã giải xong, không còn đất</div></div>
+    <div class="panel"><div class="label">Vùng residual (C1/C3/C4/C6)</div><div class="value warn">61.2%</div><div class="muted">230/376 · symbolic 76.9% · oracle 91.0% — <b style="color:var(--text)">toàn bộ lỗi nằm ở đây</b></div></div>
+  </section>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>147 lỗi còn lại thuộc loại gì — và cái gì chữa được</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="text-align:left">Nhóm</th><th>Số lỗi</th><th>% lỗi</th><th style="text-align:left">Chữa bằng gì</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left"><b>A · Có phiếu đúng nhưng thua vote</b></td><td><b>113</b></td><td>76.9%</td><td style="text-align:left"><b style="color:var(--green)">Aggregator</b> — không cần model tốt hơn, chỉ cần chọn đúng phiếu đã có</td></tr>
+          <tr><td style="text-align:left"><b>B · Luật đúng nhưng cả 3 phiếu đều trượt</b></td><td>19</td><td>12.9%</td><td style="text-align:left"><b style="color:var(--cyan)">Kỷ luật thực thi</b> — verifier mạnh hơn / RL (GRPO)</td></tr>
+          <tr><td style="text-align:left"><b>C · Chạy đúng luật, luật sai</b></td><td>8</td><td>5.4%</td><td style="text-align:left"><b style="color:var(--amber)">Policy</b> — cần feature mới, prompt vô can</td></tr>
+          <tr><td style="text-align:left"><b>D · Không phiếu nào, không luật nào đúng</b></td><td>7</td><td>4.8%</td><td style="text-align:left">Chưa có đường</td></tr>
+        </tbody>
+      </table></div>
+      <div class="muted" style="margin-top:8px">Đọc thẳng: <b style="color:var(--text)">gần 4/5 lỗi còn lại không phải lỗi "model không biết"</b> mà là lỗi hệ thống bầu cử. Đây là lý do prompt/DSPy không còn là đòn hiệu quả nhất — đòn hiệu quả nhất là bộ trọng tài.</div>
+    </div>
+    <div class="panel">
+      <h3>Vì sao trần policy chỉ ~90%: từng luật residual chỉ đúng 73–79%</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="text-align:left">Luật (thứ tự ưu tiên)</th><th>Kích hoạt</th><th>Đúng</th><th>Độ chính xác</th><th style="text-align:left">Gold thật sự là gì</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">1 · C3 nếu <code>min_diff ≥ 142.5</code></td><td>111</td><td>81</td><td class="warn">73.0%</td><td style="text-align:left">C3 81 · <b class="bad">C4 12 · C6 12 · C1 6</b></td></tr>
+          <tr><td style="text-align:left">2 · C6 nếu có cặp mod-30</td><td>123</td><td>96</td><td class="warn">78.0%</td><td style="text-align:left">C6 96 · <b class="bad">C4 17 · C1 6 · C3 4</b></td></tr>
+          <tr><td style="text-align:left">3 · C4 nếu <code>gap ≥ −3 dB</code></td><td>100</td><td>79</td><td class="warn">79.0%</td><td style="text-align:left">C4 79 · <b class="bad">C1 12 · C3 9</b></td></tr>
+          <tr><td style="text-align:left">4 · C1 nếu có hàng dưới búp sóng</td><td>35</td><td>27</td><td class="warn">77.1%</td><td style="text-align:left">C1 27 · <b class="bad">C3 8</b></td></tr>
+          <tr><td style="text-align:left">5 · còn lại → C3</td><td>7</td><td>6</td><td class="ok">85.7%</td><td style="text-align:left">C3 6 · C1 1</td></tr>
+        </tbody>
+      </table></div>
+      <div class="muted" style="margin-top:8px"><b style="color:var(--text)">Vùng chồng bằng chứng:</b> 33 case mà luật-1 (C3) VÀ luật-2 (C6) cùng kích hoạt, gold chia gần đều <b style="color:var(--text)">14 C3 / 12 C6 / 4 C4 / 3 C1</b> — không thứ tự ưu tiên nào thắng nổi ~45% ở đây. Đây là <b style="color:var(--amber)">thiếu feature</b>, không phải thiếu prompt: cần đại lượng tách được "throughput cao hơn ở cell bên" khỏi "nhiễu mod-30". Đáng chú ý: ensemble ĐÃ hơn symbolic ở đúng vùng này (17 vs 14 đúng) — LM bù được một phần chỗ luật tay bó tay.</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Nhược điểm của kiến trúc này — mỗi cái kèm số đo</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="text-align:left">Nhược điểm</th><th style="text-align:left">Bằng chứng đo được</th><th style="text-align:left">Hệ quả / hướng ra</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left"><b>1. Bầu cử chỉ nhìn NHÃN, không nhìn trace</b></td><td style="text-align:left">113/147 lỗi có phiếu đúng trong tay; vỡ 3 hướng 121 case chỉ đúng 46.3% dù oracle 94.2%</td><td style="text-align:left">Trọng tài đọc-trace (chọn phiếu có số liệu kiểm chứng được) là đòn có headroom lớn nhất</td></tr>
+        <tr><td style="text-align:left"><b>2. Đốt compute đúng chỗ vô ích nhất</b></td><td style="text-align:left">Case qua audit ngay lần 1: 463 case, <b class="ok">97.4%</b> đúng, 10.4s. Case hết 3 lượt vẫn bị cờ: 294 case, <b class="bad">47.3%</b> đúng, 38.5s &amp; 19.4 lượt gọi LM</td><td style="text-align:left">Retry cùng một chương trình không cứu được ca khó — nên <b style="color:var(--text)">đổi cơ chế</b> (phiếu khác / tool khác) thay vì thử lại</td></tr>
+        <tr><td style="text-align:left"><b>3. Chi phí gấp 3 nhưng lệ thuộc một phiếu chậm</b></td><td style="text-align:left">25,3 lượt gọi LM/câu; wall-clock tuần tự 60,3s/câu, trong đó phiếu thinking chiếm ~2/3</td><td style="text-align:left">Chạy song song 3 phiếu → còn ~1 phiếu thinking; hoặc cascade (xem bảng dưới)</td></tr>
+        <tr><td style="text-align:left"><b>4. Nhãn đúng ≠ lập luận đúng</b></td><td style="text-align:left">Trace ví dụ dưới: phiếu s4 chọn ĐÚNG C6 nhưng bước loại C4 viết sai chiều ("gap 1.48 dB không phải ≥ −3 dB")</td><td style="text-align:left">Trọng số học từ tần suất đúng, nên nó thưởng cả may mắn — chấm điểm theo trace mới lọc được</td></tr>
+        <tr><td style="text-align:left"><b>5. Hành vi gọi tool là di sản của demo, không phải của chỉ dẫn</b></td><td style="text-align:left">s4 gọi đủ giai đoạn 2 ở 376/376 case residual (vì demo của nó luôn gọi đủ), s11 chỉ 191/376, thinking 139/376 — cùng một bộ chỉ dẫn</td><td style="text-align:left">Đổi bộ tool là phải bootstrap lại demo; kỷ luật không nằm trong câu chữ</td></tr>
+        <tr><td style="text-align:left"><b>6. Verifier chỉ bắt được tự-mâu-thuẫn</b></td><td style="text-align:left">Còn 252/864 trace ra khỏi vòng lặp vẫn mang cờ; 8 lỗi nhóm C là trace "sạch mà sai"</td><td style="text-align:left">Đúng thiết kế (label-neutral) — nhưng nghĩa là nó không bao giờ chữa được lỗi policy</td></tr>
+        <tr><td style="text-align:left"><b>7. Mặt chọn cấu hình quá nhỏ</b></td><td style="text-align:left">dev-96 có 1σ ≈ ±4,4 điểm ở mức p≈0,8; các cấu hình V2/V3 hôm nay bằng nhau tuyệt đối trên dev (84.38%) rồi lệch −3,1 điểm trên holdout</td><td style="text-align:left">Muốn chọn tiếp phải có dev ≥300 câu hoặc cross-validation, không thì đang chọn nhiễu</td></tr>
+        <tr><td style="text-align:left"><b>8. Không có cơ chế từ chối/leo thang</b></td><td style="text-align:left">3 phiếu trùng nhau = <b class="ok">100.0%</b> đúng (463 case, và cũng 100% trên dev &amp; holdout); phần vỡ phiếu 401 case chỉ <b class="bad">63.3%</b></td><td style="text-align:left">Tín hiệu tin cậy hoàn hảo đang bị bỏ không: nên tiêu compute CHỈ ở 401 case kia</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="cols2" style="margin-top:12px">
+    <div class="panel">
+      <h3>Hai đòn thử hôm nay — một trượt, một là knob chi phí (báo cáo cả cái trượt)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="text-align:left">Bộ tổng hợp</th><th>dev-96</th><th>holdout-96</th><th>official-864</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">V0 · đa số thường</td><td>82.29%</td><td>83.33%</td><td>81.02%</td></tr>
+          <tr><td style="text-align:left"><b>V1 · weighted vote (đang ship)</b></td><td><b>84.38%</b></td><td><b class="ok">83.33%</b></td><td><b class="ok">82.99%</b></td></tr>
+          <tr><td style="text-align:left">V2 · weighted × phạt trace bị cờ</td><td>84.38%</td><td class="bad">80.21%</td><td class="bad">81.13%</td></tr>
+          <tr><td style="text-align:left">V3 · thêm phạt thiếu tool giai đoạn 2</td><td>84.38%</td><td class="bad">80.21%</td><td class="bad">81.13%</td></tr>
+        </tbody>
+      </table></div>
+      <div class="muted" style="margin-top:8px">Cờ audit là tín hiệu <b style="color:var(--text)">rất mạnh ở cấp một phiếu</b> (phiếu A: trace sạch 612 case → 90.2% đúng, trace bị cờ 252 case → 44.4%) nhưng <b style="color:var(--text)">vô dụng khi làm trọng số bầu cử</b>: trong các ca tranh chấp thì phiếu đúng cũng bị cờ, chỉ 41/113 ca là phiếu đúng sạch hơn phiếu thắng (36.3%). Grid trên dev bằng nhau tuyệt đối → chọn theo dev là chọn nhiễu, và holdout trả giá −3,1 điểm. <b style="color:var(--text)">Giữ V1.</b></div>
+    </div>
+    <div class="panel">
+      <h3>Cascade: dùng cờ audit để ĐỊNH TUYẾN thay vì để bầu</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th style="text-align:left">Tập</th><th>Cascade</th><th>Ensemble đủ 3 phiếu</th><th>Chi phí tuần tự</th></tr></thead>
+        <tbody>
+          <tr><td style="text-align:left">dev-96</td><td>82.29%</td><td>84.38%</td><td>27,0s vs 60,3s</td></tr>
+          <tr><td style="text-align:left">holdout-96</td><td>81.25%</td><td>83.33%</td><td>21,7s vs 60,3s</td></tr>
+          <tr><td style="text-align:left"><b>official-864</b></td><td><b>81.60%</b></td><td><b>82.99%</b></td><td><b>25,1s vs 60,3s (42%)</b></td></tr>
+        </tbody>
+      </table></div>
+      <div class="muted" style="margin-top:8px">Luật: trace phiếu A sạch cờ → lấy luôn; bị cờ → gọi đủ 3 phiếu. Nhất quán cả ba tập: <b style="color:var(--text)">mất 1,4–2,1 điểm để tiết kiệm 60% chi phí</b>. Không có tham số tự do nào phải fit — đây là knob triển khai, không phải mẹo lấy điểm.</div>
+    </div>
   </div>
 
   <div class="cols2" style="margin-top:12px">
@@ -286,6 +371,93 @@
         <div class="step"><span class="chip info">thiết kế</span><span class="muted">TRL GRPO + LoRA r32, vLLM colocate 1 GPU · dataset 2.099 prompt label-free (874 gated + 658 residual ×2, khớp symbolic) · nhãn chỉ nằm trong reward · eval bằng đúng b3 ReAct dev-96 trỏ sang model đã merge.</span></div>
       </div>
     </div>
+  </div>
+
+  <h2>Một request mất bao lâu — đo thật, không suy đoán</h2>
+  <div class="muted">Đo lại bằng <code>--workers 1</code> trên 16 câu dev (2 câu/lớp) để mỗi con số là thời gian thật của MỘT request, không bị nhiễu bởi 12 request chạy song song. Cột "sản xuất" là số đo thực tế của các run 864 câu với <code>--workers 12</code>.</div>
+  <div class="table-wrap" style="margin-top:10px"><table>
+    <thead><tr><th style="text-align:left">Cấu hình</th><th>Trung bình</th><th>Trung vị</th><th>Nhanh–chậm nhất</th><th>Chỉ gate</th><th>Ca residual</th><th>Lượt gọi LM</th><th>Sản xuất (12 luồng)</th></tr></thead>
+    <tbody>
+      <tr><td style="text-align:left">b3 ReAct trần (1 lượt, no-think)</td><td><b>5,9s</b></td><td>5,9s</td><td>4,2 – 8,3s</td><td>5,3s</td><td>7,3s</td><td>6,9</td><td class="muted">—</td></tr>
+      <tr><td style="text-align:left"><b>Phiếu A</b> · s11 + verifier v2.1</td><td><b>10,6s</b></td><td>11,6s</td><td>3,8 – 20,3s</td><td>8,6s</td><td>15,1s</td><td>12,8</td><td>32,4 câu/phút · 864 câu = 26,7 phút</td></tr>
+      <tr><td style="text-align:left"><b>Phiếu B</b> · s4 + verifier</td><td><b>7,7s</b></td><td>9,2s</td><td>5,2 – 11,0s</td><td>5,5s</td><td>9,8s</td><td>7,0</td><td>40,8 câu/phút · 864 câu = 21,2 phút</td></tr>
+      <tr><td style="text-align:left"><b>Phiếu C</b> · s11 + native thinking</td><td class="warn"><b>42,0s</b></td><td>41,6s</td><td>28,0 – 64,2s</td><td>38,9s</td><td>51,0s</td><td>6,1</td><td>9,7 câu/phút · 864 câu = 89,3 phút</td></tr>
+      <tr><td style="text-align:left"><b>Hệ R3-final</b> — 3 phiếu chạy tuần tự</td><td class="bad"><b>60,3s</b></td><td colspan="4" class="muted" style="text-align:left">tổng ba phiếu — đây là con số nếu chạy một máy, một luồng</td><td><b>25,3</b></td><td>137 phút cho 864 câu</td></tr>
+      <tr><td style="text-align:left"><b>Hệ R3-final</b> — 3 phiếu chạy song song</td><td class="ok"><b>42,0s</b></td><td colspan="4" class="muted" style="text-align:left">bằng đúng phiếu chậm nhất (thinking) — 2 phiếu verifier về trước từ lâu</td><td>25,3</td><td>89,3 phút (nghẽn ở thinking)</td></tr>
+      <tr><td style="text-align:left">Cascade (A sạch → chốt; bị cờ → đủ 3 phiếu)</td><td><b>25,1s</b></td><td colspan="4" class="muted" style="text-align:left">71% case chỉ tốn 10,6s · 29% case tốn cả 3 phiếu — đổi 1,4 điểm lấy 58% chi phí</td><td>~11,7</td><td class="muted">—</td></tr>
+    </tbody>
+  </table></div>
+  <div class="muted" style="margin-top:8px">Ba điều đọc được: (1) <b style="color:var(--text)">verifier gần gấp đôi thời gian</b> (5,9s → 10,6s) vì 9/16 câu phải chạy lại — nhưng chính vòng lặp đó tạo ra tín hiệu tin cậy ở mục 2 bảng trên; (2) <b style="color:var(--text)">thinking là nút cổ chai</b>, một mình chiếm ~2/3 wall-clock của cả hệ, và đó cũng là phiếu có phương sai lớn nhất (±4,6 điểm); (3) độ trễ <b style="color:var(--text)">phụ thuộc mạnh vào vùng câu hỏi</b> — ca gate xong nhanh (5,5–8,6s), ca residual đắt gần gấp đôi vì phải gọi thêm 2 tool giai đoạn 2 rồi thường bị audit bắt chạy lại.</div>
+
+  <h2>Xem một reasoning thật: case #29 của official-864 (gold <b class="ok">C6</b>)</h2>
+  <div class="muted">Chọn đúng case mà <b style="color:var(--text)">phiếu thiểu số thắng</b> — 2 phiếu bầu C3, 1 phiếu bầu C6, weighted vote chọn C6 và đúng. Đây cũng là case mà policy tay (symbolic) sai, nên nó cho thấy cả cơ chế lẫn giới hạn.</div>
+
+  <div class="panel" style="margin-top:10px">
+    <h3>Giai đoạn 1 — cả ba phiếu đều gọi đúng 4 tool quyết định</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="text-align:left">Tool</th><th style="text-align:left">Số đo trả về (nguyên văn từ observation)</th><th style="text-align:left">Cổng</th><th>Kết luận</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left"><code>analyze_throughput_segments</code></td><td style="text-align:left"><code>minimum_difference_mbps = 158.03</code> (PCI 550 thấp nhất 198,07 vs PCI 430 thấp nhất 356,10) · 4 hàng dưới 600 Mbps</td><td style="text-align:left" class="muted">— (dùng cho giai đoạn 2)</td><td class="muted">—</td></tr>
+        <tr><td style="text-align:left"><code>analyze_coverage_geometry</code></td><td style="text-align:left"><code>maximum_distance_km = 0.11</code> · <code>rows_below_main_lobe_lower_edge = []</code></td><td style="text-align:left">C2: &gt; 1 km?</td><td class="bad">không</td></tr>
+        <tr><td style="text-align:left"><code>analyze_mobility</code></td><td style="text-align:left"><code>transition_count = 1</code> · <code>maximum_speed_kmh = 35.0</code></td><td style="text-align:left">C5: ≥ 3 lần? / C7: &gt; 40 km/h?</td><td class="bad">không / không</td></tr>
+        <tr><td style="text-align:left"><code>analyze_radio_resources</code></td><td style="text-align:left"><code>low_throughput_rows_mean_scheduled_rbs = 193.48</code></td><td style="text-align:left">C8: &lt; 160?</td><td class="bad">không</td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">→ Không cổng nào mở. Case rơi vào <b style="color:var(--text)">vùng residual</b>, phải gọi tiếp giai đoạn 2 để chọn giữa C1/C3/C4/C6.</div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Giai đoạn 2 — và đây là chỗ khó: BA bằng chứng cùng bật một lúc</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="text-align:left">Bằng chứng</th><th style="text-align:left">Số đo</th><th style="text-align:left">Luật</th><th>Bật?</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">Chênh lệch throughput giữa hai cell</td><td style="text-align:left"><code>minimum_difference_mbps = 158.03</code></td><td style="text-align:left">luật 1 → C3 nếu ≥ 142,5</td><td class="warn"><b>BẬT</b></td></tr>
+        <tr><td style="text-align:left">Cặp PCI cùng dư mod 30</td><td style="text-align:left"><code>equal_residue_pairs</code>: 4 hàng, serving 430 ↔ neighbor 550, dư <b>10</b></td><td style="text-align:left">luật 2 → C6</td><td class="warn"><b>BẬT</b></td></tr>
+        <tr><td style="text-align:left">Neighbor không cùng vị trí mạnh ngang serving</td><td style="text-align:left"><code>best_noncolocated_gap = +1.48 dB</code> (hàng 5, PCI 550)</td><td style="text-align:left">luật 3 → C4 nếu ≥ −3 dB</td><td class="warn"><b>BẬT</b></td></tr>
+        <tr><td style="text-align:left">Hàng dưới cạnh dưới búp sóng</td><td style="text-align:left"><code>rows_below_main_lobe_lower_edge = []</code></td><td style="text-align:left">luật 4 → C1</td><td class="ok">tắt</td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">Ba luật cùng bật, thứ tự ưu tiên nói C3 trước → <b class="bad">policy tay trả C3, SAI</b> (gold C6). Case này nằm đúng trong 33 case "chồng bằng chứng" ở bảng trên.</div>
+  </div>
+
+  <div class="lanes" style="margin-top:12px">
+    <div class="lane det">
+      <span class="tag">Phiếu A · s11 + verifier v2.1</span>
+      <div class="abox"><b>8 lượt gọi tool · 3 lần audit · 41,5s</b><div class="muted">Gọi đủ 6 tool, còn bị verifier bắt chạy lại 2 lần (cờ 1 → 1 → 0)</div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox"><div class="muted" style="text-align:left"><i>"minimum_difference_mbps = 158.03 ≥ 142.5 → triggered"</i> — dừng ngay ở luật 1</div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox stop" style="border-color:#5a2b33;background:#2a0e14"><b class="bad">C3 · SAI</b><div class="muted">thực thi policy đúng như thiết kế, và policy sai</div></div>
+    </div>
+    <div class="lane det">
+      <span class="tag">Phiếu B · s4 + verifier</span>
+      <div class="abox"><b>6 lượt gọi tool · 1 lần audit · 21,7s</b><div class="muted">Demo của nó luôn gọi đủ 6 tool → không bao giờ bỏ đo, audit sạch ngay lần đầu</div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox"><div class="muted" style="text-align:left">Liệt kê CẢ BỐN ứng viên rồi loại dần: C1 loại (list rỗng) → C4 loại → <i>"serving 430 và neighbor 550 cùng dư mod-30 = 10, hỗ trợ C6"</i></div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox stop"><b class="ok">C6 · ĐÚNG</b><div class="muted">nhưng bước loại C4 viết sai chiều — xem ghi chú dưới</div></div>
+    </div>
+    <div class="lane sto">
+      <span class="tag">Phiếu C · native thinking</span>
+      <div class="abox"><b>5 lượt gọi tool · 100,4s</b><div class="muted">Bỏ hẳn <code>analyze_neighbor_overlap</code> — thiếu 1 trong 2 tool giai đoạn 2</div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox"><div class="muted" style="text-align:left"><i>"minimum_difference of 158.03 Mbps exceeds the 142.5 threshold → this directly triggers C3"</i></div></div>
+      <div class="aarrow">↓</div>
+      <div class="abox stop" style="border-color:#5a2b33;background:#2a0e14"><b class="bad">C3 · SAI</b><div class="muted">tự tin, nhanh gọn, và trùng lỗi với phiếu A</div></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>Bầu cử: 2 phiếu C3 vẫn thua 1 phiếu C6</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="text-align:left">Nhãn</th><th style="text-align:left">Ai bầu</th><th style="text-align:left">Trọng số (fit trên dev-96)</th><th>Tổng điểm</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left"><b>C3</b></td><td style="text-align:left">phiếu A + phiếu C</td><td style="text-align:left">0,31 (A đúng 4/14 lần bầu C3) + 0,35 (C đúng 54/156)</td><td class="bad"><b>0,66</b></td></tr>
+        <tr><td style="text-align:left"><b class="ok">C6</b></td><td style="text-align:left">phiếu B</td><td style="text-align:left">0,90 (B đúng <b>8/8</b> lần bầu C6 trên dev)</td><td class="ok"><b>0,90</b></td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">Đa số thường sẽ chọn C3 và sai. Weighted vote biết "phiếu nào bầu C3 cũng không đáng tin, còn s4 bầu C6 thì gần như chắc" nên chọn C6. Tổng kết trên official-864, weighted khác đa số thường ở 23 case: <b style="color:var(--text)">được 20 (5 ca thiểu-số-thắng kiểu này — tất cả đều gold C6 cùng một khuôn — và 15 ca vỡ 3 hướng chọn phiếu nặng nhất), mất 3</b> → net +17 case = 81,02% → 82,99%.</div>
+    <div class="muted" style="margin-top:10px"><b style="color:var(--amber)">Ghi chú trung thực về chất lượng lập luận:</b> phiếu B ra nhãn đúng nhưng câu loại C4 của nó viết <i>"best_noncolocated_gap là 1,48 dB, không phải −3 dB hoặc tốt hơn, nên C4 không được hỗ trợ"</i> — sai chiều so đúng thứ mà verifier v2 được thiết kế để bắt (1,48 &gt; −3 nên bằng chứng C4 CÓ bật). Nó thoát audit vì câu văn không khớp mẫu polarity. Nghĩa là: <b style="color:var(--text)">trọng số học từ tần suất đúng nên nó thưởng cả những lần đúng vì may</b> — và đây chính là lý do nhược điểm số 4 ở trên đáng để chữa bằng trọng tài đọc-trace, không phải bằng prompt.</div>
   </div>
 
   <h2>Giao thức</h2>
