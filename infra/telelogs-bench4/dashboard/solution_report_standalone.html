@@ -754,6 +754,7 @@
         <i><span class="pill ship">shipped</span> measured on official-864</i>
         <i><span class="pill test">under test</span> experiment queued or running</i>
         <i><span class="pill flat">candidate</span> designed, not started</i>
+        <i><span class="pill neg">rejected</span> tested, did not survive</i>
       </div>
 
       <div class="arch">
@@ -769,14 +770,15 @@
           <div class="chips"><i><span class="pill ship">shipped</span></i><i>gate cases stop at ~4 calls</i></div>
         </div>
 
-        <div class="abox" style="border-style:dashed;border-color:var(--amber)">
-          <b>①⁺ proposed: 7th tool <code>check_verification_lines</code> + acceptance gate</b>
-          <div class="s">the verifier's checks, callable inside the loop so a slip is fixed for the price of
-            one ReAct step instead of a whole re-run; the answer is not accepted until the check has run clean
-            — if the model never calls it, code runs it and falls through to the repair path, so the worst
-            case equals today</div>
-          <div class="chips"><i><span class="pill flat">candidate</span></i><i>needs demo re-bootstrap — demos,
-            not instructions, decide whether a tool gets called</i></div>
+        <div class="abox" style="border-style:dashed;border-color:var(--red)">
+          <b>①⁺ tested: 7th tool <code>check_verification_lines</code> — the model never picked it up</b>
+          <div class="s">built, unit-tested, demos re-bootstrapped on the champion weights under a seed that
+            mandates the call (w1). Across all 96 dev cases the model called the tool <b>zero</b> times, and
+            the fresh demo compile scored 85/96 against the champion's 91/96 — the loss is the demo lottery,
+            not the tool. Same pathology as stage-2 skipping: an instruction can suggest a call, only code
+            can guarantee one. Enforcement stays post-hoc in layer ②.</div>
+          <div class="chips"><i><span class="pill neg">rejected · w1</span></i><i>check-tool calls: 0/96 ·
+            keeps the demo-driven finding that instructions don't create tool habits</i></div>
         </div>
         <div class="arrow">↓</div>
 
@@ -801,10 +803,12 @@
             <div class="blabel no">proposed replacement</div>
             <div class="abox" style="border-style:dashed;border-color:var(--amber)"><b>③⁺ FastSpecialist:
               attach the numbers, skip the re-run</b>
-              <div class="s">the specialist redecides from those numbers anyway, so the re-run buys a
-                discarded intermediate answer</div>
-              <div class="chips"><i><span class="pill test">under test · u1</span></i><i>11.3 → ~8.4 LM
-                calls if answers match</i></div>
+              <div class="s">measured (u1, base weights): dev-96 identical at 89/96; sel200 164 vs 166
+                (4 wins : 6 losses, p = 0.75, not significant); cost 11.4 → 7.5 LM calls, −34%. The answers
+                are not bit-identical (12/200 differ), so the strict acceptance rule fails — the full re-run
+                stays the default, the fast path is a documented −34%-cost option.</div>
+              <div class="chips"><i><span class="pill test">measured · u1 — reviewer's trade-off</span></i>
+                <i>−2/200 accuracy (n.s.) for −34% cost</i></div>
             </div>
           </div>
         </div>
@@ -821,9 +825,10 @@
         <div class="abox" style="border-style:dashed;border-color:var(--amber)">
           <b>④⁺ proposed: compiled specialist prompt</b>
           <div class="s">the only high-value prompt surface never optimized; inputs frozen once, then each
-            search round costs 1 LM call instead of 11. Running now against base weights as a control (t1);
-            the real target is a re-run against the GRPO weights (weights first, prompts second)</div>
-          <div class="chips"><i><span class="pill test">under test · t1, then P2</span></i></div>
+            search round costs 1 LM call instead of 11. First attempt (t1) lost 299/320 collection cases to
+            a missing enable_thinking=False and was discarded; re-running fixed as t1b (base weights,
+            control) and t2 (the champion GRPO weights — weights first, prompts second)</div>
+          <div class="chips"><i><span class="pill test">under test · t1b + t2</span></i></div>
         </div>
         <div class="arrow">↓</div>
 
@@ -853,9 +858,10 @@
         <div class="note">
           <h4>Open questions this figure is asking its reviewers</h4>
           <ul style="margin:6px 0 0;padding-left:18px;font-size:13.5px">
-            <li>①⁺ — is a check tool the model may ignore worth the demo re-bootstrap, given the acceptance
-              gate already guarantees the floor?</li>
-            <li>③⁺ — if the A/B shows even a small accuracy cost, is 25% cheaper worth it?</li>
+            <li>①⁺ — <b>answered by w1:</b> the model ignored the tool on every one of 96 cases, so the
+              question is closed; correction stays in code, and the failed attempt itself documents why.</li>
+            <li>③⁺ — <b>numbers are in (u1):</b> −2/200 accuracy (not significant) for −34% cost. Take the
+              cheaper path or keep the bit-identical default?</li>
             <li>⑤ — should the narrative be the primary reasoning shown, with the audited lines collapsed
               underneath? (Presentation only, but it defines what a reader sees first.)</li>
             <li>Story A vs A+B — one clean pipeline at 88.77%, or +1–2 points for a hybrid-vote story?</li>
