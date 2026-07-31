@@ -209,6 +209,22 @@
   .ttrace i.g{border-color:color-mix(in srgb,var(--green) 45%,transparent);color:var(--green)}
   .ttrace i.b{border-color:color-mix(in srgb,var(--red) 45%,transparent);color:var(--red)}
 
+  /* ---------- reasoning showcase ---------- */
+  .rcase{margin-top:16px}
+  .rcase .rhead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .rnarr{font-size:15px;line-height:1.7;margin:0}
+  .rnarr mark{background:color-mix(in srgb,var(--amber) 18%,transparent);color:inherit;
+    border-bottom:2px dashed var(--amber);border-radius:2px;padding:0 2px}
+  details.rev{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  details.rev summary{cursor:pointer;padding:9px 14px;font-size:12.5px;color:var(--muted);
+    background:color-mix(in srgb,var(--panel) 70%,transparent);user-select:none;list-style:none}
+  details.rev summary::before{content:"▸ ";color:var(--faint)}
+  details.rev[open] summary::before{content:"▾ "}
+  details.rev pre{margin:0;padding:12px 14px;font-size:12px;line-height:1.65;overflow-x:auto;
+    border-top:1px solid var(--line);white-space:pre-wrap}
+  .guardnote{margin-top:10px;border-left:3px solid var(--amber);padding:8px 12px;font-size:13px;
+    color:var(--muted);background:color-mix(in srgb,var(--amber) 6%,transparent);border-radius:0 8px 8px 0}
+
   /* ---------- solution explorer ---------- */
   .explorer{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;align-items:start}
   @media(max-width:1000px){.explorer{grid-template-columns:1fr}}
@@ -265,6 +281,7 @@
     <a href="#tools">Tool layer</a>
     <a href="#dspy">DSPy</a>
     <a href="#integrity">Integrity</a>
+    <a href="#reasoning">Reasoning</a>
     <a href="#solutions">Solutions</a>
     <a href="#failures">Failure analysis</a>
     <a href="#cost">Cost</a>
@@ -835,8 +852,9 @@
         <div class="abox stage"><b>⑤ Narration + grounding guard</b>
           <div class="s"><code>answer</code> is an InputField — narration structurally cannot change the
             verdict; every number in the prose is checked against the observations by code</div>
-          <div class="chips"><i><span class="pill test">validated · default-on pending v1</span></i>
-            <i>96/96 narratives, 0 ungrounded numbers</i><i>+1 LM call</i></div>
+          <div class="chips"><i><span class="pill ship">validated on the shipped config · v1</span></i>
+            <i>96/96 narratives · the guard caught 1 fabricated number, shown annotated in the
+            Reasoning section</i><i>+1 LM call</i></div>
         </div>
         <div class="arrow">↓</div>
 
@@ -862,8 +880,9 @@
               question is closed; correction stays in code, and the failed attempt itself documents why.</li>
             <li>③⁺ — <b>numbers are in (u1):</b> −2/200 accuracy (not significant) for −34% cost. Take the
               cheaper path or keep the bit-identical default?</li>
-            <li>⑤ — should the narrative be the primary reasoning shown, with the audited lines collapsed
-              underneath? (Presentation only, but it defines what a reader sees first.)</li>
+            <li>⑤ — <b>implemented:</b> the narrative is now the primary text with the audited lines
+              collapsed underneath — see the Reasoning section; flagged numbers are shown annotated, not
+              hidden.</li>
             <li>Story A vs A+B — one clean pipeline at 88.77%, or +1–2 points for a hybrid-vote story?</li>
           </ul>
         </div>
@@ -1171,6 +1190,101 @@
       written into the prompt as domain knowledge, the way an engineer would be handed a troubleshooting
       procedure, and they are never applied by code at inference time. The four exact criteria (1 km, 3 PCI
       changes, 40 km/h, 160 RB) are given by the task definition and were not fitted at all.</p>
+    </div>
+  </section>
+
+  <section id="reasoning">
+    <h2>What a diagnosis reads like</h2>
+    <p class="lede">Three genuine cases from the shipped configuration (GRPO weights, dev-96, run
+    <code>tool_dev96_s11_specialist_grpo1_narrated</code>). The prose is what a reader sees first. It is
+    written <b>after</b> the class is locked — the verdict is an input to the writer, never an output — and a
+    grounding guard checks every number in it against the tool measurements. The machine-audited lines the
+    verdict actually rests on sit underneath, one click away.</p>
+
+    <div class="card rcase">
+      <div class="rhead"><span class="pill ship">correct</span><b>Gate case — over-shooting (C2)</b>
+        <span class="muted" style="font-size:12.5px">gold C2 · answered C2 · 7 LM calls</span></div>
+      <p class="rnarr">On this road section, the throughput drops below 600 Mbps in segments where the serving
+      cell PCI 71 is active. The analysis reveals that the maximum distance from the serving cell to the test
+      vehicle is 2.774 km, which exceeds the 1 km threshold, indicating over-shooting. This over-shooting leads
+      to weak signal strength and reduced throughput. While other potential causes such as handover frequency,
+      vehicle speed, and resource block allocation were considered, they were ruled out by the data. For
+      instance, the vehicle speed never exceeded 40 km/h, and the average scheduled RBs remained above 160. The
+      strongest competing explanation was interference from neighboring cells, but the measurements show no
+      significant overlap or PCI mod 30 conflicts. Thus, the most likely cause is that the serving cell's
+      coverage distance exceeds 1 km, resulting in over-shooting.</p>
+      <details class="rev"><summary>The audited evidence behind it — 4 machine-checked lines</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 2.774 &gt; 1 → triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 2 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 33 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 206.62 &gt; 160 → not triggered.</pre></details>
+    </div>
+
+    <div class="card rcase">
+      <div class="rhead"><span class="pill ship">correct</span><b>Residual case — mod-30 interference (C6)</b>
+        <span class="muted" style="font-size:12.5px">gold C6 · answered C6 · 11 LM calls · specialist fired</span></div>
+      <p class="rnarr">On this road section, the throughput drops below 600 Mbps in certain segments, primarily
+      affecting PCI 712 and PCI 832. The analysis reveals that the issue is not due to coverage distance,
+      handover frequency, vehicle speed, or insufficient scheduled RBs, as these factors are ruled out by the
+      measurements. Instead, the key insight lies in the PCI modulo-30 residue analysis, where multiple
+      instances show that the serving cell and neighboring cells share the same residue (mod 30 = 22). This
+      indicates a potential for interference, as cells with the same PCI mod 30 can cause overlapping coverage
+      and signal degradation. While the strongest competing explanation — weak coverage due to excessive
+      downtilt — was ruled out by the absence of low RSRP values below the main lobe lower edge, the consistent
+      PCI residue overlap provides a clear and decisive link to the root cause.</p>
+      <details class="rev"><summary>The audited evidence behind it — gate lines, then the specialist's rule walk</summary>
+<pre>- C2: maximum_distance_km (analyze_coverage_geometry) is 0.064 &lt; 1 → not triggered.
+- C5: transition_count (analyze_mobility) is 1 &lt; 3 → not triggered.
+- C7: maximum_speed_kmh (analyze_mobility) is 30 &lt; 40 → not triggered.
+- C8: low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is 210.02 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. rows_below_main_lobe_lower_edge is empty → not satisfied.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3; undefined when the drive has a single segment. minimum_difference_mbps is 35.27 &lt; 142.5 → not satisfied.
+2. otherwise a non-empty equal_residue_pairs selects C6. equal_residue_pairs is non-empty → triggered.</pre></details>
+    </div>
+
+    <div class="card rcase">
+      <div class="rhead"><span class="pill ship">correct</span><b>Residual case — overlapping coverage (C4),
+        with one sentence flagged by the guard</b>
+        <span class="muted" style="font-size:12.5px">gold C4 · answered C4 · 15 LM calls</span></div>
+      <p class="rnarr">On this road section, the throughput drops below 600 Mbps in certain segments, primarily
+      due to overlapping coverage from non-colocated co-frequency neighboring cells. The drive-test data
+      reveals that the serving cell's signal strength (SS-RSRP) is consistently above −83 dBm, <mark>and the
+      SINR remains around 17-21 dB, indicating adequate signal quality</mark>. However, the presence of
+      neighboring cells with strong signal levels (e.g., −78 dBm to −85 dBm) creates overlapping coverage,
+      leading to interference and reduced throughput. The best non-colocated neighbor gap is −2.01 dB, which is
+      greater than −3 dB, confirming that the overlapping coverage from non-colocated co-frequency cells is the
+      dominant factor. This interference is not mitigated by PCI mod 30 conflicts, as no equal residue pairs
+      were found, nor is it due to excessive distance, mobility, or resource allocation issues.</p>
+      <div class="guardnote"><b>Grounding guard:</b> the highlighted sentence quotes an SINR of 17–21 dB, but
+      SINR is not a field any tool measures — the number has no source in the observations. The guard flagged
+      it automatically (<code>narrative_ungrounded: ["-21"]</code>). The verdict is unaffected: the class was
+      decided and machine-checked before the narrative existed, and the flag is displayed rather than hidden so
+      a reader never has to take the prose on trust. 95 of the 96 narratives in this run contain no such
+      number; this is the one that does.</div>
+      <details class="rev"><summary>The audited evidence behind it — gate lines, then the specialist's rule walk</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.196 &lt; 1 → not triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 35 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 210.86 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. The rows_below_main_lobe_lower_edge have throughput values of 425.18, 434.27, 1049.95, 1137.28, 871.7, none of which are below the stated throughput criterion of 600.0 Mbps. Additionally, the serving RSRP values for these rows are -88.68, -83.12, -77.05, -75.66, -77.02, none of which are &lt;= -90. Therefore, this rule is not satisfied.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 39.17, which is less than 142.5. Therefore, this rule is not satisfied.
+2. otherwise a non-empty equal_residue_pairs selects C6. The equal_residue_pairs is an empty list. Therefore, this rule is not satisfied.
+3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap &gt; -3 or gap = -3) selects C4 (null means there is no non-colocated neighbour). The best_noncolocated_gap is -2.01, which is greater than -3. Therefore, this rule is satisfied.</pre></details>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>Why the two layers are separate</h4>
+      <p style="margin:0">The audited lines cannot be softened: the consistency verifier parses exactly that
+      format — field name, signed inequality, verdict word — so relaxing it would blind the audit. Instead of
+      asking one string to be both machine-checkable and readable, the pipeline keeps both: the verdict rests
+      only on the audited lines, and the narrative is a presentation layer that can be regenerated, translated
+      (<code>--narrate-language</code>), or dropped without touching a single decision. Validated on the
+      shipped configuration: 96/96 cases produced a narrative, 1/96 tripped the grounding guard — and that one
+      is shown above, annotated, not hidden.</p>
     </div>
   </section>
 
