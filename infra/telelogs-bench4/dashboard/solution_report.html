@@ -100,6 +100,7 @@
   .arrow{display:grid;justify-items:center;gap:2px;color:var(--faint);font-size:16px;line-height:1}
   .arrow span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
   .lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:100%;align-items:start}
+  .lanes.two{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media(max-width:900px){.lanes{grid-template-columns:1fr}}
   .lane{border:1px dashed var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;
     justify-items:center;background:color-mix(in srgb,var(--panel) 60%,transparent)}
@@ -327,6 +328,48 @@
         that killed them.</p>
       </div>
     </div>
+    <div class="card" style="margin-top:16px">
+      <h3>The decision — and the measurement that closes each option</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 12px">Three directions were open at the start of
+      round 4. All three now have a decisive number rather than an opinion, so this table is the
+      recommendation.</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">Direction</th><th class="l">Deciding measurement</th><th class="l">Verdict</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="l"><b>Ship the current architecture</b><br><span class="muted">ReAct + tools → verifier
+              → forced measurement → residual specialist</span></td>
+            <td class="l"><b class="ok">86.23% on official-864</b>, pre-registered. Beats the three-voter
+              ensemble by 3.24 points, McNemar 81 : 53, p = 0.019, at 45% of its LM calls.</td>
+            <td class="l"><span class="pill ship">adopt</span> The most accurate configuration is also the
+              cheapest useful one.</td>
+          </tr>
+          <tr>
+            <td class="l"><b>Keep training with GRPO</b><br><span class="muted">more steps from the current
+              checkpoint</span></td>
+            <td class="l">Inside the pipeline 92.71% → 91.67% on dev-96, <b>McNemar 3 : 4, p = 1.0</b>. RL and
+              the specialist fix the same defect; the specialist got there first and cost no GPU time.</td>
+            <td class="l"><span class="pill neg">stop</span> Not because RL failed — it gained 29.2 points on
+              the residual half alone — but because that ground is already taken.</td>
+          </tr>
+          <tr>
+            <td class="l"><b>Keep optimizing the prompt</b><br><span class="muted">more seeds, demos, or
+              optimizer runs</span></td>
+            <td class="l">MIPROv2, the last untried optimizer, reaches 78.04% pooled — <b>p = 0.086</b> against
+              the baseline and p = 0.90 against forced measurement. Changing only the random seed under one
+              optimizer spans 34.4–72.9% on dev-96.</td>
+            <td class="l"><span class="pill neg">stop</span> The seed lottery is wider than any wording effect,
+              so further search on 96 cases optimizes noise.</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p style="margin:12px 0 0;font-size:13.5px"><b>What is worth doing next is none of the three.</b> The
+      remaining 119 errors split into 44 the policy would get right and the model does not, 62 where the
+      policy itself is wrong but some configuration on file holds the gold, and 13 nothing reaches. That
+      points at a routing layer over specialists, and at a C1-versus-C3 discriminator — not at more of any
+      axis already measured.</p>
+    </div>
+
   </section>
 
   <section id="architecture">
@@ -335,8 +378,10 @@
     procedure — the only place raw data is ever touched. Figures 2 and 3 are the two configurations built
     around it: run it three times and vote, or run it once and add a focused second decision. Figure 3 is
     what ships; Figure 2 is kept because it was the shipped system for three rounds and its measurements
-    are what motivated Figure 3. Nothing is modelled on an external architecture; the only off-the-shelf
-    part is the ReAct loop itself, taken from <code>dspy.ReAct</code>.</p>
+    are what motivated Figure 3. Figure 4 is the road not taken — the same defect attacked by training the
+    weights instead of changing the architecture — and it is drawn here because measuring it is what proved
+    the architectural fix was the right one. Nothing is modelled on an external architecture; the only
+    off-the-shelf part is the ReAct loop itself, taken from <code>dspy.ReAct</code>.</p>
 
     <div class="card" style="margin-top:18px">
       <div class="fignum">Figure 1</div>
@@ -469,6 +514,112 @@
             <div class="s">745/864 · 11.3 LM calls · 21.9 s per case · +3.24 points over the ensemble at
               45% of its LM calls</div></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="fignum">Figure 4 · the other route · not shipped</div>
+      <h3>GRPO — fixing the same defect in the weights instead of in the architecture</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 14px">Figure 3 removes the crowded decision by giving
+      it its own call. This removes it by training the model until it can do the crowded version. Both target
+      the same 109 cases. The decisive property of this diagram is what is <b style="color:var(--text)">missing
+      from the left half</b>: at training time there is no ReAct loop and no tool call — the observations are
+      computed offline and handed over. That is what the model learns, and it is why it later hesitates to
+      call a tool itself.</p>
+
+      <div class="grid g2" style="gap:20px">
+        <div>
+          <div class="tag" style="margin-bottom:8px">Training · one H200 · 21 h</div>
+          <div class="arch">
+            <div class="abox src"><b>Raw case (train split only)</b><div class="s">the same 60% hash split; dev-96 and holdout-96 are never touched</div></div>
+            <div class="arrow">↓<span>tools run OFFLINE, by the dataset builder</span></div>
+            <div class="abox stage"><b>Deterministic observations</b>
+              <div class="s">4 stage-1 tools always; the 2 stage-2 tools only when no exact criterion fires —
+                decided symbolically <i>from the observations</i>, never from the label</div>
+              <div class="chips"><i>assert_label_neutral on every block</i></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="abox loop"><b>One single-turn prompt</b>
+              <div class="s">question + observation blocks + the 4 gate criteria + the 5 ordered residual
+                rules + <code>/no_think</code>. Ends with one line: <code>Final answer: C&lt;n&gt;</code></div>
+              <div class="chips"><i>2 190 prompts</i><i>874 gated ×1</i><i>658 residual ×2</i></div>
+            </div>
+            <div class="arrow">↓<span>GRPO · sample a group of completions per prompt</span></div>
+            <div class="lanes two">
+              <div class="lane">
+                <span class="tag">Rollouts</span>
+                <div class="abox"><b>vLLM, colocated</b><div class="s">same GPU as the policy</div></div>
+              </div>
+              <div class="lane">
+                <span class="tag">Reward</span>
+                <div class="abox"><b>reward_correct</b><div class="s">1 if the parsed label equals gold</div></div>
+                <div class="abox"><b>reward_format</b><div class="s">small shaping term</div></div>
+              </div>
+            </div>
+            <div class="guard" style="margin-top:8px"><b>The gold label exists only inside the reward
+              function.</b> It never appears in a prompt, a demonstration or an observation — the same
+              constraint the tool layer enforces at inference time.</div>
+            <div class="arrow">↓</div>
+            <div class="abox stage"><b>LoRA update · r32 / α64</b>
+              <div class="s">LoRA is a memory decision, not a quality one: GRPO must hold the training policy
+                <i>and</i> a vLLM rollout engine on one H200, and full fine-tuning of 8B does not fit</div>
+              <div class="chips"><i>1 048 steps</i><i>2 epochs</i><i>~70 s/step</i></div>
+            </div>
+            <div class="arrow">↓<span>the output is an adapter, not a model</span></div>
+            <div class="abox out" style="max-width:none"><b>merge_and_unload() → standalone model</b>
+              <div class="s">adapter folded back into the base weights, served under
+                <code>--served-model-name Qwen/Qwen3-8B</code> so the client only changes
+                <code>DSPY_API_BASE</code></div></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="tag" style="margin-bottom:8px">What it bought · dev-96</div>
+          <div class="arch">
+            <div class="abox stage"><b>Measured under its own training conditions</b>
+              <div class="s">single turn, observations pre-supplied, no tools, no verifier, no specialist —
+                base and RL weights compared with nothing else varying</div>
+            </div>
+            <div class="ttrace"><i class="g">residual half 58.3% → 87.5%</i><i class="g">overall 65.6% → 83.3%</i></div>
+            <div class="arrow">↓<span>so the training genuinely worked</span></div>
+            <div class="abox"><b>Second, independent confirmation</b>
+              <div class="s">+29.2 points on exactly the half this project was stuck on — the bottleneck really
+                is rule application, not knowledge or data</div></div>
+            <div class="arrow">↓<span>then drop the weights into Figure 3</span></div>
+            <div class="abox stage" style="border-style:dashed"><b>Inside the shipped pipeline</b>
+              <div class="s">92.71% (base weights) → 91.67% (RL weights)</div>
+              <div class="chips"><i>McNemar 3 : 4</i><i>p = 1.0</i></div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="abox out" style="max-width:none;border-color:var(--red)"><b>No gain — the defect was
+              already fixed</b><div class="s">the specialist removed it architecturally, for free; two cures for
+              one disease do not add up</div></div>
+          </div>
+
+          <div class="note" style="margin-top:14px">
+            <h4>What RL did <i>not</i> learn — and it is measurable</h4>
+            <p style="margin:0 0 8px"><b>Gate-verdict discipline.</b> C8 is 2/12 native (base 0/12), failing as
+            <code>100.98 &gt; 160 → not triggered</code> — a false inequality — and
+            <code>105.57 &lt; 160 → not triggered</code> — a correct inequality with the wrong verdict. Those
+            are text-internal contradictions, which is exactly what the verifier catches, and why the shipped
+            pipeline holds C8 at 108/108.</p>
+            <p style="margin:0"><b>Tool initiative, where the demonstrations leave it to the model.</b> Under
+            seed v11 plain-ReAct stage-2 coverage halves, 19–21% → 9.4%. Under seed 4, whose demonstrations
+            call all six tools every time, it is unchanged (51.0% → 54.2%). The shipped pipeline barely
+            notices either way — forced-measurement rounds go 41/96 to 43/96 — because it never relied on that
+            initiative in the first place.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="note ok" style="margin-top:16px">
+        <h4>The one-sentence comparison</h4>
+        <p style="margin:0">Figure 3 and Figure 4 attack the identical defect — a decision made in a prompt
+        that is simultaneously carrying four gate criteria, eight cause definitions and a drive-test table.
+        Figure 3 deletes the crowding and costs <b>one extra LM call per residual case</b>. Figure 4 trains
+        through the crowding and costs <b>21 GPU-hours</b>. Both work; measured together they are worth
+        <b>p = 1.0</b>. The architectural fix arrived first and is free, so it ships — and the RL run keeps its
+        value as the independent second measurement that the diagnosis was right.</p>
       </div>
     </div>
 
