@@ -74,6 +74,8 @@
   .pill.ref{background:color-mix(in srgb,var(--purple) 13%,transparent);color:var(--purple);
     border-color:color-mix(in srgb,var(--purple) 30%,transparent)}
   .pill.flat{background:var(--line2);color:var(--muted);border-color:var(--line)}
+  .pill.test{background:color-mix(in srgb,var(--amber) 14%,transparent);color:var(--amber);
+    border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
 
   /* ---------- tables ---------- */
   .tw{border:1px solid var(--line);border-radius:12px;overflow-x:auto;background:var(--panel)}
@@ -739,6 +741,126 @@
           prompt written by hand.</b> That is the open lever, and the conditions there are far better than at
           layer ①: a small single-purpose prompt, four output classes instead of eight, demos that carry no
           tool trajectory so the context ceiling does not bite, and 2.5 s per evaluation instead of 21.9.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;border-width:2px">
+      <div class="fignum">Figure 6 · the round-5 proposal — posted for review</div>
+      <h3>The architecture as it stands, with every proposed change marked</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 6px">Solid boxes are shipped and carry their measured
+      value on official-864. Dashed amber boxes are proposals currently queued or under A/B — each one names
+      the experiment that will accept or reject it. This is the diagram to argue with.</p>
+      <div class="chips" style="justify-content:flex-start;margin:0 0 14px">
+        <i><span class="pill ship">shipped</span> measured on official-864</i>
+        <i><span class="pill test">under test</span> experiment queued or running</i>
+        <i><span class="pill flat">candidate</span> designed, not started</i>
+      </div>
+
+      <div class="arch">
+        <div class="abox src"><b>Weights: Qwen3-8B + GRPO LoRA, merged</b>
+          <div class="s">label-free single-turn RL, 2 epochs, gold only inside the reward</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+2.55 pts, McNemar 37:15, p = 0.0032</i></div>
+        </div>
+        <div class="arrow">↓<span>same pipeline, only DSPY_API_BASE changed</span></div>
+
+        <div class="abox loop"><b>① ReAct over 6 label-neutral tools</b>
+          <div class="s">compiled instruction + 2 bootstrapped demos; the model chooses tool, order, stopping
+            point; assert_label_neutral raises on any class token in any observation</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>gate cases stop at ~4 calls</i></div>
+        </div>
+
+        <div class="abox" style="border-style:dashed;border-color:var(--amber)">
+          <b>①⁺ proposed: 7th tool <code>check_verification_lines</code> + acceptance gate</b>
+          <div class="s">the verifier's checks, callable inside the loop so a slip is fixed for the price of
+            one ReAct step instead of a whole re-run; the answer is not accepted until the check has run clean
+            — if the model never calls it, code runs it and falls through to the repair path, so the worst
+            case equals today</div>
+          <div class="chips"><i><span class="pill flat">candidate</span></i><i>needs demo re-bootstrap — demos,
+            not instructions, decide whether a tool gets called</i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage"><b>② Consistency verifier · pure code, 17 flag sites, none names a class</b>
+          <div class="s">catches false inequalities and verdicts that contradict the model's own comparison —
+            the pathology that survived both prompting and 21 h of RL</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+11.23 pts, p = 8e-15 · holds the
+            gate half at 431–432/432</i></div>
+        </div>
+        <div class="arrow">↓<span>residual branch only</span></div>
+
+        <div class="split">
+          <div class="branch">
+            <div class="blabel yes">today</div>
+            <div class="abox stage"><b>③ Forced measurement + full re-run</b>
+              <div class="s">skipped stage-2 tools executed by code, then the whole trajectory re-runs</div>
+              <div class="chips"><i><span class="pill ship">shipped</span></i><i>0 pts — kept as insurance;
+                +7.7 LM calls on 41/96 cases</i></div>
+            </div>
+          </div>
+          <div class="branch">
+            <div class="blabel no">proposed replacement</div>
+            <div class="abox" style="border-style:dashed;border-color:var(--amber)"><b>③⁺ FastSpecialist:
+              attach the numbers, skip the re-run</b>
+              <div class="s">the specialist redecides from those numbers anyway, so the re-run buys a
+                discarded intermediate answer</div>
+              <div class="chips"><i><span class="pill test">under test · u1</span></i><i>11.3 → ~8.4 LM
+                calls if answers match</i></div>
+            </div>
+          </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage" style="border-width:2px"><b>④ Residual specialist · one narrow call on the
+          GRPO weights</b>
+          <div class="s">sees the six observations + the ordered rules, nothing else — the call whose shape
+            matches the RL training distribution, which is why the two gains compose</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+9.96 pts architectural, then RL
+            adds +2.55 on top</i></div>
+        </div>
+
+        <div class="abox" style="border-style:dashed;border-color:var(--amber)">
+          <b>④⁺ proposed: compiled specialist prompt</b>
+          <div class="s">the only high-value prompt surface never optimized; inputs frozen once, then each
+            search round costs 1 LM call instead of 11. Running now against base weights as a control (t1);
+            the real target is a re-run against the GRPO weights (weights first, prompts second)</div>
+          <div class="chips"><i><span class="pill test">under test · t1, then P2</span></i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage"><b>⑤ Narration + grounding guard</b>
+          <div class="s"><code>answer</code> is an InputField — narration structurally cannot change the
+            verdict; every number in the prose is checked against the observations by code</div>
+          <div class="chips"><i><span class="pill test">validated · default-on pending v1</span></i>
+            <i>96/96 narratives, 0 ungrounded numbers</i><i>+1 LM call</i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox out"><b>answer · audit_trace · narrative · narrative_ungrounded</b>
+          <div class="s"><b>88.77% on official-864</b> · 767/864 · ~11.3 LM calls · residual half 77.8%
+            against a 79.9% policy ceiling</div>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-top:16px;gap:16px">
+        <div class="note">
+          <h4>Sitting outside the pipeline — Story B, the other report candidate</h4>
+          <p style="margin:0">A router/arbiter over the specialist family (GRPO weights, base weights, earlier
+          ballots). 64 of the 97 remaining errors already have the gold label on some stored run — an oracle
+          of 98.96% — but the aggregator has failed once before and the fit needs selection data that is
+          still being collected (v1). <span class="pill flat">candidate</span> It would add ~1–2 points and
+          subtract from the story's simplicity; the choice between them is an open review question.</p>
+        </div>
+        <div class="note">
+          <h4>Open questions this figure is asking its reviewers</h4>
+          <ul style="margin:6px 0 0;padding-left:18px;font-size:13.5px">
+            <li>①⁺ — is a check tool the model may ignore worth the demo re-bootstrap, given the acceptance
+              gate already guarantees the floor?</li>
+            <li>③⁺ — if the A/B shows even a small accuracy cost, is 25% cheaper worth it?</li>
+            <li>⑤ — should the narrative be the primary reasoning shown, with the audited lines collapsed
+              underneath? (Presentation only, but it defines what a reader sees first.)</li>
+            <li>Story A vs A+B — one clean pipeline at 88.77%, or +1–2 points for a hybrid-vote story?</li>
+          </ul>
         </div>
       </div>
     </div>
