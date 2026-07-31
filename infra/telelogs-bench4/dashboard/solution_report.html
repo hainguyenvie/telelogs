@@ -442,14 +442,148 @@
 
   <section id="architecture">
     <h2>Architecture</h2>
-    <p class="lede">Everything here is one tool-calling procedure used more than once. Figure 1 is that
-    procedure — the only place raw data is ever touched. Figures 2 and 3 are the two configurations built
-    around it: run it three times and vote, or run it once and add a focused second decision. Figure 3 is
-    what ships; Figure 2 is kept because it was the shipped system for three rounds and its measurements
-    are what motivated Figure 3. Figure 4 is the road not taken — the same defect attacked by training the
-    weights instead of changing the architecture — and it is drawn here because measuring it is what proved
-    the architectural fix was the right one. Nothing is modelled on an external architecture; the only
-    off-the-shelf part is the ReAct loop itself, taken from <code>dspy.ReAct</code>.</p>
+    <p class="lede">The first diagram is the system that ships — one program, five layers, on GRPO-tuned
+    weights — with every alternative that was tried drawn in place and the measurement that closed it. The
+    figures after it are how it was arrived at: Figure 1 is the tool-calling core, the only place raw data
+    is ever touched; Figure 2 the three-voter configuration that shipped for rounds 1–3; Figure 3 the
+    specialist configuration that replaced it; Figure 4 the GRPO training the final weights come from;
+    Figure 5 the per-layer ledger of what each piece is worth. Nothing is modelled on an external
+    architecture; the only off-the-shelf part is the ReAct loop itself, taken from
+    <code>dspy.ReAct</code>.</p>
+
+    <div class="card" style="margin-top:20px;border-width:2px">
+      <div class="fignum">The shipped architecture · final</div>
+      <h3>One program, five layers, on GRPO-tuned weights — 88.77% official</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 6px">Solid boxes are the shipped system and carry
+      their measured value on official-864. Dashed boxes are the alternatives that were designed, run, and
+      closed — each names the experiment and the number that closed it. Nothing here is an opinion.</p>
+      <div class="chips" style="justify-content:flex-start;margin:0 0 14px">
+        <i><span class="pill ship">shipped</span> measured on official-864</i>
+        <i><span class="pill test">under test</span> experiment queued or running</i>
+        <i><span class="pill flat">candidate</span> designed, not started</i>
+        <i><span class="pill neg">rejected</span> tested, did not survive</i>
+      </div>
+
+      <div class="arch">
+        <div class="abox src"><b>Weights: Qwen3-8B + GRPO LoRA, merged</b>
+          <div class="s">label-free single-turn RL, 2 epochs, gold only inside the reward</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+2.55 pts, McNemar 37:15, p = 0.0032</i></div>
+        </div>
+        <div class="arrow">↓<span>same pipeline, only DSPY_API_BASE changed</span></div>
+
+        <div class="abox loop"><b>① ReAct over 6 label-neutral tools</b>
+          <div class="s">compiled instruction + 2 bootstrapped demos; the model chooses tool, order, stopping
+            point; assert_label_neutral raises on any class token in any observation</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>gate cases stop at ~4 calls</i></div>
+        </div>
+
+        <div class="abox" style="border-style:dashed;border-color:var(--red)">
+          <b>①⁺ tested: 7th tool <code>check_verification_lines</code> — the model never picked it up</b>
+          <div class="s">built, unit-tested, demos re-bootstrapped on the champion weights under a seed that
+            mandates the call (w1). Across all 96 dev cases the model called the tool <b>zero</b> times, and
+            the fresh demo compile scored 85/96 against the champion's 91/96 — the loss is the demo lottery,
+            not the tool. Same pathology as stage-2 skipping: an instruction can suggest a call, only code
+            can guarantee one. Enforcement stays post-hoc in layer ②.</div>
+          <div class="chips"><i><span class="pill neg">rejected · w1</span></i><i>check-tool calls: 0/96 ·
+            keeps the demo-driven finding that instructions don't create tool habits</i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage"><b>② Consistency verifier · pure code, 17 flag sites, none names a class</b>
+          <div class="s">catches false inequalities and verdicts that contradict the model's own comparison —
+            the pathology that survived both prompting and 21 h of RL</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+11.23 pts, p = 8e-15 · holds the
+            gate half at 431–432/432</i></div>
+        </div>
+        <div class="arrow">↓<span>residual branch only</span></div>
+
+        <div class="split">
+          <div class="branch">
+            <div class="blabel yes">today</div>
+            <div class="abox stage"><b>③ Forced measurement + full re-run</b>
+              <div class="s">skipped stage-2 tools executed by code, then the whole trajectory re-runs</div>
+              <div class="chips"><i><span class="pill ship">shipped</span></i><i>0 pts — kept as insurance;
+                +7.7 LM calls on 41/96 cases</i></div>
+            </div>
+          </div>
+          <div class="branch">
+            <div class="blabel no">proposed replacement</div>
+            <div class="abox" style="border-style:dashed;border-color:var(--amber)"><b>③⁺ FastSpecialist:
+              attach the numbers, skip the re-run</b>
+              <div class="s">measured (u1, base weights): dev-96 identical at 89/96; sel200 164 vs 166
+                (4 wins : 6 losses, p = 0.75, not significant); cost 11.4 → 7.5 LM calls, −34%. The answers
+                are not bit-identical (12/200 differ), so the strict acceptance rule fails — the full re-run
+                stays the default, the fast path is a documented −34%-cost option.</div>
+              <div class="chips"><i><span class="pill test">measured · u1 — reviewer's trade-off</span></i>
+                <i>−2/200 accuracy (n.s.) for −34% cost</i></div>
+            </div>
+          </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage" style="border-width:2px"><b>④ Residual specialist · one narrow call on the
+          GRPO weights</b>
+          <div class="s">sees the six observations + the ordered rules, nothing else — the call whose shape
+            matches the RL training distribution, which is why the two gains compose</div>
+          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+9.96 pts architectural, then RL
+            adds +2.55 on top</i></div>
+        </div>
+
+        <div class="abox" style="border-style:dashed;border-color:var(--red)">
+          <b>④⁺ tested: compiled specialist prompt — the hand-written instruction stands</b>
+          <div class="s">inputs frozen once (so each search round costs 1 LM call instead of 11), then
+            BootstrapFewShot 2/4/8 demos and MIPROv2 searched against the hand-written baseline, paired on
+            the pooled dev-96 + sel200 residual subset. On the champion's GRPO weights, demos actively hurt:
+            2 demos drop it 75.7% → 59.5% (5 : 29, p = 3.9e-05). On base weights every variant ties
+            (p = 0.61–1.0). Consistent with the mechanism: the zero-demo call is exactly the shape RL was
+            trained on, and demos push the input away from that distribution.</div>
+          <div class="chips"><i><span class="pill neg">rejected · t1b + t2</span></i><i>the prompt surface is
+            confirmed exhausted, this time with paired statistics</i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox stage"><b>⑤ Narration + grounding guard</b>
+          <div class="s"><code>answer</code> is an InputField — narration structurally cannot change the
+            verdict; every number in the prose is checked against the observations by code</div>
+          <div class="chips"><i><span class="pill ship">validated on the shipped config · v1</span></i>
+            <i>96/96 narratives · the guard caught 1 fabricated number, shown annotated in the
+            Reasoning section</i><i>+1 LM call</i></div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="abox out"><b>answer · audit_trace · narrative · narrative_ungrounded</b>
+          <div class="s"><b>88.77% on official-864</b> · 767/864 · ~11.3 LM calls · residual half 77.8%
+            against a 79.9% policy ceiling</div>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-top:16px;gap:16px">
+        <div class="note">
+          <h4>Sitting outside the pipeline — Story B, tested and closed</h4>
+          <p style="margin:0">A router over the four stored voters (champion, base specialist, verifier,
+          forced) was fitted properly this time: three candidate rules, 5-fold cross-validation on the
+          296-case selection pool only, one pre-registered winner replayed on the stored official
+          predictions. Result: <b>768 vs 767 — one case, McNemar 8 : 7, p = 1.0.</b> The 4-voter oracle is
+          95.0%, so the headroom is real, but no rule fittable on selection-scale data can identify which
+          disagreeing voter is right — the same aggregator wall the 3-ballot ensemble hit.
+          <span class="pill neg">rejected</span> Story A — one clean pipeline at 88.77% — stands.</p>
+        </div>
+        <div class="note">
+          <h4>The review questions this figure asked — and their answers</h4>
+          <ul style="margin:6px 0 0;padding-left:18px;font-size:13.5px">
+            <li>①⁺ — <b>answered by w1:</b> the model ignored the tool on every one of 96 cases, so the
+              question is closed; correction stays in code, and the failed attempt itself documents why.</li>
+            <li>③⁺ — <b>numbers are in (u1):</b> −2/200 accuracy (not significant) for −34% cost. Take the
+              cheaper path or keep the bit-identical default?</li>
+            <li>⑤ — <b>implemented:</b> the narrative is now the primary text with the audited lines
+              collapsed underneath — see the Reasoning section; flagged numbers are shown annotated, not
+              hidden.</li>
+            <li>Story A vs A+B — <b>answered by measurement:</b> the cross-validated router bought one case
+              on official (p = 1.0). Story A stands.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
     <div class="card" style="margin-top:18px">
       <div class="fignum">Figure 1</div>
@@ -586,7 +720,7 @@
     </div>
 
     <div class="card" style="margin-top:20px">
-      <div class="fignum">Figure 4 · the other route · not shipped</div>
+      <div class="fignum">Figure 4 · the training half of the shipped system</div>
       <h3>GRPO — fixing the same defect in the weights instead of in the architecture</h3>
       <p class="muted" style="font-size:13.5px;margin:0 0 14px">Figure 3 removes the crowded decision by giving
       it its own call. This removes it by training the model until it can do the crowded version. Both target
@@ -684,10 +818,11 @@
         <h4>The one-sentence comparison</h4>
         <p style="margin:0">Figure 3 and Figure 4 attack the identical defect — a decision made in a prompt
         that is simultaneously carrying four gate criteria, eight cause definitions and a drive-test table.
-        Figure 3 deletes the crowding and costs <b>one extra LM call per residual case</b>. Figure 4 trains
-        through the crowding and costs <b>21 GPU-hours</b>. Both work; measured together they are worth
-        <b>p = 1.0</b>. The architectural fix arrived first and is free, so it ships — and the RL run keeps its
-        value as the independent second measurement that the diagnosis was right.</p>
+        Figure 3 deletes the crowding for <b>one extra LM call per residual case</b>; Figure 4 trains through
+        it for <b>21 GPU-hours</b>. On saturated dev-96 they looked redundant (p = 1.0); the pre-registered
+        official run reversed that: <b>they compose</b> — 86.23% → 88.77%, McNemar 37 : 15, p = 0.0032 —
+        because the specialist call's input is exactly the shape the RL saw in training. Both ship: the
+        architecture is the mechanism, the weights are the muscle.</p>
       </div>
     </div>
 
@@ -786,140 +921,6 @@
           prompt written by hand.</b> That is the open lever, and the conditions there are far better than at
           layer ①: a small single-purpose prompt, four output classes instead of eight, demos that carry no
           tool trajectory so the context ceiling does not bite, and 2.5 s per evaluation instead of 21.9.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:20px;border-width:2px">
-      <div class="fignum">Figure 6 · the round-5 proposal — posted for review</div>
-      <h3>The architecture as it stands, with every proposed change marked</h3>
-      <p class="muted" style="font-size:13.5px;margin:0 0 6px">Solid boxes are shipped and carry their measured
-      value on official-864. Dashed amber boxes are proposals currently queued or under A/B — each one names
-      the experiment that will accept or reject it. This is the diagram to argue with.</p>
-      <div class="chips" style="justify-content:flex-start;margin:0 0 14px">
-        <i><span class="pill ship">shipped</span> measured on official-864</i>
-        <i><span class="pill test">under test</span> experiment queued or running</i>
-        <i><span class="pill flat">candidate</span> designed, not started</i>
-        <i><span class="pill neg">rejected</span> tested, did not survive</i>
-      </div>
-
-      <div class="arch">
-        <div class="abox src"><b>Weights: Qwen3-8B + GRPO LoRA, merged</b>
-          <div class="s">label-free single-turn RL, 2 epochs, gold only inside the reward</div>
-          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+2.55 pts, McNemar 37:15, p = 0.0032</i></div>
-        </div>
-        <div class="arrow">↓<span>same pipeline, only DSPY_API_BASE changed</span></div>
-
-        <div class="abox loop"><b>① ReAct over 6 label-neutral tools</b>
-          <div class="s">compiled instruction + 2 bootstrapped demos; the model chooses tool, order, stopping
-            point; assert_label_neutral raises on any class token in any observation</div>
-          <div class="chips"><i><span class="pill ship">shipped</span></i><i>gate cases stop at ~4 calls</i></div>
-        </div>
-
-        <div class="abox" style="border-style:dashed;border-color:var(--red)">
-          <b>①⁺ tested: 7th tool <code>check_verification_lines</code> — the model never picked it up</b>
-          <div class="s">built, unit-tested, demos re-bootstrapped on the champion weights under a seed that
-            mandates the call (w1). Across all 96 dev cases the model called the tool <b>zero</b> times, and
-            the fresh demo compile scored 85/96 against the champion's 91/96 — the loss is the demo lottery,
-            not the tool. Same pathology as stage-2 skipping: an instruction can suggest a call, only code
-            can guarantee one. Enforcement stays post-hoc in layer ②.</div>
-          <div class="chips"><i><span class="pill neg">rejected · w1</span></i><i>check-tool calls: 0/96 ·
-            keeps the demo-driven finding that instructions don't create tool habits</i></div>
-        </div>
-        <div class="arrow">↓</div>
-
-        <div class="abox stage"><b>② Consistency verifier · pure code, 17 flag sites, none names a class</b>
-          <div class="s">catches false inequalities and verdicts that contradict the model's own comparison —
-            the pathology that survived both prompting and 21 h of RL</div>
-          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+11.23 pts, p = 8e-15 · holds the
-            gate half at 431–432/432</i></div>
-        </div>
-        <div class="arrow">↓<span>residual branch only</span></div>
-
-        <div class="split">
-          <div class="branch">
-            <div class="blabel yes">today</div>
-            <div class="abox stage"><b>③ Forced measurement + full re-run</b>
-              <div class="s">skipped stage-2 tools executed by code, then the whole trajectory re-runs</div>
-              <div class="chips"><i><span class="pill ship">shipped</span></i><i>0 pts — kept as insurance;
-                +7.7 LM calls on 41/96 cases</i></div>
-            </div>
-          </div>
-          <div class="branch">
-            <div class="blabel no">proposed replacement</div>
-            <div class="abox" style="border-style:dashed;border-color:var(--amber)"><b>③⁺ FastSpecialist:
-              attach the numbers, skip the re-run</b>
-              <div class="s">measured (u1, base weights): dev-96 identical at 89/96; sel200 164 vs 166
-                (4 wins : 6 losses, p = 0.75, not significant); cost 11.4 → 7.5 LM calls, −34%. The answers
-                are not bit-identical (12/200 differ), so the strict acceptance rule fails — the full re-run
-                stays the default, the fast path is a documented −34%-cost option.</div>
-              <div class="chips"><i><span class="pill test">measured · u1 — reviewer's trade-off</span></i>
-                <i>−2/200 accuracy (n.s.) for −34% cost</i></div>
-            </div>
-          </div>
-        </div>
-        <div class="arrow">↓</div>
-
-        <div class="abox stage" style="border-width:2px"><b>④ Residual specialist · one narrow call on the
-          GRPO weights</b>
-          <div class="s">sees the six observations + the ordered rules, nothing else — the call whose shape
-            matches the RL training distribution, which is why the two gains compose</div>
-          <div class="chips"><i><span class="pill ship">shipped</span></i><i>+9.96 pts architectural, then RL
-            adds +2.55 on top</i></div>
-        </div>
-
-        <div class="abox" style="border-style:dashed;border-color:var(--red)">
-          <b>④⁺ tested: compiled specialist prompt — the hand-written instruction stands</b>
-          <div class="s">inputs frozen once (so each search round costs 1 LM call instead of 11), then
-            BootstrapFewShot 2/4/8 demos and MIPROv2 searched against the hand-written baseline, paired on
-            the pooled dev-96 + sel200 residual subset. On the champion's GRPO weights, demos actively hurt:
-            2 demos drop it 75.7% → 59.5% (5 : 29, p = 3.9e-05). On base weights every variant ties
-            (p = 0.61–1.0). Consistent with the mechanism: the zero-demo call is exactly the shape RL was
-            trained on, and demos push the input away from that distribution.</div>
-          <div class="chips"><i><span class="pill neg">rejected · t1b + t2</span></i><i>the prompt surface is
-            confirmed exhausted, this time with paired statistics</i></div>
-        </div>
-        <div class="arrow">↓</div>
-
-        <div class="abox stage"><b>⑤ Narration + grounding guard</b>
-          <div class="s"><code>answer</code> is an InputField — narration structurally cannot change the
-            verdict; every number in the prose is checked against the observations by code</div>
-          <div class="chips"><i><span class="pill ship">validated on the shipped config · v1</span></i>
-            <i>96/96 narratives · the guard caught 1 fabricated number, shown annotated in the
-            Reasoning section</i><i>+1 LM call</i></div>
-        </div>
-        <div class="arrow">↓</div>
-
-        <div class="abox out"><b>answer · audit_trace · narrative · narrative_ungrounded</b>
-          <div class="s"><b>88.77% on official-864</b> · 767/864 · ~11.3 LM calls · residual half 77.8%
-            against a 79.9% policy ceiling</div>
-        </div>
-      </div>
-
-      <div class="grid g2" style="margin-top:16px;gap:16px">
-        <div class="note">
-          <h4>Sitting outside the pipeline — Story B, tested and closed</h4>
-          <p style="margin:0">A router over the four stored voters (champion, base specialist, verifier,
-          forced) was fitted properly this time: three candidate rules, 5-fold cross-validation on the
-          296-case selection pool only, one pre-registered winner replayed on the stored official
-          predictions. Result: <b>768 vs 767 — one case, McNemar 8 : 7, p = 1.0.</b> The 4-voter oracle is
-          95.0%, so the headroom is real, but no rule fittable on selection-scale data can identify which
-          disagreeing voter is right — the same aggregator wall the 3-ballot ensemble hit.
-          <span class="pill neg">rejected</span> Story A — one clean pipeline at 88.77% — stands.</p>
-        </div>
-        <div class="note">
-          <h4>Open questions this figure is asking its reviewers</h4>
-          <ul style="margin:6px 0 0;padding-left:18px;font-size:13.5px">
-            <li>①⁺ — <b>answered by w1:</b> the model ignored the tool on every one of 96 cases, so the
-              question is closed; correction stays in code, and the failed attempt itself documents why.</li>
-            <li>③⁺ — <b>numbers are in (u1):</b> −2/200 accuracy (not significant) for −34% cost. Take the
-              cheaper path or keep the bit-identical default?</li>
-            <li>⑤ — <b>implemented:</b> the narrative is now the primary text with the audited lines
-              collapsed underneath — see the Reasoning section; flagged numbers are shown annotated, not
-              hidden.</li>
-            <li>Story A vs A+B — <b>answered by measurement:</b> the cross-validated router bought one case
-              on official (p = 1.0). Story A stands.</li>
-          </ul>
         </div>
       </div>
     </div>
