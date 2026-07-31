@@ -16,11 +16,41 @@ label, and it cannot overrule a gate answer.
 from __future__ import annotations
 
 import json
+import re
 
 import dspy
 
 from verifier import RESIDUAL_TOOLS
 from forced_program import RESIDUAL_ANSWERS, forced_block  # noqa: F401  (forced_block reused)
+
+
+GATE_CLASSES = {"C2", "C5", "C7", "C8"}
+_CLASS_LINE = re.compile(r"^\s*[-*]?\s*\**\s*(C[1-8])\b")
+
+
+def gate_lines_only(reasoning: str) -> str:
+    """The first pass's gate verification, without the residual lines the specialist supersedes.
+
+    The first pass writes four gate lines and then, when no criterion fires, its own
+    residual attempt. The specialist redecides that second part from scratch, so keeping
+    both leaves the saved trace saying the same thing twice — and occasionally saying it
+    two different ways, which reads as the system contradicting itself when it is not.
+
+    Only the leading gate block is kept. Anything unrecognised falls through untouched:
+    a presentation tweak must never be able to drop evidence.
+    """
+    lines = (reasoning or "").splitlines()
+    kept, seen_gate = [], False
+    for line in lines:
+        match = _CLASS_LINE.match(line)
+        if match and match.group(1) not in GATE_CLASSES:
+            break
+        if match:
+            seen_gate = True
+        kept.append(line)
+    if not seen_gate:
+        return reasoning or ""
+    return "\n".join(kept).rstrip()
 
 
 class ResidualDecision(dspy.Signature):
@@ -101,8 +131,10 @@ class SpecialistProgram(dspy.Module):
                 f"{getattr(pred, 'planning_reason', '')} || specialist={specialist_answer} "
                 f"(first pass said {answer})"
             )
+            # keep the audited text verbatim; `reasoning` becomes the final explanation
+            pred.audit_trace = str(getattr(pred, "reasoning", ""))
             pred.reasoning = (
-                f"{getattr(pred, 'reasoning', '')}\n\n[residual specialist]\n"
+                f"{gate_lines_only(pred.audit_trace)}\n\n[residual specialist]\n"
                 f"{getattr(decision, 'reasoning', '')}"
             )
             pred.answer = specialist_answer

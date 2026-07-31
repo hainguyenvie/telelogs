@@ -15,8 +15,35 @@ lines.
 from __future__ import annotations
 
 import json
+import re
 
 import dspy
+
+# Numbers that are thresholds from the task definition rather than measurements:
+# a narrative may legitimately say "below the 160 RB threshold" without 160
+# appearing in any observation. Everything else must be traceable.
+RULE_CONSTANTS = {"1", "3", "30", "40", "160", "142.5", "-3", "90", "-90", "600"}
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def ungrounded_numbers(narrative: str, observations: dict, raw_question: str = "") -> list[str]:
+    """Numbers asserted in the prose that appear in no measurement and no rule constant.
+
+    Same principle as the consistency verifier, applied to the presentation layer:
+    the narrative is the part a human quotes, so it is the part that must not
+    invent a value. Pure text comparison, no LM, no knowledge of the class.
+    """
+    haystack = json.dumps(observations, ensure_ascii=False) + "\n" + (raw_question or "")
+    out = []
+    for token in dict.fromkeys(_NUMBER.findall(narrative or "")):
+        if token in RULE_CONSTANTS or token in haystack:
+            continue
+        # 2.774 quoted as 2.77, or 33.0 quoted as 33
+        trimmed = token.rstrip("0").rstrip(".") if "." in token else token
+        if trimmed and trimmed in haystack:
+            continue
+        out.append(token)
+    return out
 
 
 class NarrateDiagnosis(dspy.Signature):
@@ -64,4 +91,8 @@ class NarrationLayer(dspy.Module):
             answer=answer,
             language=self.language,
         )
-        return str(getattr(result, "narrative", "") or "").strip()
+        narrative = str(getattr(result, "narrative", "") or "").strip()
+        pred.narrative_ungrounded = ungrounded_numbers(
+            narrative, dict(getattr(pred, "tool_observations", {})), raw_question
+        )
+        return narrative

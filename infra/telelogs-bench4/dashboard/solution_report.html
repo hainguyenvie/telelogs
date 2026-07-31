@@ -101,6 +101,20 @@
   .arrow span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
   .lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:100%;align-items:start}
   .lanes.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ledger{display:grid;gap:0;margin-top:14px}
+  .lrow{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr);
+    gap:14px;padding:14px 12px;border-top:1px solid var(--line);align-items:center}
+  .lrow.hd{border-top:0;padding-bottom:6px;font-size:10.5px;font-weight:800;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--faint)}
+  .lrow .stg{font-weight:700}
+  .lrow .stg span{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:3px}
+  .lrow .num{font-variant-numeric:tabular-nums;font-weight:800;font-size:19px}
+  .lrow .num span{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px;
+    font-variant-numeric:normal}
+  .lrow .vd{font-size:12.5px;color:var(--muted)}
+  .lrow.tot{border-top:2px solid var(--line2);background:color-mix(in srgb,var(--green) 5%,transparent);
+    border-radius:0 0 12px 12px}
+  @media(max-width:820px){.lrow{grid-template-columns:1fr;gap:6px}.lrow.hd{display:none}}
   @media(max-width:900px){.lanes{grid-template-columns:1fr}}
   .lane{border:1px dashed var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;
     justify-items:center;background:color-mix(in srgb,var(--panel) 60%,transparent)}
@@ -248,6 +262,7 @@
     <a href="#architecture">Architecture</a>
     <a href="#tools">Tool layer</a>
     <a href="#dspy">DSPy</a>
+    <a href="#integrity">Integrity</a>
     <a href="#solutions">Solutions</a>
     <a href="#failures">Failure analysis</a>
     <a href="#cost">Cost</a>
@@ -623,6 +638,105 @@
       </div>
     </div>
 
+    <div class="card" style="margin-top:20px">
+      <div class="fignum">Figure 5</div>
+      <h3>What each layer is worth, and what it costs</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 4px">The same shipped pipeline as Figure 3, read as a
+      ledger. Value is the paired change on official-864 when that layer is added to the one above it; cost is
+      LM calls per case. Two layers are worth nothing on accuracy and are kept anyway — the reasons are in the
+      right-hand column, and both are load-bearing.</p>
+      <div class="ledger">
+        <div class="lrow hd"><div>Layer</div><div>Cost</div><div>Value on official-864</div><div>Why it is in the pipeline</div></div>
+
+        <div class="lrow">
+          <div class="stg">① ReAct over 6 label-neutral tools
+            <span>compiled instruction + 2 bootstrapped demos; the model chooses tool, order and stopping point</span></div>
+          <div class="num">6.6<span>LM calls on the gate path</span></div>
+          <div class="num" style="color:var(--blue)">65.62%<span>567/864 on its own</span></div>
+          <div class="vd">The whole answer path — nothing else ever reads the raw tables. On its own it already
+            gets the gate half nearly right (428/432) but loses the residual half outright.</div>
+        </div>
+
+        <div class="lrow">
+          <div class="stg">② Consistency verifier + retry
+            <span>pure Python: regex over the model's own inequalities, field names and verdict words. Zero LM,
+              never names a class</span></div>
+          <div class="num">+7.7<span>LM calls per retry — it re-runs ①</span></div>
+          <div class="num ok">+11.23 pts<span>McNemar 130 : 33, p = 8e-15</span></div>
+          <div class="vd"><b>The second-largest lever, and pure code.</b> 65.62% → 76.85%, gate half
+            428/432 → 432/432. It catches the motivated-arithmetic pathology
+            (<code>100.98 &gt; 160 → not triggered</code>) that survived both prompting and 21 hours of RL. It
+            is also what produces the flags layer ③ reacts to — remove it and ③ has no trigger.</div>
+        </div>
+
+        <div class="lrow">
+          <div class="stg">③ Forced measurement
+            <span>runs the skipped stage-2 tool itself instead of asking again; the tool run is free Python,
+              the re-decision is not</span></div>
+          <div class="num warn">+7.7<span>LM calls, fires on 41/96</span></div>
+          <div class="num bad">−0.6 pts<span>McNemar 68 : 63, p = 0.73</span></div>
+          <div class="vd"><b>Worth zero on accuracy, kept as insurance.</b> Stage-2 coverage 52% → 100%. The
+            GRPO run is the proof it earns its keep: when the model lost the habit of calling stage-2
+            (19–21% → 9.4%), the pipeline held at 91.67% because this layer was already doing the work.</div>
+        </div>
+
+        <div class="lrow">
+          <div class="stg">④ Residual specialist
+            <span>one narrow call seeing only the six observations and the ordered rules — no gate criteria, no
+              cause definitions, no drive-test table</span></div>
+          <div class="num ok">+1.0<span>LM call, exactly</span></div>
+          <div class="num ok">+9.96 pts<span>McNemar 130 : 44, p = 4.7e-11</span></div>
+          <div class="vd"><b>Where the accuracy is.</b> The residual half goes 53.7% → 72.5% against a symbolic
+            ceiling of 79.9%. One extra call buys what three whole ballots could not.</div>
+        </div>
+
+        <div class="lrow tot">
+          <div class="stg">Shipped pipeline<span>one program, no voting</span></div>
+          <div class="num">11.3<span>LM calls · 21.9 s</span></div>
+          <div class="num ok">86.23%<span>745/864, pre-registered</span></div>
+          <div class="vd">Beats the three-voter ensemble by 3.24 points (McNemar 81 : 53, p = 0.019) at 45% of
+            its LM calls.</div>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-top:16px;gap:16px">
+        <div class="note">
+          <h4>The cost is in the wrong place</h4>
+          <p style="margin:0 0 8px">Grouping the 96 dev cases by the path they took shows compute and accuracy
+          running in opposite directions:</p>
+          <div class="tw"><table style="font-size:13px">
+            <thead><tr><th class="l">Path</th><th>n</th><th>LM calls</th><th>Accuracy</th></tr></thead>
+            <tbody>
+              <tr><td class="l">gate answer, no retry, no specialist</td><td>48</td><td>6.6</td><td class="ok">100%</td></tr>
+              <tr><td class="l">specialist only, no forcing</td><td>5</td><td>10.0</td><td class="ok">100%</td></tr>
+              <tr><td class="l">one forced round, 2 attempts</td><td>28</td><td>14.3</td><td>89.3%</td></tr>
+              <tr><td class="l">one forced round, 3 attempts</td><td>13</td><td class="bad">21.4</td><td class="bad">69.2%</td></tr>
+            </tbody>
+          </table></div>
+          <p class="muted" style="margin:10px 0 0;font-size:13px">A case that ends at 6.6 calls is always right;
+          a case that burns 21.4 is right 69% of the time. The expensive path is expensive because layer ③
+          re-runs the entire ReAct trajectory to hand back two numbers.</p>
+        </div>
+        <div class="note">
+          <h4>Which prompts are actually optimized</h4>
+          <div class="tw"><table style="font-size:13px">
+            <thead><tr><th class="l">Prompt surface</th><th class="l">Author</th><th>Compiled?</th></tr></thead>
+            <tbody>
+              <tr><td class="l">① ReAct instruction + demos</td><td class="l">BootstrapFewShot / MIPROv2</td><td class="ok">yes</td></tr>
+              <tr><td class="l">② verifier retry messages</td><td class="l">hand-written</td><td class="bad">no</td></tr>
+              <tr><td class="l">③ forced-measurement header</td><td class="l">hand-written</td><td class="bad">no</td></tr>
+              <tr><td class="l"><b>④ residual specialist rules</b></td><td class="l">hand-written</td><td class="bad"><b>no</b></td></tr>
+            </tbody>
+          </table></div>
+          <p style="margin:10px 0 0;font-size:13px">Only one of four surfaces has ever seen an optimizer — and
+          it is the one where optimization plateaued. <b>The layer that bought +9.96 points is running on a
+          prompt written by hand.</b> That is the open lever, and the conditions there are far better than at
+          layer ①: a small single-purpose prompt, four output classes instead of eight, demos that carry no
+          tool trajectory so the context ceiling does not bite, and 2.5 s per evaluation instead of 21.9.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="grid g2" style="margin-top:16px;gap:16px">
       <div class="note">
         <h4>Why Figure 3 exists — the measurement that motivated it</h4>
@@ -829,6 +943,101 @@
       seed produced dev-96 scores from <b>34.4% to 72.9%</b> — a spread wider than any instruction edit we
       made, which is why further prompt search on a 96-case set optimizes noise rather than the task. Every
       point after that came from the mechanisms in the right-hand column above.</p>
+    </div>
+  </section>
+
+  <section id="integrity">
+    <h2>Is the answer computed by code?</h2>
+    <p class="lede">This is the first question any reviewer should ask of a system that pairs a language model
+    with deterministic tools, and the design has to survive it on evidence rather than assurance. Four checks
+    below; each one is verifiable in the repository, and the fourth is the one that actually settles it.</p>
+
+    <div class="grid g2" style="margin-top:18px;gap:16px">
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill ship">check 1</span><b>No tool can return a class — enforced, not promised</b>
+        </div>
+        <p style="font-size:13.5px;margin:0 0 10px"><code>assert_label_neutral</code> runs on every observation
+        before the model sees it, including the ones forced measurement executes on the model's behalf. It
+        raises <code>AssertionError</code> on any <code>C1</code>–<code>C8</code> token anywhere in the
+        serialized output, and on any field named <code>answer</code>, <code>label</code>, <code>gate</code>,
+        <code>triggered</code>, <code>diagnosis</code> or <code>root_cause</code>.</p>
+        <p class="muted" style="margin:0;font-size:13px">It is an assertion, not a warning: a leak crashes the
+        run rather than degrading it quietly. Every number the model quotes has to have come through this
+        gate.</p>
+      </div>
+
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill ship">check 2</span><b>No audit message names a class</b>
+        </div>
+        <p style="font-size:13.5px;margin:0 0 10px">The consistency verifier has <b>17</b> places where it can
+        raise a flag. <b>Zero</b> of them contain a class token. Every message either quotes the model's own
+        sentence back at it — <i>"a comparison that makes a criterion true, then labelled not triggered"</i> —
+        or names a tool it never called.</p>
+        <p class="muted" style="margin:0;font-size:13px">The verifier knows a trace contradicts itself. It does
+        not know, and is never told, which of the eight causes is correct.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px;gap:16px">
+      <div class="card">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill ref">check 3</span><b>The Python solver exists — and is never on the answer path</b>
+        </div>
+        <p style="font-size:13.5px;margin:0 0 10px">We did write a plain-Python executor of the published
+        decision flow. It scores <b>89.93%</b>. It is used for exactly two things: as the ceiling that the LM
+        pipeline is measured against, and as an offline audit of where the policy itself is wrong.</p>
+        <p class="muted" style="margin:0;font-size:13px">No code path in the shipped program imports or calls
+        it. Reporting it openly is the point — a hidden solver would be the thing to worry about.</p>
+      </div>
+
+      <div class="card" style="border-color:var(--green)">
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <span class="pill ship">check 4</span><b>The measurement that settles it</b>
+        </div>
+        <p style="font-size:13.5px;margin:0 0 10px">If code were deciding, the two numbers would be identical.
+        They are not:</p>
+        <dl class="kv" style="margin-bottom:10px">
+          <dt>Python executor of the rules</dt><dd class="pur"><b>89.93%</b></dd>
+          <dt>The shipped LM pipeline</dt><dd><b>86.23%</b></dd>
+          <dt>Gap</dt><dd class="warn"><b>3.70 points = 32 cases</b></dd>
+        </dl>
+        <p style="margin:0;font-size:13.5px"><b>A hardcoded system cannot underperform its own hardcoding.</b>
+        Those 32 cases are precisely where the model, given the same measurements and the same written rules,
+        reaches a different conclusion than the rules do. That gap is the model's own work, and it is the
+        honest cost of not hardcoding.</p>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>The division of labour, stated plainly</h4>
+      <div class="tw" style="margin-top:8px"><table>
+        <thead><tr><th class="l">Deterministic code does</th><th class="l">The model does</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="l">Parse the drive-test tables. Compute the measurements. Refuse to emit anything that
+              looks like a verdict. Detect self-contradiction in a finished trace. Execute a measurement the
+              model skipped.</td>
+            <td class="l">Choose which of the six tools to call, in what order, and when it has enough. Write
+              the verification line for every criterion. Decide the class. Decide whether the case is residual
+              at all — which is what routes it to the specialist.</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p style="margin:10px 0 0;font-size:13.5px">The executor is handed every feature by construction. The
+      model has to go and get them, and on 43.5% of cases it needs a second round of measurement before it can
+      decide. That is the part no rule engine performs.</p>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>What is fitted from data, and disclosed</h4>
+      <p style="margin:0">Two quantities in the residual tie-break are calibrated rather than given: the rule
+      order (C6 before C4 before C1) and the <b>142.5 Mbps</b> threshold. Both were fitted on the
+      <b>training split only</b> — 567 residual training cases — and neither has been retuned since. They are
+      written into the prompt as domain knowledge, the way an engineer would be handed a troubleshooting
+      procedure, and they are never applied by code at inference time. The four exact criteria (1 km, 3 PCI
+      changes, 40 km/h, 160 RB) are given by the task definition and were not fitted at all.</p>
     </div>
   </section>
 

@@ -262,6 +262,8 @@ def main() -> None:
         begin = time.monotonic()
         error = None
         narrative = ""
+        ungrounded: list[str] = []
+        audit_trace = ""
         try:
             pred = programs[method](raw_question=row["question"], case=contexts[row["source_index"]])
             answer = normalize_answer(getattr(pred, "answer", ""))
@@ -270,11 +272,14 @@ def main() -> None:
             observations = dict(getattr(pred, "tool_observations", {}))
             planning_reason = str(getattr(pred, "planning_reason", ""))
             lm_calls = int(getattr(pred, "lm_calls", 1))
+            audit_trace = str(getattr(pred, "audit_trace", ""))
             if narrator is not None:
                 narrative = narrator(raw_question=row["question"], pred=pred)
+                ungrounded = list(getattr(pred, "narrative_ungrounded", []))
                 lm_calls += 1
         except Exception as exc:
             answer, reasoning, selected_tools, observations, planning_reason, lm_calls = "", "", [], {}, "", 0
+            audit_trace = ""
             error = f"{type(exc).__name__}: {exc}"
         return {
             "source_index": row["source_index"],
@@ -288,7 +293,11 @@ def main() -> None:
             "selected_tools": selected_tools,
             "tool_observations": observations,
             "reasoning": reasoning,
+            # the verbatim text the consistency verifier audited, kept whenever the
+            # specialist rewrote `reasoning` into the final explanation
+            "audit_trace": audit_trace,
             "narrative": narrative,
+            "narrative_ungrounded": ungrounded,
             "lm_calls": lm_calls,
             "elapsed_seconds": round(time.monotonic() - begin, 3),
             "error": error,
