@@ -840,13 +840,16 @@
             adds +2.55 on top</i></div>
         </div>
 
-        <div class="abox" style="border-style:dashed;border-color:var(--amber)">
-          <b>④⁺ proposed: compiled specialist prompt</b>
-          <div class="s">the only high-value prompt surface never optimized; inputs frozen once, then each
-            search round costs 1 LM call instead of 11. First attempt (t1) lost 299/320 collection cases to
-            a missing enable_thinking=False and was discarded; re-running fixed as t1b (base weights,
-            control) and t2 (the champion GRPO weights — weights first, prompts second)</div>
-          <div class="chips"><i><span class="pill test">under test · t1b + t2</span></i></div>
+        <div class="abox" style="border-style:dashed;border-color:var(--red)">
+          <b>④⁺ tested: compiled specialist prompt — the hand-written instruction stands</b>
+          <div class="s">inputs frozen once (so each search round costs 1 LM call instead of 11), then
+            BootstrapFewShot 2/4/8 demos and MIPROv2 searched against the hand-written baseline, paired on
+            the pooled dev-96 + sel200 residual subset. On the champion's GRPO weights, demos actively hurt:
+            2 demos drop it 75.7% → 59.5% (5 : 29, p = 3.9e-05). On base weights every variant ties
+            (p = 0.61–1.0). Consistent with the mechanism: the zero-demo call is exactly the shape RL was
+            trained on, and demos push the input away from that distribution.</div>
+          <div class="chips"><i><span class="pill neg">rejected · t1b + t2</span></i><i>the prompt surface is
+            confirmed exhausted, this time with paired statistics</i></div>
         </div>
         <div class="arrow">↓</div>
 
@@ -867,12 +870,14 @@
 
       <div class="grid g2" style="margin-top:16px;gap:16px">
         <div class="note">
-          <h4>Sitting outside the pipeline — Story B, the other report candidate</h4>
-          <p style="margin:0">A router/arbiter over the specialist family (GRPO weights, base weights, earlier
-          ballots). 64 of the 97 remaining errors already have the gold label on some stored run — an oracle
-          of 98.96% — but the aggregator has failed once before and the fit needs selection data that is
-          still being collected (v1). <span class="pill flat">candidate</span> It would add ~1–2 points and
-          subtract from the story's simplicity; the choice between them is an open review question.</p>
+          <h4>Sitting outside the pipeline — Story B, tested and closed</h4>
+          <p style="margin:0">A router over the four stored voters (champion, base specialist, verifier,
+          forced) was fitted properly this time: three candidate rules, 5-fold cross-validation on the
+          296-case selection pool only, one pre-registered winner replayed on the stored official
+          predictions. Result: <b>768 vs 767 — one case, McNemar 8 : 7, p = 1.0.</b> The 4-voter oracle is
+          95.0%, so the headroom is real, but no rule fittable on selection-scale data can identify which
+          disagreeing voter is right — the same aggregator wall the 3-ballot ensemble hit.
+          <span class="pill neg">rejected</span> Story A — one clean pipeline at 88.77% — stands.</p>
         </div>
         <div class="note">
           <h4>Open questions this figure is asking its reviewers</h4>
@@ -884,7 +889,8 @@
             <li>⑤ — <b>implemented:</b> the narrative is now the primary text with the audited lines
               collapsed underneath — see the Reasoning section; flagged numbers are shown annotated, not
               hidden.</li>
-            <li>Story A vs A+B — one clean pipeline at 88.77%, or +1–2 points for a hybrid-vote story?</li>
+            <li>Story A vs A+B — <b>answered by measurement:</b> the cross-validated router bought one case
+              on official (p = 1.0). Story A stands.</li>
           </ul>
         </div>
       </div>
