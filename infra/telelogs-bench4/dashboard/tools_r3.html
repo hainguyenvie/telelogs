@@ -535,7 +535,7 @@
           <tr><td style="text-align:left"><b>Forced measurement</b></td><td style="text-align:left"><b>76.27% official</b></td><td style="text-align:left" class="bad">bằng 0 — xóa được lỗi đo, không mua được điểm</td></tr>
           <tr><td style="text-align:left">MIPROv2</td><td style="text-align:left"><b>72.92% dev</b> (81.25% có audit)</td><td style="text-align:left" class="bad">bằng 0 — optimizer đắt nhất, ngang hệt bootstrap 2 demo; pooled 296 ca p=0.086 vs baseline</td></tr>
           <tr><td style="text-align:left"><b>Residual specialist</b></td><td style="text-align:left"><b class="ok">86.23% official · 87.50% holdout</b></td><td style="text-align:left" class="ok"><b>THẮNG</b> — vượt ensemble 82.99% (McNemar 81:53, p=0.019) bằng MỘT chương trình, 45% số LM call</td></tr>
-          <tr><td style="text-align:left">Pre-written comparisons</td><td style="text-align:left">79.05% pooled-296</td><td style="text-align:left" class="bad">bằng 0 — bằng forced (p=0.52), thua specialist (p=0.004): cái specialist mua KHÔNG phải phép so sánh</td></tr><tr><td style="text-align:left">GRPO (trọng số)</td><td style="text-align:left"><i class="muted">đang train</i></td><td style="text-align:left" class="warn">nhắm đúng 109 ca ở trên</td></tr>
+          <tr><td style="text-align:left">Pre-written comparisons</td><td style="text-align:left">79.05% pooled-296</td><td style="text-align:left" class="bad">bằng 0 — bằng forced (p=0.52), thua specialist (p=0.004): cái specialist mua KHÔNG phải phép so sánh</td></tr><tr><td style="text-align:left"><b>GRPO (trọng số)</b></td><td style="text-align:left">83.33% native · <b>91.67%</b> trong pipeline</td><td style="text-align:left" class="bad">HỌC ĐƯỢC nhưng bằng 0 khi ship — trùng việc với specialist (McNemar 3:4, p=1.0)</td></tr>
         </tbody>
       </table></div>
     </div>
@@ -553,6 +553,24 @@
       </table></div>
       <div class="muted" style="margin-top:8px">Hai nhánh đầu <b style="color:var(--text)">198/198 đều là câu sai, zero báo động sai</b> → ship vô điều kiện, theo đúng nguyên tắc đã chọn v2.1 (superset audit, 0 false-flag). Nhánh C3 để sau <code>TELELOGS_VERIFIER_C3_FALLBACK=1</code> để so bằng số. Điểm đáng chú ý nhất: <b style="color:var(--text)">v2.2 mở khóa retry cho phiếu s4</b> — dưới v2.1 nó chỉ bị cờ 7/864 trace nên chưa từng chạy lại lần nào; dưới v2.2 là 165/864 với 97% cờ đúng.</div>
     </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <h3>GRPO xong — học được thật, nhưng không ship được vì trùng việc</h3>
+    <div class="muted">Train 1048 step / 2 epoch / 21 giờ trên 1×H200. LoRA r32/α64 <b style="color:var(--text)">chỉ vì lý do bộ nhớ</b>: GRPO colocate cần model đang học (có optimizer state) VÀ một engine vLLM sinh rollout trên cùng một GPU — full fine-tune 8B không vừa. Nên cái train ra là adapter, phải <code>merge_and_unload()</code> cộng ngược vào trọng số gốc mới serve được như model thường; job <code>zz_finalize_and_serve</code> làm đúng việc đó rồi bật vLLM với <code>--served-model-name Qwen/Qwen3-8B</code> để client chỉ đổi <code>DSPY_API_BASE</code>. <code>train.json</code> hai bên trùng md5 → RL chưa từng thấy dev-96.</div>
+    <div class="table-wrap" style="margin-top:10px"><table>
+      <thead><tr><th style="text-align:left">dev-96, cùng prompt / cùng script / chỉ khác trọng số</th><th>base</th><th>GRPO v1</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left">native single-turn (không tool, không verifier) — tổng</td><td>65.62%</td><td class="ok"><b>83.33%</b></td></tr>
+        <tr><td style="text-align:left"><b>native — nửa residual (48 ca)</b></td><td>58.3%</td><td class="ok"><b>87.5%</b> (+29,2)</td></tr>
+        <tr><td style="text-align:left">plain ReAct s11 (không verifier)</td><td>72.92%</td><td class="bad">66.67%</td></tr>
+        <tr><td style="text-align:left">— phủ tool stage-2 trong ReAct</td><td>~25%</td><td class="bad"><b>9.4%</b></td></tr>
+        <tr><td style="text-align:left"><b>trong pipeline đang ship (specialist)</b></td><td><b>92.71%</b></td><td><b>91.67%</b></td></tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="margin-top:8px">Đọc đúng: <b style="color:var(--text)">GRPO thật sự học được luật residual</b> — +29,2 điểm ở đúng nửa mà cả dự án đang tắc, và đây là bằng chứng thứ hai ĐỘC LẬP với specialist rằng nút thắt là áp dụng luật chứ không phải kiến thức. <b style="color:var(--text)">Nhưng nó không ship</b>: trong pipeline là hòa tuyệt đối (McNemar 3:4, <b style="color:var(--text)">p=1.0</b>) vì specialist đã gỡ đúng cái bệnh đó bằng kiến trúc, miễn phí. Hai cách chữa cùng một bệnh thì không cộng dồn.</div>
+    <div class="muted" style="margin-top:8px">Hai thứ RL <b style="color:var(--text)">không</b> học được, và đều đo được: (1) <b style="color:var(--text)">kỷ luật gate</b> — C8 native 2/12 (base 0/12), bệnh là <code>100.98 &gt; 160 → not triggered</code> (bất đẳng thức SAI) và <code>105.57 &lt; 160 → not triggered</code> (đúng bất đẳng thức, sai verdict); đúng loại lỗi verifier bắt, nên pipeline vẫn C8 108/108. (2) <b style="color:var(--text)">kỷ luật gọi tool</b> — nó chưa bao giờ thấy một tool call nên trong ReAct phủ stage-2 tụt 25%→9.4%, C6 1/12, C4 0/12. Pipeline sống sót CHỈ nhờ forced measurement tự chạy tool bị bỏ: <b style="color:var(--text)">forced là kết quả âm về accuracy nhưng hóa ra là bảo hiểm</b> — đừng gỡ nó đi.</div>
+    <div class="muted" style="margin-top:8px">Kết luận vận hành: <b style="color:var(--text)">không train tiếp từ checkpoint này.</b> Train sâu thêm chỉ đào sâu nửa residual mà specialist đã lấy. Muốn RL có giá thì đổi MỤC TIÊU — 44 ca "policy đúng mà model không thi hành", hoặc chính kỷ luật gate-verdict ở trên — tức đổi dataset + reward, không phải chạy tiếp.</div>
   </div>
 
   <div class="panel" style="margin-top:12px">
