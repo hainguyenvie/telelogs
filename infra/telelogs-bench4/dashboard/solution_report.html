@@ -302,6 +302,34 @@
 
   <section id="summary">
     <h2>Where the system stands</h2>
+
+    <div class="card" style="margin-top:16px;border-width:2px">
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span class="pill ship">shipped method</span>
+        <h3 style="margin:0">Residual-specialist pipeline on GRPO-tuned Qwen3-8B — per-class diagnosis</h3>
+      </div>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">One program, five layers: ReAct over six
+      label-neutral tools → consistency verifier (pure code) → forced measurement → residual specialist →
+      narration with a grounding guard. Scored on the full official test — the GSMA ot-full TeleLogs parquet,
+      verified byte-identical (order, questions, answers) to <code>test_official864.json</code>.</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">Class</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th>
+          <th>C6</th><th>C7</th><th>C8</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td class="l">Correct / 108</td><td>74</td><td class="ok">108</td><td>95</td><td>70</td>
+            <td class="ok">108</td><td>97</td><td class="ok">108</td><td>107</td><td><b>767/864</b></td></tr>
+          <tr><td class="l">Accuracy</td><td class="warn">68.5%</td><td class="ok">100%</td><td>88.0%</td>
+            <td class="warn">64.8%</td><td class="ok">100%</td><td>89.8%</td><td class="ok">100%</td>
+            <td class="ok">99.1%</td><td><b class="ok">88.77%</b></td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted" id="gsma-harness-line" style="font-size:13px;margin:10px 0 0">
+        <b>GSMA harness confirmation:</b> an end-to-end re-run under the ot-full harness contract — one run
+        per question, the completion scored by the official parser (last <code>\boxed{...}</code>, first
+        integer) — is in progress on the full 864 with narrated completions; this line carries the number
+        when it lands.</p>
+    </div>
+
     <div class="grid g5" style="margin-top:16px">
       <div class="card kpi">
         <div class="label">Official test · 864 cases</div>
