@@ -614,6 +614,59 @@
       </div>
     </div>
 
+    <div class="card" style="margin-top:16px;border-width:2px;border-color:var(--green)">
+      <h3>The ceiling is not the measurements — it is how the rules read them</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">If presence cannot express dominance, the
+      obvious question is whether the tools already return something that can. Probe, fitted on the
+      <b>training</b> residual pool only, depth chosen on the dev split alone, official touched once
+      afterwards: replace each yes/no witness with the magnitude behind it — how many mod-30 pairs, how many
+      non-colocated neighbours clear −3 dB, how far below the lobe edge the worst row sits — and re-learn the
+      tie-break as a small tree. Train and test share no question and no table skeleton (0 overlap of 864).</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">Tie-break over the residual zone</th><th>dev 189</th><th>holdout 189</th>
+          <th>official 376</th></tr></thead>
+        <tbody>
+          <tr><td class="l">Ordered presence tests — <b>shipped</b></td><td class="muted">—</td>
+            <td class="muted">—</td><td class="warn"><b>289/376 · 76.86%</b></td></tr>
+          <tr><td class="l">Full lookup over the four binary witnesses</td><td class="muted">—</td>
+            <td class="muted">—</td><td>316/376 · 84.04%</td></tr>
+          <tr><td class="l">Four rules on <b>counts</b> instead of yes/no</td><td>85.19%</td><td>87.30%</td>
+            <td class="ok"><b>342/376 · 90.96%</b></td></tr>
+          <tr><td class="l">The same, one level deeper (depth chosen on dev)</td><td>94.18%</td>
+            <td>94.71%</td><td class="ok"><b>359/376 · 95.48%</b></td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin:12px 0 0;font-size:13.5px">The four-rule version is short enough to print in a prompt
+      verbatim, and it is <b>the same shape as the rules already in use</b> — only the conditions changed from
+      existence to quantity:</p>
+      <div class="tw" style="margin-top:8px"><table>
+        <thead><tr><th class="l">Shipped rule</th><th class="l">What the probe learned instead</th></tr></thead>
+        <tbody>
+          <tr><td class="l">a mod-30 pair <b>exists</b> → C6</td>
+            <td class="l ok">more than <b>two</b> mod-30 pairs among the affected rows → C6</td></tr>
+          <tr><td class="l">the <b>best</b> non-colocated gap ≥ −3 dB → C4</td>
+            <td class="l ok">more than <b>two</b> non-colocated neighbours clear −3 dB → C4</td></tr>
+          <tr><td class="l">a row <b>exists</b> below the lobe → C1</td>
+            <td class="l ok">the worst row sits more than <b>2.5°</b> below the lobe edge → C1</td></tr>
+          <tr><td class="l"><code>min_diff ≥ 142.5</code> → C3, evaluated first</td>
+            <td class="l">not needed — C3 becomes the fallback</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note" style="margin-top:12px">
+        <h4>What this does and does not license</h4>
+        <p style="margin:0">It does <b>not</b> license shipping the tree: a Python classifier on the answer
+        path is precisely the thing this system is built not to be. What it establishes is that the six tools
+        already carry the distinction — <code>equal_residue_pairs</code> and the neighbour rows are lists the
+        model is handed in full, and the deficit is two fields subtracted — so the loss is in the wording of
+        the tie-break, not in the measurements. The legitimate change is to expose those counts as scalar
+        fields (still label-neutral measurements) and rewrite the residual rules over them, leaving the model
+        as the decider. Ceiling if that is done and executed as faithfully as today: <b>488 + 342 = 830/864 =
+        96.06%</b> for the four-rule version, against the 89.93% ceiling the current rules impose. The new
+        thresholds would be fitted on the training split exactly as the 142.5 threshold was, and disclosed the
+        same way.</p>
+      </div>
+    </div>
+
     <h3 style="margin:36px 0 6px">Reasoning samples, one per failure mode</h3>
     <p class="lede" style="margin-top:0">Each block is a real case from this run: the narrative a reader
     sees, what the measurements say underneath it, and the audited rule walk. Together they cover the correct
