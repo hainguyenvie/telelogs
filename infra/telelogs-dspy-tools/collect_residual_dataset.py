@@ -55,6 +55,10 @@ def main() -> None:
 
     dspy.configure(lm=dspy.LM(model="openai/Qwen/Qwen3-8B", api_base=API_BASE,
                               api_key="local", max_tokens=args.max_tokens, temperature=0.0,
+                              # without this Qwen3 emits a <think> block that eats the
+                              # token budget and breaks the ReAct adapter's parsing —
+                              # 299/320 collection failures in run t1
+                              extra_body={"chat_template_kwargs": {"enable_thinking": False}},
                               cache=False))
 
     rows = load_rows(Path(args.raw))

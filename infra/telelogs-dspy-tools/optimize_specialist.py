@@ -69,6 +69,9 @@ def main() -> None:
 
     dspy.configure(lm=dspy.LM(model="openai/Qwen/Qwen3-8B", api_base=API_BASE,
                               api_key="local", max_tokens=args.max_tokens, temperature=0.0,
+                              # same fix as collect_residual_dataset: Qwen3's <think>
+                              # block otherwise eats the budget and breaks parsing
+                              extra_body={"chat_template_kwargs": {"enable_thinking": False}},
                               cache=False))
 
     def to_example(record: dict) -> "dspy.Example":
