@@ -242,7 +242,7 @@ class ReActToolsProgram(dspy.Module):
 
 from verifier import VerifiedReActProgram  # noqa: E402  (needs ReActToolsProgram defined above)
 from forced_program import ForcedMeasurementProgram  # noqa: E402
-from specialist_program import SpecialistProgram  # noqa: E402
+from specialist_program import FastSpecialistProgram, SpecialistProgram  # noqa: E402
 from compare_program import ComparisonProgram  # noqa: E402
 
 PROGRAMS = {
@@ -253,5 +253,6 @@ PROGRAMS = {
     "b3_react_verified": VerifiedReActProgram,
     "b3_react_forced": ForcedMeasurementProgram,
     "b3_react_specialist": SpecialistProgram,
+    "b3_react_specialist_fast": FastSpecialistProgram,
     "b3_react_compare": ComparisonProgram,
 }

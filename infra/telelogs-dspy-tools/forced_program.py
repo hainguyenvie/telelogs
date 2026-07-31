@@ -67,12 +67,20 @@ class ForcedMeasurementProgram(dspy.Module):
     ReActToolsProgram exactly like the verified program does.
     """
 
-    def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2) -> None:
+    def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2,
+                 defer_residual_rerun: bool = False) -> None:
         super().__init__()
         from tool_program import ReActToolsProgram
 
         self.inner = ReActToolsProgram(max_iters=max_iters, instructions=instructions)
         self.max_retries = max_retries
+        # Re-running the whole ReAct trajectory just to hand back two numbers is the
+        # most expensive path in the pipeline (+7.7 LM calls on 41 of 96 dev cases)
+        # and, when the conclusion is residual, it is also redundant: the specialist
+        # downstream redecides from the observations anyway. With this set, forcing
+        # attaches the measurements and stops, leaving the decision to that layer.
+        # Off by default until the A/B says it costs nothing.
+        self.defer_residual_rerun = defer_residual_rerun
 
     def load(self, path) -> None:
         self.inner.load(path)
@@ -115,6 +123,16 @@ class ForcedMeasurementProgram(dspy.Module):
                 block, observed = forced_block(case, missing)
                 forced.update(observed)
                 forced_rounds += 1
+                if self.defer_residual_rerun and answer in RESIDUAL_ANSWERS:
+                    # attach the measurements to this prediction and stop; whoever
+                    # consumes it sees exactly what a re-run would have seen
+                    merged = {**observations,
+                              **{f"forced_{name}": value for name, value in observed.items()}}
+                    pred.tool_observations = merged
+                    pred.selected_tools = selected + [n for n in observed if n not in selected]
+                    attempts[-1] = (pred, verify_prediction(
+                        answer, reasoning, pred.selected_tools, merged))
+                    break
                 question = raw_question + block + self.extra_block(case, observations)
                 if len(flags) > 1:
                     question += AUDIT_HEADER + "\n".join(f"- {flag}" for flag in flags)

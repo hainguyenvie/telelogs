@@ -89,12 +89,14 @@ class ResidualDecision(dspy.Signature):
 class SpecialistProgram(dspy.Module):
     """Forced-measurement ReAct for stage one, then a dedicated residual decider."""
 
-    def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2) -> None:
+    def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2,
+                 defer_residual_rerun: bool = False) -> None:
         super().__init__()
         from forced_program import ForcedMeasurementProgram
 
         self.inner = ForcedMeasurementProgram(
-            max_iters=max_iters, instructions=instructions, max_retries=max_retries
+            max_iters=max_iters, instructions=instructions, max_retries=max_retries,
+            defer_residual_rerun=defer_residual_rerun,
         )
         self.residual = dspy.Predict(ResidualDecision)
 
@@ -141,3 +143,25 @@ class SpecialistProgram(dspy.Module):
         else:
             pred.planning_reason = f"{getattr(pred, 'planning_reason', '')} || specialist=unparsed, kept {answer}"
         return pred
+
+
+class FastSpecialistProgram(SpecialistProgram):
+    """Same decisions, without the re-run that the specialist makes redundant.
+
+    When the audit's only complaint is that a residual conclusion was reached
+    without its stage-two measurements, the current pipeline re-runs the entire
+    ReAct trajectory so the model can look at the numbers it skipped. But the
+    specialist then redecides from those same numbers regardless, so the re-run
+    buys a discarded intermediate answer for about 7.7 LM calls, on 41 of 96 dev
+    cases. This variant attaches the measurements and goes straight to the
+    specialist.
+
+    Registered separately so the saving can be A/B'd against the shipped program
+    rather than assumed: identical answers would mean the re-run was never doing
+    work, and any difference is a real cost of the shortcut.
+    """
+
+    def __init__(self, max_iters: int = 8, instructions: str | None = None,
+                 max_retries: int = 2) -> None:
+        super().__init__(max_iters=max_iters, instructions=instructions,
+                         max_retries=max_retries, defer_residual_rerun=True)
