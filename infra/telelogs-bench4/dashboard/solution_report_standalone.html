@@ -277,6 +277,7 @@
   <span class="brand">TeleLogs · Tool-Calling Track</span>
   <span class="navlinks">
     <a href="#summary">Summary</a>
+    <a href="#diagnosis">Diagnosis</a>
     <a href="#architecture">Architecture</a>
     <a href="#tools">Tool layer</a>
     <a href="#dspy">DSPy</a>
@@ -443,6 +444,184 @@
       axis already measured.</p>
     </div>
 
+  </section>
+
+  <section id="diagnosis">
+    <h2>Diagnosis of the shipped run</h2>
+    <p class="lede">Every one of the 864 cases below comes from the single GSMA-harness run, and every error
+    is attributed by code rather than by reading: the six tools are deterministic, so each witness the policy
+    depends on is recomputed in Python and compared against what the model concluded. That turns "it got it
+    wrong" into a decidable statement about <b>which layer</b> failed.</p>
+
+    <div class="grid g2" style="margin-top:18px;gap:16px">
+      <div class="card">
+        <h3>What each half of the architecture delivered</h3>
+        <div class="tw" style="margin-top:10px"><table>
+          <thead><tr><th class="l">Zone</th><th class="l">Layers responsible</th><th>Result</th>
+            <th>Ceiling</th></tr></thead>
+          <tbody>
+            <tr><td class="l">Gate half · 432 cases<br><span class="muted">C2 / C5 / C7 / C8</span></td>
+              <td class="l">① ReAct measurement + ② consistency verifier</td>
+              <td class="ok"><b>431/432</b><br>99.77%</td>
+              <td class="muted">432/432<br>exact criteria</td></tr>
+            <tr><td class="l">Residual half · 432 cases<br><span class="muted">C1 / C3 / C4 / C6</span></td>
+              <td class="l">③ forced measurement + ④ residual specialist</td>
+              <td class="warn"><b>337/432</b><br>78.01%</td>
+              <td class="muted">345/432<br>79.86% policy ceiling</td></tr>
+          </tbody>
+        </table></div>
+        <p style="margin:12px 0 0;font-size:13.5px">The specialist fired on <b>433</b>
+        cases and was right on 337 of them. Read against its own ceiling, the LM half
+        of the system now captures <b>97.7%</b> of everything the published procedure
+        can reach — the remaining distance to the ceiling is 8 cases in 864.</p>
+      </div>
+      <div class="card">
+        <h3>Where the 96 errors actually come from</h3>
+        <div class="tw" style="margin-top:10px"><table>
+          <thead><tr><th class="l">Attribution</th><th>Cases</th><th>of 864</th></tr></thead>
+          <tbody>
+            <tr><td class="l"><b>The published rule is wrong here</b><br><span class="muted">the model
+              executed the procedure faithfully; the rule it followed does not match the gold label</span></td>
+              <td class="warn"><b>73</b></td>
+              <td class="muted">8.4%</td></tr>
+            <tr><td class="l"><b>Answered a class with no witness</b><br><span class="muted">the measurement
+              that the chosen rule requires is absent — a genuine execution error</span></td>
+              <td class="bad"><b>12</b></td>
+              <td class="muted">1.4%</td></tr>
+            <tr><td class="l"><b>Skipped an earlier satisfied rule</b><br><span class="muted">the order was
+              violated; both the skipped and the chosen witness are real</span></td>
+              <td class="bad"><b>8</b></td>
+              <td class="muted">0.9%</td></tr>
+            <tr><td class="l">Wrong in a different way than the policy, which was also wrong</td>
+              <td class="muted">2</td><td class="muted">0.2%</td></tr>
+            <tr><td class="l">Gate stage · a fired criterion was not followed</td>
+              <td class="muted">1</td><td class="muted">0.1%</td></tr>
+          </tbody>
+        </table></div>
+        <p style="margin:12px 0 0;font-size:13.5px"><b>The model reproduces the published procedure on
+        841/864 = 97.3% of cases.</b> The entire remaining execution debt — every
+        case where it was handed a correct rule and failed to apply it — is <b>23 cases,
+        2.7%</b>. Everything else is the procedure's own precision, which no amount of
+        prompting, training or verification can move.</p>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px;gap:16px">
+      <div class="card">
+        <h3>Confusion — this run, gold against predicted</h3>
+        <p class="muted" style="font-size:13.5px;margin:0 0 8px">Diagonal is the correct count; off-diagonal
+        cells are errors. Every error in the run lands in four columns: the residual classes. C2, C5 and C7
+        have no error at all, and C8 has one.</p>
+        <div class="tw"><table><thead><tr><th class="l">gold ↓ / predicted →</th><th>C1</th><th>C3</th><th>C4</th><th>C6</th><th>errors</th></tr></thead><tbody><tr><td class="l"><b>C1</b></td><td class="muted">79 ✓</td><td class="bad"><b>10</b></td><td class="bad"><b>9</b></td><td class="bad"><b>10</b></td><td class="bad">29</td></tr><tr><td class="l"><b>C2</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C3</b></td><td class="bad"><b>2</b></td><td class="muted">92 ✓</td><td class="bad"><b>9</b></td><td class="bad"><b>5</b></td><td class="warn">16</td></tr><tr><td class="l"><b>C4</b></td><td class="bad"><b>3</b></td><td class="bad"><b>18</b></td><td class="muted">70 ✓</td><td class="bad"><b>17</b></td><td class="bad">38</td></tr><tr><td class="l"><b>C5</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C6</b></td><td class="muted">·</td><td class="bad"><b>12</b></td><td class="muted">·</td><td class="muted">96 ✓</td><td class="warn">12</td></tr><tr><td class="l"><b>C7</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C8</b></td><td class="muted">·</td><td class="muted">·</td><td class="bad"><b>1</b></td><td class="muted">·</td><td class="warn">1</td></tr></tbody></table></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">The mass sits in <b>C4 → C3 (18)</b> and
+        <b>C4 → C6 (17)</b>: when several residual witnesses fire at once, the fixed order takes the earlier
+        one and C4 is third in line. C1 loses 29 the same way. This is the shape a missing discriminating
+        feature makes — not the shape of a reasoning failure.</p>
+      </div>
+      <div class="card">
+        <h3>Per-rule precision, measured on this run</h3>
+        <p class="muted" style="font-size:13.5px;margin:0 0 8px">Each residual rule, in the order it is
+        applied, counted by how often it decides a case and how often that decision is the gold label.</p>
+        <div class="tw"><table>
+          <thead><tr><th class="l">Rule</th><th>Decides</th><th>Correct</th><th>Precision</th></tr></thead>
+          <tbody>
+            <tr><td class="l">1 · C3 if <code>min_diff ≥ 142.5</code></td><td>111</td>
+              <td>81</td><td class="warn">73.0%</td></tr><tr><td class="l">2 · C6 if a mod-30 pair exists</td><td>123</td>
+              <td>96</td><td class="warn">78.0%</td></tr><tr><td class="l">3 · C4 if <code>gap ≥ −3 dB</code></td><td>100</td>
+              <td>79</td><td class="warn">79.0%</td></tr><tr><td class="l">4 · C1 if a row sits below the lobe</td><td>35</td>
+              <td>27</td><td class="warn">77.1%</td></tr><tr><td class="l">5 · otherwise C3 (fallback)</td><td>7</td>
+              <td>6</td><td class="warn">85.7%</td></tr>
+          </tbody>
+        </table></div>
+        <p style="margin:10px 0 0;font-size:13.5px">No rule exceeds 79% precision. Chaining them in a fixed
+        order gives <b>345/432</b> in the residual half however perfectly they are executed — which is
+        why the 23-case execution debt above, not the rules, is the only part an LM can still fix,
+        and why the next real gain has to be a new measurement rather than a better prompt.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:36px 0 6px">Reasoning samples, one per failure mode</h3>
+    <p class="lede" style="margin-top:0">Each block is a real case from this run: the narrative a reader
+    sees, what the measurements say underneath it, and the audited rule walk. Together they cover the correct
+    path and every category of error in the table above.</p>
+      <div class="card rcase">
+        <div class="rhead"><span class="pill ok">Correct</span>
+          <b>the rule walk stops where it should</b>
+          <span class="muted" style="font-size:12.5px">case #221 · gold C6 ·
+            answered C6 · the published policy would say C6</span></div>
+        <p class="rnarr">On this road section, throughput drops below 600Mbps due to interference from neighboring cells sharing the same PCI mod 30 residue. The serving cell PCI 455 and neighboring cell PCI 575 both have a mod 30 residue of 5, leading to potential interference. This is supported by the audited evidence showing non-empty equal_residue_pairs, which directly points to C6 as the root cause. The strongest competing explanation, C3, was ruled out because the minimum throughput difference between segments was insufficient to indicate a higher throughput neighbor.</p>
+        <div class="guardnote"><b>What the measurements actually say:</b> min_diff = 31.52 · mod-30 pair: present · gap ≥ −3 dB: absent · row below lobe: absent · strong C1 witness: absent.
+          The specialist reaches rule 2, the mod-30 witness is present in the measurements, and it stops there — exactly what the fixed order prescribes.</div>
+        <details class="rev"><summary>The audited evidence behind it</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.075 &lt; 1 → not triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 30 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 193.51 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. rows_below_main_lobe_lower_edge is empty → not triggered.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3 (undefined when the drive has a single segment); minimum_difference_mbps = 31.52 &lt; 142.5 → not triggered.
+2. otherwise a non-empty equal_residue_pairs selects C6; equal_residue_pairs is non-empty → triggered.</pre></details>
+      </div>
+      <div class="card rcase">
+        <div class="rhead"><span class="pill warn">Execution error</span>
+          <b>an earlier rule was satisfied and skipped</b>
+          <span class="muted" style="font-size:12.5px">case #680 · gold C1 ·
+            answered C6 · the published policy would say C1</span></div>
+        <p class="rnarr">On this road section, the throughput drops below 600Mbps due to interference from neighboring cells with the same PCI mod 30 residue. The vehicle&#x27;s drive-test data shows that during low-throughput events, the serving cell (PCI 440 and 871) shares a mod 30 residue with neighboring cells (PCI 650), leading to overlapping coverage and interference. This is confirmed by the presence of equal residue pairs in the low-throughput rows, which directly points to PCI mod 30 interference as the root cause. The strongest competing explanation, C2 (over-shooting), was ruled out because the maximum distance from the serving cell to the user is well within 1km.</p>
+        <div class="guardnote"><b>What the measurements actually say:</b> min_diff = 59.26 · mod-30 pair: present · gap ≥ −3 dB: absent · row below lobe: present · strong C1 witness: present.
+          Rule 0 (the strong C1 witness) is true in the measurements, but the model read only two of the below-lobe rows, found their RSRP above −90, and moved on. It then answered from rule 2, whose witness is also genuinely present — so the answer is internally consistent and still wrong. This is the failure mode no consistency check can catch: nothing the model wrote contradicts anything it measured.</div>
+        <details class="rev"><summary>The audited evidence behind it</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.074 &lt; 1 → not triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 34 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 182.75 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. The rows_below_main_lobe_lower_edge include rows with throughput below the stated criterion (e.g., row 4 with throughput 351.79 Mbps) and serving RSRP of -86.82 (row 4) and -74.77 (row 5), which are above -90. Thus, this rule is not satisfied.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 59.26, which is less than 142.5. Thus, this rule is not satisfied.
+2. otherwise a non-empty equal_residue_pairs selects C6. The equal_residue_pairs are non-empty (e.g., row 2 and row 3 with shared residue mod30 of 20). Thus, this rule is satisfied.</pre></details>
+      </div>
+      <div class="card rcase">
+        <div class="rhead"><span class="pill bad">Execution error</span>
+          <b>a rule condition was applied from the wrong rule</b>
+          <span class="muted" style="font-size:12.5px">case #728 · gold C1 ·
+            answered C3 · the published policy would say C1</span></div>
+        <p class="rnarr">The throughput drops below 600Mbps in certain road sections due to a neighboring cell providing higher throughput. The analysis shows that the serving cell&#x27;s throughput is consistently lower than the neighboring cells, with the lowest throughput values recorded when the serving cell PCI is 433. The neighboring cell with PCI 990 consistently provides higher throughput, as evidenced by the higher throughput values recorded when the serving cell switches to PCI 990. The strongest competing explanation was C1, which would have been triggered if the serving cell&#x27;s RSRP was below -90 dBm, but this was not observed in the data. The measurements confirm that the issue is due to the neighboring cell providing higher throughput, making C3 the most likely root cause.</p>
+        <div class="guardnote"><b>What the measurements actually say:</b> min_diff = 51.52 · mod-30 pair: absent · gap ≥ −3 dB: absent · row below lobe: present · strong C1 witness: absent.
+          Rule 4 asks only whether a low-throughput row sits below the main lobe — which is true here. The model attached rule 0's extra condition (RSRP ≤ −90) to it, declared rule 4 unsatisfied, and fell through to the fallback. One condition borrowed from a neighbouring rule costs the case.</div>
+        <details class="rev"><summary>The audited evidence behind it</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.204 &lt; 1 → not triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 34 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 208.15 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. The rows_below_main_lobe_lower_edge have throughput values of 394.01, 380.95, 442.65, 432.47, and the stated throughput criterion is 600.0. None of these rows have throughput below 600.0, so this rule is not satisfied.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 51.52, which is less than 142.5, so this rule is not satisfied.
+2. otherwise a non-empty equal_residue_pairs selects C6. The equal_residue_pairs is an empty list, so this rule is not satisfied.
+3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap &gt; -3 or gap = -3) selects C4. The best_noncolocated_gap is -14.98, which is less than -3, so this rule is not satisfied.
+4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge selects C1. The low-throughput rows have throughput values of 394.01, 380.95, 442.65, 432.47. The rows_below_main_lobe_lower_edge have throughput values of 394.01, 380.95, 442.65, 432.47. The rows_below_main_lobe_lower_edge have RSRP values of -88.46, -89.4, -87.75, -87.3. None of these rows have RSRP &lt;= -90, so this rule is not satisfied.
+5. otherwise select C3.</pre></details>
+      </div>
+      <div class="card rcase">
+        <div class="rhead"><span class="pill flat">Not an execution error</span>
+          <b>the published rule is wrong here</b>
+          <span class="muted" style="font-size:12.5px">case #648 · gold C1 ·
+            answered C3 · the published policy would say C3</span></div>
+        <p class="rnarr">The throughput drops below 600Mbps in certain road sections due to a neighboring cell providing higher throughput (C3). The analysis shows that the minimum throughput for the serving cell PCI 405 is 348.08 Mbps, while the best other serving cell PCI 871 maintains a minimum of 520.42 Mbps, creating a difference of 172.34 Mbps. This significant gap indicates that the neighboring cell with higher throughput is overpowering the serving cell, leading to reduced performance. The strongest competing explanation, C1, was ruled out because the serving RSRP values remain above -90 dBm, and the distances are well within the coverage range.</p>
+        <div class="guardnote"><b>What the measurements actually say:</b> min_diff = 172.34 · mod-30 pair: absent · gap ≥ −3 dB: present · row below lobe: present · strong C1 witness: absent.
+          The model executes rule 1 perfectly: the measured advantage is 172.34 Mbps, above the 142.5 threshold, so the rule selects C3. The gold label is C1. Nothing about the reasoning is faulty — the rule itself is only 73% precise. 73 of the 96 errors look exactly like this.</div>
+        <details class="rev"><summary>The audited evidence behind it</summary>
+<pre>- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.174 &lt; 1 → not triggered.
+- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 &lt; 3 → not triggered.
+- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 38 &lt; 40 → not triggered.
+- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 182.59 &gt; 160 → not triggered.
+
+[residual specialist]
+0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright. The rows_below_main_lobe_lower_edge have throughputs: 1206.81, 1266.36, 520.42, 529.75. None of these are below the stated criterion of 600.0 Mbps. Additionally, the serving RSRP values for these rows are -85.47, -85.96, -85.16, -87.02, none of which are &lt;= -90. Therefore, this rule is not satisfied.
+1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 172.34, which is greater than 142.5. This rule is satisfied.</pre></details>
+      </div>
   </section>
 
   <section id="architecture">

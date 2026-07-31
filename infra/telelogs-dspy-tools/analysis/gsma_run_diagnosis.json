@@ -1,0 +1,276 @@
+{
+ "total": 864,
+ "correct": 768,
+ "accuracy": 0.8889,
+ "symbolic_on_same_run": 777,
+ "zones": {
+  "gate": {
+   "n": 432,
+   "ok": 431
+  },
+  "residual": {
+   "n": 432,
+   "ok": 337
+  }
+ },
+ "specialist": {
+  "fired": 433,
+  "correct": 337
+ },
+ "buckets": {
+  "policy_limit_faithful": 73,
+  "correct": 768,
+  "rule_order": 8,
+  "unsupported_witness": 12,
+  "gate_stage": 1,
+  "policy_limit_other": 2
+ },
+ "bucket_gold_mix": {
+  "policy_limit_faithful": {
+   "C1": 19,
+   "C4": 27,
+   "C6": 12,
+   "C3": 15
+  },
+  "rule_order": {
+   "C1": 6,
+   "C4": 1,
+   "C3": 1
+  },
+  "unsupported_witness": {
+   "C4": 8,
+   "C1": 4
+  },
+  "gate_stage": {
+   "C8": 1
+  },
+  "policy_limit_other": {
+   "C4": 2
+  }
+ },
+ "rule_precision": {
+  "1": {
+   "fires": 111,
+   "correct": 81
+  },
+  "2": {
+   "fires": 123,
+   "correct": 96
+  },
+  "3": {
+   "fires": 100,
+   "correct": 79
+  },
+  "4": {
+   "fires": 35,
+   "correct": 27
+  },
+  "5": {
+   "fires": 7,
+   "correct": 6
+  }
+ },
+ "confusion": [
+  {
+   "gold": "C4",
+   "pred": "C3",
+   "n": 18
+  },
+  {
+   "gold": "C4",
+   "pred": "C6",
+   "n": 17
+  },
+  {
+   "gold": "C6",
+   "pred": "C3",
+   "n": 12
+  },
+  {
+   "gold": "C1",
+   "pred": "C3",
+   "n": 10
+  },
+  {
+   "gold": "C1",
+   "pred": "C6",
+   "n": 10
+  },
+  {
+   "gold": "C1",
+   "pred": "C4",
+   "n": 9
+  },
+  {
+   "gold": "C3",
+   "pred": "C4",
+   "n": 9
+  },
+  {
+   "gold": "C3",
+   "pred": "C6",
+   "n": 5
+  },
+  {
+   "gold": "C4",
+   "pred": "C1",
+   "n": 3
+  },
+  {
+   "gold": "C3",
+   "pred": "C1",
+   "n": 2
+  },
+  {
+   "gold": "C8",
+   "pred": "C4",
+   "n": 1
+  }
+ ],
+ "samples": {
+  "policy_limit_faithful": {
+   "i": 648,
+   "gold": "C1",
+   "pred": "C3",
+   "bucket": "policy_limit_faithful",
+   "symbolic": "C3",
+   "specialist": true,
+   "narrative": "The throughput drops below 600Mbps in certain road sections due to a neighboring cell providing higher throughput (C3). The analysis shows that the minimum throughput for the serving cell PCI 405 is 348.08 Mbps, while the best other serving cell PCI 871 maintains a minimum of 520.42 Mbps, creating a difference of 172.34 Mbps. This significant gap indicates that the neighboring cell with higher throughput is overpowering the serving cell, leading to reduced performance. The strongest competing explanation, C1, was ruled out because the serving RSRP values remain above -90 dBm, and the distances are well within the coverage range.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.174 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 38 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 182.59 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. The rows_below_main_lobe_lower_edge have throughputs: 1206.81, 1266.36, 520.42, 529.75. None of these are below the stated criterion of 600.0 Mbps. Additionally, the serving RSRP values for these rows are -85.47, -85.96, -85.16, -87.02, none of which are <= -90. Therefore, this rule is not satisfied.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 172.34, which is greater than 142.5. This rule is satisfied.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 172.33999999999997,
+    "w6": false,
+    "w4": true,
+    "w1": true,
+    "strong_c1": false,
+    "gate": null
+   }
+  },
+  "correct_gate": {
+   "i": 695,
+   "gold": "C8",
+   "pred": "C8",
+   "bucket": "correct",
+   "symbolic": "C8",
+   "specialist": false,
+   "narrative": "The throughput drops below 600Mbps in certain road sections due to insufficient scheduled resource blocks (RBs), as evidenced by the mean of 100.07 RBs in low-throughput rows, which is below the threshold of 160 RBs. This aligns with C8, which is triggered by the low average scheduled RBs. The strongest competing explanation, C2, is ruled out because the maximum distance from the serving cell is 0.128 km, well within the 1 km limit. The analysis confirms that the primary issue is the inadequate allocation of RBs, leading to reduced throughput.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.128 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 34 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 100.07 < 160 → triggered.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 63.02999999999997,
+    "w6": false,
+    "w4": true,
+    "w1": false,
+    "strong_c1": false,
+    "gate": "C8"
+   }
+  },
+  "correct_residual": {
+   "i": 221,
+   "gold": "C6",
+   "pred": "C6",
+   "bucket": "correct",
+   "symbolic": "C6",
+   "specialist": true,
+   "narrative": "On this road section, throughput drops below 600Mbps due to interference from neighboring cells sharing the same PCI mod 30 residue. The serving cell PCI 455 and neighboring cell PCI 575 both have a mod 30 residue of 5, leading to potential interference. This is supported by the audited evidence showing non-empty equal_residue_pairs, which directly points to C6 as the root cause. The strongest competing explanation, C3, was ruled out because the minimum throughput difference between segments was insufficient to indicate a higher throughput neighbor.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.075 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 30 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 193.51 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. rows_below_main_lobe_lower_edge is empty → not triggered.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3 (undefined when the drive has a single segment); minimum_difference_mbps = 31.52 < 142.5 → not triggered.\n2. otherwise a non-empty equal_residue_pairs selects C6; equal_residue_pairs is non-empty → triggered.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 31.519999999999982,
+    "w6": true,
+    "w4": false,
+    "w1": false,
+    "strong_c1": false,
+    "gate": null
+   }
+  },
+  "rule_order": {
+   "i": 680,
+   "gold": "C1",
+   "pred": "C6",
+   "bucket": "rule_order",
+   "symbolic": "C1",
+   "specialist": true,
+   "narrative": "On this road section, the throughput drops below 600Mbps due to interference from neighboring cells with the same PCI mod 30 residue. The vehicle's drive-test data shows that during low-throughput events, the serving cell (PCI 440 and 871) shares a mod 30 residue with neighboring cells (PCI 650), leading to overlapping coverage and interference. This is confirmed by the presence of equal residue pairs in the low-throughput rows, which directly points to PCI mod 30 interference as the root cause. The strongest competing explanation, C2 (over-shooting), was ruled out because the maximum distance from the serving cell to the user is well within 1km.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.074 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 34 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 182.75 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. The rows_below_main_lobe_lower_edge include rows with throughput below the stated criterion (e.g., row 4 with throughput 351.79 Mbps) and serving RSRP of -86.82 (row 4) and -74.77 (row 5), which are above -90. Thus, this rule is not satisfied.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 59.26, which is less than 142.5. Thus, this rule is not satisfied.\n2. otherwise a non-empty equal_residue_pairs selects C6. The equal_residue_pairs are non-empty (e.g., row 2 and row 3 with shared residue mod30 of 20). Thus, this rule is satisfied.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 59.25999999999999,
+    "w6": true,
+    "w4": false,
+    "w1": true,
+    "strong_c1": true,
+    "gate": "C1"
+   }
+  },
+  "unsupported_witness": {
+   "i": 728,
+   "gold": "C1",
+   "pred": "C3",
+   "bucket": "unsupported_witness",
+   "symbolic": "C1",
+   "specialist": true,
+   "narrative": "The throughput drops below 600Mbps in certain road sections due to a neighboring cell providing higher throughput. The analysis shows that the serving cell's throughput is consistently lower than the neighboring cells, with the lowest throughput values recorded when the serving cell PCI is 433. The neighboring cell with PCI 990 consistently provides higher throughput, as evidenced by the higher throughput values recorded when the serving cell switches to PCI 990. The strongest competing explanation was C1, which would have been triggered if the serving cell's RSRP was below -90 dBm, but this was not observed in the data. The measurements confirm that the issue is due to the neighboring cell providing higher throughput, making C3 the most likely root cause.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.204 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 34 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 208.15 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. The rows_below_main_lobe_lower_edge have throughput values of 394.01, 380.95, 442.65, 432.47, and the stated throughput criterion is 600.0. None of these rows have throughput below 600.0, so this rule is not satisfied.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3. The minimum_difference_mbps is 51.52, which is less than 142.5, so this rule is not satisfied.\n2. otherwise a non-empty equal_residue_pairs selects C6. The equal_residue_pairs is an empty list, so this rule is not satisfied.\n3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap > -3 or gap = -3) selects C4. The best_noncolocated_gap is -14.98, which is less than -3, so this rule is not satisfied.\n4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge selects C1. The low-throughput rows have throughput values of 394.01, 380.95, 442.65, 432.47. The rows_below_main_lobe_lower_edge have throughput values of 394.01, 380.95, 442.65, 432.47. The rows_below_main_lobe_lower_edge have RSRP values of -88.46, -89.4, -87.75, -87.3. None of these rows have RSRP <= -90, so this rule is not satisfied.\n5. otherwise select C3.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 51.52000000000004,
+    "w6": false,
+    "w4": false,
+    "w1": true,
+    "strong_c1": false,
+    "gate": null
+   }
+  },
+  "gate_stage": {
+   "i": 591,
+   "gold": "C8",
+   "pred": "C4",
+   "bucket": "gate_stage",
+   "symbolic": "C8",
+   "specialist": true,
+   "narrative": "On this road section, the throughput drops below 600Mbps due to severe overlapping coverage from non-colocated co-frequency neighboring cells. The vehicle travels through a segment where the serving cell's signal strength weakens, and the neighboring cells' signals overlap significantly, leading to interference and reduced throughput. The strongest competing explanation was a large downtilt angle causing weak coverage, but the maximum distance from the serving cell remains within 0.1km, ruling out excessive coverage distance. The best non-colocated neighbor gap of 18.69dB indicates that overlapping coverage from neighboring cells is the dominant issue, as the signal from these cells is strong enough to interfere with the serving cell's signal, degrading performance.",
+   "evidence": "- C2: maximum_distance_km (analyze_coverage_geometry) is 0.1 < 1 → not triggered.\n- C5: transition_count (analyze_mobility) is 1 < 3 → not triggered.\n- C7: maximum_speed_kmh (analyze_mobility) is 35 < 40 → not triggered.\n- C8: all_rows_mean_scheduled_rbs (analyze_radio_resources) is 160.93 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. - rows_below_main_lobe_lower_edge is empty → not satisfied.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3 (undefined when the drive has a single segment); - minimum_difference_mbps is 37.37 < 142.5 → not satisfied.\n2. otherwise a non-empty equal_residue_pairs selects C6; - equal_residue_pairs is empty → not satisfied.\n3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap > -3 or gap = -3) selects C4 (null means there is no non-colocated neighbour); - best_noncolocated_gap is 18.69 > -3 → satisfied.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 37.369999999999976,
+    "w6": false,
+    "w4": true,
+    "w1": false,
+    "strong_c1": false,
+    "gate": "C8"
+   }
+  },
+  "policy_limit_other": {
+   "i": 843,
+   "gold": "C4",
+   "pred": "C1",
+   "bucket": "policy_limit_other",
+   "symbolic": "C3",
+   "specialist": true,
+   "narrative": "On this road section, the throughput drops below 600Mbps in specific segments, primarily when the serving cell PCI 65 is active. The drive-test data reveals that during these low-throughput instances, the signal strength (SS-RSRP) is weak, with values as low as -89.99 dBm, and the user equipment (UE) is positioned beyond the main lobe's lower edge of the serving cell's beam. This indicates that the UE is no longer within the optimal coverage area of the serving cell, which is likely due to an excessively large downtilt angle. The mechanical downtilt for the serving cell PCI 65 is set to 15 degrees, which, combined with the beam scenario and vertical beamwidth, results in a coverage distance that is too far, causing the signal to weaken at the far end. This weak coverage directly correlates with the observed throughput degradation. The strongest competing explanation, C3 (neighboring cell providing higher throughput), is ruled out because the neighboring cells have significantly lower signal strength, as evidenced by their filtered Tx BRSRP values.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.262 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 39 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 186.68 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. The row with serving_pci 65, throughput_mbps 53.82, and serving_rsrp_dbm -89.99 meets this condition (throughput 53.82 < 600 and RSRP -89.99 <= -90), so C1 is triggered.",
+   "ungrounded": [],
+   "witnesses": {
+    "advantage": 254.31,
+    "w6": true,
+    "w4": true,
+    "w1": true,
+    "strong_c1": false,
+    "gate": null
+   }
+  },
+  "guard_flagged": {
+   "i": 280,
+   "gold": "C1",
+   "pred": "C1",
+   "bucket": "guard",
+   "narrative": "On this road section, the throughput drops below 600 Mbps in several instances, primarily when the serving cell PCI 420 and 374 are active. The analysis reveals that the vehicle remains within the coverage of these cells, with distances consistently below 0.15 km, ruling out excessive coverage distance as the cause. The throughput degradation coincides with the vehicle entering regions where the signal strength (SS-RSRP) falls below -90 dBm, and the signal-to-interference-plus-noise ratio (SS-SINR) drops significantly. This suggests that the serving cell's coverage is not optimal, with the beam's main lobe lower edge not adequately reaching the user equipment (UE) elevation, leading to weak signal reception. The strongest competing explanation was interference from neighboring cells, but the analysis shows that the neighboring cells' signal strength is sufficiently weaker than the serving cell's, with gaps exceeding -11 dB. Thus, the most likely cause is the serving cell's downtilt angle being too large, resulting in weak coverage at the far end of the beam's reach.",
+   "evidence": "- C2: triggered when maximum_distance_km (analyze_coverage_geometry) is greater than 1; maximum_distance_km = 0.146 < 1 → not triggered.\n- C5: triggered when transition_count (analyze_mobility) is 3 or more; transition_count = 1 < 3 → not triggered.\n- C7: triggered when maximum_speed_kmh (analyze_mobility) is greater than 40; maximum_speed_kmh = 36 < 40 → not triggered.\n- C8: triggered when low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is below 160; low_throughput_rows_mean_scheduled_rbs = 208.03 > 160 → not triggered.\n\n[residual specialist]\n0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright. The rows_below_main_lobe_lower_edge include rows with throughput below the stated criterion (e.g., row 4, 5, 6, 7 with throughput_mbps 286.56, 264.47, 278.38, 284.08) and serving RSRP <= -90 (e.g., row 4, 5, 6, 7 with serving_rsrp_dbm -92.14, -92.57, -86.13, -83.66). However, the stated criterion is 600.0 Mbps, and the throughput of these rows is below this, but the RSRP values are not all <= -90. Therefore, this rule is not satisfied.\n1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least 142.5 selects C3 (undefined when the drive has a single segment); the minimum_difference_mbps is 13.91, which is less than 142.5, so this rule is not satisfied.\n2. otherwise a non-empty equal_residue_pairs selects C6; the equal_residue_pairs is empty, so this rule is not satisfied.\n3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap > -3 or gap = -3) selects C4 (null means there is no non-colocated neighbour); the best_noncolocated_gap is -11.76 dB, which is less than -3 dB, so this rule is not satisfied.\n4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge selects C1; the low-throughput rows are listed in rows_below_main_lobe_lower_edge, so this rule is satisfied.",
+   "ungrounded": [
+    "0.15"
+   ]
+  }
+ }
+}
