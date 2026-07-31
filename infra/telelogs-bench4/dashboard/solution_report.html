@@ -551,6 +551,69 @@
       </div>
     </div>
 
+    <div class="card" style="margin-top:16px">
+      <h3>Why the biggest bucket is the rule and not the model</h3>
+      <p class="muted" style="font-size:13.5px;margin:0 0 10px">The four exact criteria are given by the task.
+      The other four causes are described in words only — no formula exists for them — so the procedure had to
+      be reconstructed: a binary witness test per cause, a priority order, and one threshold. The order
+      (C6 &gt; C4 &gt; C1) and the threshold (142.5) were fitted by exhaustive search over all six permutations
+      and 800 threshold values, on the 567 residual cases of the <b>training</b> split only. The result below
+      is what that family of procedures can and cannot do.</p>
+      <div class="grid g2" style="gap:16px">
+        <div>
+          <p style="font-size:13.5px;margin:0 0 8px"><b>The rule is accurate exactly when the situation is
+          unambiguous.</b> Grouping the 376 cases that reach the ladder by how many witnesses are
+          simultaneously true in the measurements:</p>
+          <div class="tw"><table>
+            <thead><tr><th class="l">Witnesses true at once</th><th>Cases</th><th>Rule correct</th>
+              <th>Precision</th></tr></thead>
+            <tbody>
+              <tr><td class="l">1 — one phenomenon present</td><td>161</td><td>146</td>
+                <td class="ok">90.7%</td></tr>
+              <tr><td class="l">0 — none, the fallback decides</td><td>7</td><td>6</td>
+                <td class="ok">85.7%</td></tr>
+              <tr><td class="l">2 — two co-occur</td><td>162</td><td>124</td><td class="warn">76.5%</td></tr>
+              <tr><td class="l">3 — three co-occur</td><td>41</td><td>12</td><td class="bad">29.3%</td></tr>
+              <tr><td class="l">4 — all four</td><td>5</td><td>1</td><td class="bad">20.0%</td></tr>
+            </tbody>
+          </table></div>
+          <p style="margin:10px 0 0;font-size:13.5px">A witness answers "is this phenomenon <i>present</i>?".
+          The gold label answers "which phenomenon <i>dominates</i>?". While only one is present the two
+          questions coincide and the rule is right nine times in ten; when three co-occur, a fixed order is a
+          weighted coin toss and drops to 29%. That is the entire policy-limit bucket.</p>
+        </div>
+        <div>
+          <p style="font-size:13.5px;margin:0 0 8px"><b>The most frequent witness combinations</b>, with how
+          the gold label actually splits inside each:</p>
+          <div class="tw"><table>
+            <thead><tr><th class="l">Witnesses present</th><th>Cases</th><th class="l">Gold splits</th></tr></thead>
+            <tbody>
+              <tr><td class="l">C3 alone</td><td>38</td><td class="l ok">C3 38 — never wrong</td></tr>
+              <tr><td class="l">C6 alone</td><td>42</td><td class="l">C6 41 · C3 1</td></tr>
+              <tr><td class="l">C4 alone</td><td>46</td><td class="l">C4 40 · C3 6</td></tr>
+              <tr><td class="l">C1 alone</td><td>35</td><td class="l">C1 27 · C3 8</td></tr>
+              <tr><td class="l">C6 + C4</td><td>63</td><td class="l warn">C6 55 · C4 8</td></tr>
+              <tr><td class="l">C4 + C1</td><td>54</td><td class="l warn">C4 39 · C1 12 · C3 3</td></tr>
+              <tr><td class="l">C3 + C1</td><td>23</td><td class="l warn">C3 21 · C1 2</td></tr>
+              <tr><td class="l">C3 + C6 + C4</td><td>12</td><td class="l bad">C6 11 · C4 1</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="note ok" style="margin-top:14px">
+        <h4>The procedure in use is within five cases of the best one that exists</h4>
+        <p style="margin:0">Re-running the same exhaustive search <b>directly on the official test set</b> —
+        which the shipped configuration is never allowed to do, and which is done here only to measure the
+        ceiling of the family — the best possible fixed order and threshold reaches <b>294/376 = 78.19%</b>
+        (same order, threshold 128 instead of 142.5). The train-fitted configuration actually in use reaches
+        <b>289/376 = 76.86%</b>. So the 73 policy-limit errors are not a calibration miss and not a coding
+        mistake: <b>no ordering of presence tests can do materially better</b>, because presence is not
+        dominance. Passing this line requires a new measured quantity — one that ranks co-occurring causes by
+        how much of the throughput loss each explains — not a better prompt, more training, or another
+        verifier.</p>
+      </div>
+    </div>
+
     <h3 style="margin:36px 0 6px">Reasoning samples, one per failure mode</h3>
     <p class="lede" style="margin-top:0">Each block is a real case from this run: the narrative a reader
     sees, what the measurements say underneath it, and the audited rule walk. Together they cover the correct
