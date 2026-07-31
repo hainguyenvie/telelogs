@@ -484,12 +484,14 @@
               executed the procedure faithfully; the rule it followed does not match the gold label</span></td>
               <td class="warn"><b>73</b></td>
               <td class="muted">8.4%</td></tr>
-            <tr><td class="l"><b>Answered a class with no witness</b><br><span class="muted">the measurement
-              that the chosen rule requires is absent — a genuine execution error</span></td>
+            <tr><td class="l"><b>Fell through to the C3 fallback</b><br><span class="muted">all 12 answered
+              C3 while an earlier rule was genuinely satisfied — rule 3 in 8 cases, rule 4 in 4. The model
+              read a present witness as absent and kept walking the ladder</span></td>
               <td class="bad"><b>12</b></td>
               <td class="muted">1.4%</td></tr>
-            <tr><td class="l"><b>Skipped an earlier satisfied rule</b><br><span class="muted">the order was
-              violated; both the skipped and the chosen witness are real</span></td>
+            <tr><td class="l"><b>Stopped at the wrong rule</b><br><span class="muted">both witnesses are
+              real and the order decides; 6 of 8 missed the strong-C1 witness at rule 0 and answered a
+              genuine rule-2 witness instead</span></td>
               <td class="bad"><b>8</b></td>
               <td class="muted">0.9%</td></tr>
             <tr><td class="l">Wrong in a different way than the policy, which was also wrong</td>
@@ -498,6 +500,14 @@
               <td class="muted">1</td><td class="muted">0.1%</td></tr>
           </tbody>
         </table></div>
+        <p style="margin:12px 0 0;font-size:13.5px"><b>One mechanism explains 18 of the 20 execution
+        errors:</b> the model evaluates a rule whose witness is present in the measurements and declares it
+        unsatisfied, then continues down the ladder. It is not a knowledge gap — the rule is printed in the
+        prompt and the number is on the table — but a scan over a list of rows or neighbours with a compound
+        condition attached. The obvious guard was measured on this run and still does not pass: a verifier
+        branch that flags "answered C3 while an earlier witness exists" fires on 17 cases, catches 11 of the
+        12, and false-alarms on 6 correct answers, so it stays disabled under the zero-false-flag rule that
+        selected verifier v2.1.</p>
         <p style="margin:12px 0 0;font-size:13.5px"><b>The model reproduces the published procedure on
         841/864 = 97.3% of cases.</b> The entire remaining execution debt — every
         case where it was handed a correct rule and failed to apply it — is <b>23 cases,
