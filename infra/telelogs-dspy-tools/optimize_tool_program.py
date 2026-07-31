@@ -198,8 +198,9 @@ def main() -> None:
 
     kwargs = {}
     if args.seed_instructions is not None:
-        if args.method not in ("b1_all_tools", "b3_react_tools"):
-            raise SystemExit("--seed-instructions is only supported for b1_all_tools and b3_react_tools")
+        if args.method not in ("b1_all_tools", "b3_react_tools", "b3_react_check_tools"):
+            raise SystemExit("--seed-instructions is only supported for b1_all_tools, "
+                             "b3_react_tools and b3_react_check_tools")
         kwargs["instructions"] = args.seed_instructions.read_text(encoding="utf-8").strip()
     program = PROGRAMS[args.method](**kwargs)
     baseline = evaluate(program, valset, args.workers)

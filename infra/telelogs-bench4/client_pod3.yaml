@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-bench4-client3
+  namespace: tensara
+  labels:
+    app: telelogs-bench4-client3
+    owner: h2n
+spec:
+  restartPolicy: Always
+  nodeName: hgx046
+  containers:
+    - name: main
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -u
+          ROOT=/workspace/telelogs-bench4
+          mkdir -p "$ROOT/client_jobs3" "$ROOT/client_done3" "$ROOT/results" "$ROOT/dashboard/data/items"
+          chmod -R 0777 "$ROOT/client_jobs3" "$ROOT/client_done3" "$ROOT/results" "$ROOT/dashboard"
+          if [ -f "$ROOT/client_done3/full4_eval3.running" ]; then
+            mv "$ROOT/client_done3/full4_eval3.running" "$ROOT/client_jobs3/full4_eval.sh"
+          fi
+          echo "client runner up $(date) $(hostname)"
+          while true; do
+            for j in "$ROOT"/client_jobs3/*.sh; do
+              [ -e "$j" ] || continue
+              n=$(basename "$j" .sh)
+              mv "$j" "$ROOT/client_done3/$n.running" || continue
+              setsid bash "$ROOT/client_done3/$n.running" > "$ROOT/client_done3/$n.log" 2>&1 &
+              pid=$!
+              while kill -0 "$pid" 2>/dev/null; do
+                if [ -e "$ROOT/client_done3/$n.kill" ]; then
+                  kill -- -"$pid" 2>/dev/null || true
+                  sleep 2
+                  kill -9 -- -"$pid" 2>/dev/null || true
+                  rm -f "$ROOT/client_done3/$n.kill"
+                fi
+                sleep 5
+              done
+              wait "$pid"
+              rc=$?
+              mv "$ROOT/client_done3/$n.running" "$ROOT/client_done3/$n.rc$rc"
+              chmod -R 0777 "$ROOT/client_done3" "$ROOT/results" "$ROOT/dashboard" 2>/dev/null || true
+            done
+            sleep 5
+          done
+      resources:
+        requests:
+          cpu: "2"
+          memory: 4Gi
+        limits:
+          cpu: "8"
+          memory: 16Gi
+      volumeMounts:
+        - name: project
+          mountPath: /workspace/telelogs-bench4
+        - name: telelogs-base
+          mountPath: /workspace/telelogs
+          readOnly: true
+  volumes:
+    - name: project
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs-bench4
+        type: DirectoryOrCreate
+    - name: telelogs-base
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs
+        type: Directory

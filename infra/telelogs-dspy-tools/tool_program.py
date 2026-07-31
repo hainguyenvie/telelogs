@@ -175,6 +175,12 @@ class AgenticToolDiagnosis(dspy.Signature):
 _ACTIVE_CASE: contextvars.ContextVar[CaseContext | None] = contextvars.ContextVar(
     "telelogs_active_case", default=None
 )
+# Live record of the current trajectory's tool usage, so the check tool can
+# audit "what has actually been measured so far" without waiting for the
+# trajectory to finish. Reset per forward() alongside the case.
+_CALL_RECORD: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
+    "telelogs_call_record", default=None
+)
 
 
 def _case_tool(name: str, description: str):
@@ -184,6 +190,10 @@ def _case_tool(name: str, description: str):
             raise RuntimeError("no active CaseContext bound for tool execution")
         observation = TOOL_FUNCTIONS[name](case)
         assert_label_neutral(observation)
+        record = _CALL_RECORD.get()
+        if record is not None:
+            record["selected"].append(name)
+            record["observations"][f"live_{name}"] = observation
         return json.dumps(observation, ensure_ascii=False, separators=(",", ":"))
 
     call.__name__ = name
@@ -191,35 +201,78 @@ def _case_tool(name: str, description: str):
     return dspy.Tool(call, name=name, desc=description)
 
 
+CHECK_TOOL_NAME = "check_verification_lines"
+CHECK_TOOL_DESC = (
+    "Audit your drafted verification lines against the measurements already returned "
+    "in this trajectory. Pass the complete drafted lines as verification_lines and the "
+    "class you currently intend to answer as tentative_answer. Returns the list of "
+    "contradictions found in your own text or tool usage — a misquoted value, an "
+    "inequality whose verdict word contradicts the comparison, a conclusion missing its "
+    "required measurement. It does not know the diagnosis and never suggests a class. "
+    "Call it after drafting your verification lines, before the final answer."
+)
+
+
+def run_verification_check(verification_lines: str, tentative_answer: str) -> str:
+    """The consistency audit, exposed mid-trajectory. Pure code, label-neutral."""
+    from verifier import verify_prediction  # deferred: verifier imports this module
+
+    record = _CALL_RECORD.get() or {"selected": [], "observations": {}}
+    flags = verify_prediction(
+        normalize_answer(tentative_answer),
+        str(verification_lines or ""),
+        list(record["selected"]),
+        dict(record["observations"]),
+    )
+    result = {"contradictions": flags}
+    if not flags:
+        result["note"] = "No contradiction detected in the checked lines."
+    assert_label_neutral(result)
+    return json.dumps(result, ensure_ascii=False)
+
+
+def _check_tool():
+    return dspy.Tool(run_verification_check, name=CHECK_TOOL_NAME, desc=CHECK_TOOL_DESC)
+
+
 class ReActToolsProgram(dspy.Module):
     """LM-driven function calling: the model chooses, sequences, and reads tools."""
 
-    def __init__(self, max_iters: int = 8, instructions: str | None = None) -> None:
+    def __init__(self, max_iters: int = 8, instructions: str | None = None,
+                 include_check_tool: bool = False) -> None:
         super().__init__()
         signature = (
             AgenticToolDiagnosis.with_instructions(instructions)
             if instructions
             else AgenticToolDiagnosis
         )
+        tools = [_case_tool(item["name"], item["description"]) for item in TOOL_CATALOG]
+        if include_check_tool:
+            tools.append(_check_tool())
         self.react = dspy.ReAct(
             signature,
-            tools=[_case_tool(item["name"], item["description"]) for item in TOOL_CATALOG],
+            tools=tools,
             max_iters=max_iters,
         )
 
     def forward(self, raw_question: str, case: CaseContext) -> dspy.Prediction:
         token = _ACTIVE_CASE.set(case)
+        record_token = _CALL_RECORD.set({"selected": [], "observations": {}})
         try:
             pred = self.react(raw_question=raw_question)
         finally:
             _ACTIVE_CASE.reset(token)
+            _CALL_RECORD.reset(record_token)
         trajectory = dict(getattr(pred, "trajectory", {}) or {})
         selected, observations, steps = [], {}, 0
+        check_calls = 0
         for step in range(len(trajectory)):
             tool_name = trajectory.get(f"tool_name_{step}")
             if tool_name is None:
                 break
             steps += 1
+            if tool_name == CHECK_TOOL_NAME:
+                check_calls += 1
             if tool_name not in TOOL_FUNCTIONS:
                 continue
             selected.append(tool_name)
@@ -237,12 +290,27 @@ class ReActToolsProgram(dspy.Module):
         ]
         pred.planning_reason = " | ".join(thoughts) if thoughts else "ReAct trajectory without recorded thoughts."
         pred.lm_calls = steps + 1
+        pred.check_tool_calls = check_calls
         return pred
+
+
+class CheckReActToolsProgram(ReActToolsProgram):
+    """ReAct with the consistency audit available as a callable 7th tool.
+
+    The audit itself is unchanged code (verifier.verify_prediction); packaging it
+    as a tool moves the correction inside the trajectory instead of after it. The
+    model may still ignore the tool, so the post-hoc acceptance gate downstream is
+    what guarantees the floor. max_iters is raised to 10 because a disciplined
+    trajectory now spends one or two extra steps on the check calls.
+    """
+
+    def __init__(self, max_iters: int = 10, instructions: str | None = None) -> None:
+        super().__init__(max_iters=max_iters, instructions=instructions, include_check_tool=True)
 
 
 from verifier import VerifiedReActProgram  # noqa: E402  (needs ReActToolsProgram defined above)
 from forced_program import ForcedMeasurementProgram  # noqa: E402
-from specialist_program import FastSpecialistProgram, SpecialistProgram  # noqa: E402
+from specialist_program import CheckSpecialistProgram, FastSpecialistProgram, SpecialistProgram  # noqa: E402
 from compare_program import ComparisonProgram  # noqa: E402
 
 PROGRAMS = {
@@ -250,6 +318,8 @@ PROGRAMS = {
     "b1_all_tools": AllToolsProgram,
     "b2_planned_tools": PlannedToolsProgram,
     "b3_react_tools": ReActToolsProgram,
+    "b3_react_check_tools": CheckReActToolsProgram,
+    "b3_react_check_specialist": CheckSpecialistProgram,
     "b3_react_verified": VerifiedReActProgram,
     "b3_react_forced": ForcedMeasurementProgram,
     "b3_react_specialist": SpecialistProgram,

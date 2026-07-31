@@ -90,13 +90,13 @@ class SpecialistProgram(dspy.Module):
     """Forced-measurement ReAct for stage one, then a dedicated residual decider."""
 
     def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2,
-                 defer_residual_rerun: bool = False) -> None:
+                 defer_residual_rerun: bool = False, include_check_tool: bool = False) -> None:
         super().__init__()
         from forced_program import ForcedMeasurementProgram
 
         self.inner = ForcedMeasurementProgram(
             max_iters=max_iters, instructions=instructions, max_retries=max_retries,
-            defer_residual_rerun=defer_residual_rerun,
+            defer_residual_rerun=defer_residual_rerun, include_check_tool=include_check_tool,
         )
         self.residual = dspy.Predict(ResidualDecision)
 
@@ -165,3 +165,18 @@ class FastSpecialistProgram(SpecialistProgram):
                  max_retries: int = 2) -> None:
         super().__init__(max_iters=max_iters, instructions=instructions,
                          max_retries=max_retries, defer_residual_rerun=True)
+
+
+class CheckSpecialistProgram(SpecialistProgram):
+    """The full specialist stack with the audit also available as a 7th tool.
+
+    Layer ② (the post-hoc acceptance gate) is unchanged — the tool only gives the
+    model a chance to fix its lines before that gate sees them. Compiled states
+    must come from CheckReActToolsProgram: the old demos never call the new tool,
+    so loading a 6-tool compile here would measure demo mismatch, not the tool.
+    """
+
+    def __init__(self, max_iters: int = 10, instructions: str | None = None,
+                 max_retries: int = 2) -> None:
+        super().__init__(max_iters=max_iters, instructions=instructions,
+                         max_retries=max_retries, include_check_tool=True)

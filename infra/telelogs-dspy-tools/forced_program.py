@@ -68,11 +68,12 @@ class ForcedMeasurementProgram(dspy.Module):
     """
 
     def __init__(self, max_iters: int = 8, instructions: str | None = None, max_retries: int = 2,
-                 defer_residual_rerun: bool = False) -> None:
+                 defer_residual_rerun: bool = False, include_check_tool: bool = False) -> None:
         super().__init__()
         from tool_program import ReActToolsProgram
 
-        self.inner = ReActToolsProgram(max_iters=max_iters, instructions=instructions)
+        self.inner = ReActToolsProgram(max_iters=max_iters, instructions=instructions,
+                                       include_check_tool=include_check_tool)
         self.max_retries = max_retries
         # Re-running the whole ReAct trajectory just to hand back two numbers is the
         # most expensive path in the pipeline (+7.7 LM calls on 41 of 96 dev cases)

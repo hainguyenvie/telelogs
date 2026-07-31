@@ -38,6 +38,8 @@ DISPLAY_NAMES = {
     "b3_react_forced": "B3f · ReAct + audit + forced stage-2 measurement",
     "b3_react_specialist": "B3s · forced + dedicated residual decider",
     "b3_react_specialist_fast": "B3sf · specialist without the redundant re-run",
+    "b3_react_check_tools": "B3ck · ReAct with the audit as a 7th callable tool",
+    "b3_react_check_specialist": "B3cks · specialist stack + callable audit tool",
     "b3_react_compare": "B3c · forced + pre-written signed comparisons",
 }
 
@@ -300,6 +302,7 @@ def main() -> None:
             "narrative": narrative,
             "narrative_ungrounded": ungrounded,
             "lm_calls": lm_calls,
+            "check_tool_calls": int(getattr(pred, "check_tool_calls", 0)) if not error else 0,
             "elapsed_seconds": round(time.monotonic() - begin, 3),
             "error": error,
         }
