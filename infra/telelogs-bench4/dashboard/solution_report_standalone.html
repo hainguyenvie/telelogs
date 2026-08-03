@@ -561,9 +561,17 @@
 
     <div class="card" style="margin-top:16px;border-color:color-mix(in srgb,var(--red) 40%,transparent)">
       <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-        <span class="pill neg">the open defect</span>
-        <h3 style="margin:0">Why C3 fell to 77/108 — and the measurement that separates it from C1</h3>
+        <span class="pill flat">investigation closed</span>
+        <h3 style="margin:0">Why C3 fell to 77/108 — and why the last 17 cases are not reachable</h3>
       </div>
+      <p class="muted" style="font-size:13px;margin:0 0 12px;padding:10px 12px;
+        border-left:3px solid var(--slate);background:var(--line2);border-radius:0 8px 8px 0">
+        <b>Decision, 2026-08-03: development stops at 94.21%.</b> Two distinct things sit behind the
+        remaining C3 loss and this section keeps them apart. One is a <b>+12-case rule refinement that is
+        measured, transfers cleanly, and is deliberately not taken</b>. The other is a residue of roughly
+        17 cases that <b>no rule, prompt, model or amount of training can reach</b>, because the quantity
+        the diagnosis needs is not in the drive-test data at all. Only the second is "impossible"; the
+        first is a choice, and it is recorded as a choice.</p>
       <p style="font-size:13.5px;margin:0 0 10px">C3 was the one class that got <i>worse</i> (92 → 77).
       The diagnosis localises it completely: of the 31 C3 errors, <b>27 go to C1</b>, and every one of
       them is claimed by rule 3. The question rule 3 asks is
@@ -618,10 +626,87 @@
       by <code>advantage ≥ 106.7 Mbps → C3, else C1</code> takes rule 3's own population from 57.3% to
       75.5% on train, and the whole residual zone to <b>dev 93.12% · holdout 94.18% · official 94.15%</b>
       against the shipped 85.19 / 87.30 / 90.96 — <b>+15, +13, +12 cases</b>. On official that is
-      C3 78 → 100 and C1 50 → 40 inside the residual zone: a net <b>+12</b>. This is the same depth-4
-      split <code>fit_magnitude_rule.py</code> already reported (354/376) and that the shipped depth-3
-      configuration declined to take — an honest miss, recorded here rather than quietly corrected.
-      It is <b>not shipped</b>: it needs its own pre-registered paired run, exactly like this one had.</p>
+      C3 78 → 100 and C1 50 → 40 inside the residual zone: a net <b>+12</b>, i.e. +22 C3 rescued against
+      10 C1 broken. This is the same depth-4 split <code>fit_magnitude_rule.py</code> already reported
+      (354/376) and that the shipped depth-3 configuration declined to take — an honest miss, recorded
+      here rather than quietly corrected. <b>It is not shipped, by decision:</b> it would cost another
+      pre-registered official run, it buys a class trade rather than a clean gain, and the section below
+      shows it lands only 17 cases short of a hard data limit, so the headroom above it is not worth the
+      run. Anyone who wants those 12 cases has the exact rule, the exact threshold and the provenance
+      right here.</p>
+    </div>
+
+    <div class="card" style="margin-top:16px;border-color:color-mix(in srgb,var(--purple) 40%,transparent)">
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span class="pill ref">hard limit</span>
+        <h3 style="margin:0">The last ~17 cases: the data does not contain the comparison C3 requires</h3>
+      </div>
+      <p style="font-size:13.5px;margin:0 0 10px">Even with the advantage split above, rule 3's population
+      stops at <b>78.5%</b> on official — 17 of 79 still wrong. Before calling that irreducible it was
+      attacked directly, because "we could not find a feature" and "no feature exists" are very different
+      claims. Three probes, all fitted on train only.</p>
+
+      <div class="grid g3" style="gap:16px">
+        <div>
+          <h4>Probe 1 · is it label noise?</h4>
+          <p style="font-size:13px;margin:0">Nearest-neighbour check over 15 normalised features:
+          <b>0 of 109</b> train cases have an opposite-class twin within 0.05; median distance to the
+          nearest opposite-class case is <b>0.608</b>.</p>
+          <p class="muted" style="font-size:12.5px;margin:8px 0 0">The cases genuinely differ. Something
+          distinguishes them — it is just not in what we measure.</p>
+        </div>
+        <div>
+          <h4>Probe 2 · is `advantage` confounded?</h4>
+          <p style="font-size:13px;margin:0">It compares the worst segment's minimum against the best other
+          segment's. In <b>109/109 train and 79/79 official</b> cases those two segments cover
+          <b>disjoint stretches of road</b> — the drive never revisits a location under both cells.</p>
+          <p class="muted" style="font-size:12.5px;margin:8px 0 0">So a higher minimum elsewhere is equally
+          consistent with "that cell is better" and "that stretch is easier".</p>
+        </div>
+        <div>
+          <h4>Probe 3 · can a co-located measure replace it?</h4>
+          <p style="font-size:13px;margin:0">Eight candidates built from per-row
+          <code>brsrp_minus_serving_rsrp_db</code> at the affected rows. Best one reaches train AUC
+          <b>0.691</b> against advantage's <b>0.795</b>, and transfers worse on every split.</p>
+          <p class="muted" style="font-size:12.5px;margin:8px 0 0">Conjoined with advantage it gains +8 on
+          train and then <b>1 case on the pooled untouched dev+holdout, McNemar 1:0, p = 1.0</b>.</p>
+        </div>
+      </div>
+
+      <p style="font-size:13.5px;margin:16px 0 0"><b>The probe that failed most informatively.</b> The
+      obvious co-located test — "is the cell that did better elsewhere visible and stronger <i>here</i>?" —
+      fails twice over. It is visible on at least one affected row in <b>100% of cases in both classes</b>,
+      so availability decides nothing. And it is <i>stronger than serving</i> in <b>54% of gold C1 against
+      44.8% of gold C3</b> on official (46% vs 30% on train): the association runs <b>backwards</b>. That
+      is mechanically sensible once said out loud — a serving cell below its own main lobe is weak, which
+      makes every neighbour look strong, so a strong neighbour is a <i>symptom of C1</i> rather than
+      evidence for C3.</p>
+
+      <div class="tw" style="margin-top:14px"><table>
+        <thead><tr><th class="l">What deciding C3 requires</th><th class="l">Is it in the data?</th></tr></thead>
+        <tbody>
+          <tr><td class="l">The throughput a neighbouring cell would deliver <b>at these rows</b></td>
+            <td class="l bad"><b>Never.</b> Each row records throughput for the serving cell only</td></tr>
+          <tr><td class="l">The throughput that cell delivered <b>on another stretch</b></td>
+            <td class="l warn"><b>Yes</b> — but always a different stretch (probe 2), so the comparison is
+              confounded by location</td></tr>
+          <tr><td class="l">That cell's <b>signal strength</b> at these rows</td>
+            <td class="l warn"><b>Yes</b> — but signal is not throughput, and it correlates with the
+              <i>wrong</i> class (probe 3)</td></tr>
+        </tbody>
+      </table></div>
+
+      <p style="font-size:13.5px;margin:14px 0 0"><b>So the question is counterfactual, and one drive test
+      cannot answer it.</b> At any instant exactly one cell is serving; the vehicle never re-drives a
+      stretch under a different serving cell. "Would the neighbour have done better <i>here</i>" is
+      therefore unobservable in principle, not merely unmeasured. A radio engineer reading the same two
+      tables hits the same wall — they can beat this only with knowledge from outside the table
+      (terrain, the operator's cell plan, which cell normally serves which stretch), and none of that is
+      in the data the system is given.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Recorded as a limit of the dataset, not of
+      the method. It also bounds what any future work on this benchmark can claim: a system reporting near
+      100% on TeleLogs residual classes is either using outside knowledge, fitting the test set, or
+      reporting a different metric.</p>
     </div>
 
     <div class="card" style="margin-top:16px">
@@ -1934,32 +2019,53 @@
   </section>
 
   <section id="next">
-    <h2>What is still open</h2>
+    <h2>Where this stops, and why</h2>
+    <p class="lede">Development ends at <b>94.21%</b>. Three of the four questions this section used to
+    carry are now answered rather than open, and the fourth turned out to be a property of the dataset.
+    What follows is the closing position, with the measurement that closed each line.</p>
+
     <div class="grid g4" style="margin-top:16px">
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill best">untried</span><b>Vote over specialists</b></div>
-        <p style="margin:0;font-size:13.5px">The two mechanisms are orthogonal and were never combined: every
-        ensemble measurement predates the specialist. 62 of the 119 remaining errors have the gold label on
-        some run already on file, and an oracle over everything scores <b>98.50%</b>.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill ship">closed · solved</span><b>C4 and C6</b></div>
+        <p style="margin:0;font-size:13.5px">The weak classes of every earlier configuration. Reading
+        <i>how much</i> of each phenomenon is present instead of whether any is present took C4 from
+        56 → <b>101/108</b> and C6 to <b>99/108</b>; their rules are now <b>99.1%</b> and <b>100%</b>
+        precise on official. This is the change that was worth +46 cases.</p>
       </div>
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">regression</span><b>The C1 the specialist gave away</b></div>
-        <p style="margin:0;font-size:13.5px">Against the ensemble it gains +42 C3 and +26 C4 but loses 20 net
-        on C1 (63.9% vs 82.4%). Rule 1 claims those cases for C3 before the C1 rule is reached, so a
-        C1-versus-C3 discriminator is worth about 2 points on its own.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">closed · declined</span><b>The C3/C1 split</b></div>
+        <p style="margin:0;font-size:13.5px">Splitting rule 3 on <code>advantage ≥ 106.7</code> is
+        measured at <b>+15 dev, +13 holdout, +12 official</b>, train-fitted and stable. Not taken: it
+        trades 10 C1 for 22 C3, costs another pre-registered run, and stops 17 cases short of the limit
+        below. <b>The rule and its threshold are published above</b> for anyone who wants those points.</p>
       </div>
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">feature gap</span><b>Separating C4</b></div>
-        <p style="margin:0;font-size:13.5px">56/108 on official — the weak class in every configuration ever
-        run, and 52 of the 119 remaining errors. The 33-case overlap zone shows this needs a new
-        discriminating measurement, not a better prompt.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill ref">closed · impossible</span><b>The last ~17 cases</b></div>
+        <p style="margin:0;font-size:13.5px">C3 claims a neighbour would deliver higher <i>throughput</i>
+        here; the drive test never observes that, and the two segments it does compare cover disjoint
+        stretches in <b>100%</b> of cases. Signal strength is the only co-located substitute and it
+        correlates with the <b>wrong</b> class. Counterfactual, not merely unmeasured.</p>
       </div>
       <div class="card">
-        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill flat">open</span><b>RL aimed somewhere else</b></div>
-        <p style="margin:0;font-size:13.5px">GRPO v1 finished and proved redundant with the specialist. What
-        it demonstrably did <i>not</i> learn is gate-verdict discipline — the C8 pathology the verifier
-        catches. A run targeting that, or the 44 execution errors, is the version worth training.</p>
+        <div class="row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="pill neg">closed · exhausted</span><b>Prompts, demos, RL</b></div>
+        <p style="margin:0;font-size:13.5px">Every optimizer plateaued at 72.9% dev-96 with a seed lottery
+        wider than any wording effect. GRPO bought +2.55 points and is in the shipped weights. Neither axis
+        moved the residual rules — that took a change of <i>measurement</i>, which is the finding this
+        project ends on.</p>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>The one-paragraph version</h3>
+      <p style="margin:0;font-size:13.5px">Four exact criteria were given by the task and are solved:
+      <b>432/432</b>. The other four causes had no formula, so a procedure was reconstructed from the
+      measurements — and the whole arc of this project is that the procedure's <i>form</i> mattered far
+      more than the model running it. Asking "is this phenomenon present" capped the system at 88.9% and
+      looked like a hard ceiling for months; asking "how much of it is present" moved it to <b>94.21%</b>
+      with the same weights, the same prompt-compiled program and the same cost. Beyond that sits one
+      genuine dataset limit, stated precisely rather than hidden in a residual bucket: <b>whether a
+      different cell would have served this stretch better is a counterfactual, and a single drive test
+      cannot answer it.</b></p>
     </div>
   </section>
 

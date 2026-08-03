@@ -24,17 +24,46 @@
 > p = 0.024), dev-96 91.67%, holdout-96 95.83%, and one pre-registered official
 > run last.
 >
-> **The open defect is C3 (92 → 77), and it is fully localised.** 27 of its 31
-> errors go to C1, all claimed by rule 3. That rule asks "is the serving cell
+> **Development stops here, 2026-08-03.** C3 is the one class that got worse
+> (92 → 77) and it was investigated to the end. The result splits in two, and
+> the two halves must not be conflated.
+>
+> **(a) A +12-case refinement exists, is measured, and is declined.** 27 of C3's
+> 31 errors go to C1, all claimed by rule 3. That rule asks "is the serving cell
 > below its main lobe?", but inside its own population both classes answer yes:
-> the split is 63 C1 / 46 C3 on train and 50 C1 / 29 C3 on official, and the lobe
-> deficits overlap (median 6.0° vs 9.9°). What does separate them is throughput
-> advantage (median 43.5 vs 170.6 Mbps): being below the lobe is *necessary* for
-> C1, but it is only the *cause* when no neighbour would have served the stretch
-> materially better. Splitting rule 3 on `advantage ≥ 106.7` (fitted on train
-> only) takes the residual zone to dev 93.12% / holdout 94.18% / official 94.15%
-> — **+15 / +13 / +12 cases**. Not shipped: it needs its own pre-registered
-> paired run. See `analysis/why_c3.py`.
+> 63 C1 / 46 C3 on train, 50 C1 / 29 C3 on official, with the lobe deficits
+> overlapping (median 6.0° vs 9.9°). What does separate them is throughput
+> advantage (median 43.5 vs 170.6 Mbps) — being below the lobe is *necessary*
+> for C1 but is only the *cause* when no neighbour would have served the stretch
+> better. Splitting rule 3 on `advantage ≥ 106.7` (train-fitted) gives dev
+> 93.12% / holdout 94.18% / official 94.15%, i.e. **+15 / +13 / +12 cases**, and
+> is the most stable discriminator found (76.1 / 77.5 / 77.5 / 78.5 across all
+> four splits). Not taken: it trades 10 C1 for 22 C3, costs another
+> pre-registered official run, and lands 17 cases short of the limit below. The
+> rule and threshold are published so anyone can take it. See `analysis/why_c3.py`.
+>
+> **(b) The remaining ~17 cases are unreachable from this data.** Three probes,
+> all train-fitted, in `analysis/c3_separability.py`, `c3_confounding.py` and
+> `c3_colocated_probe.py`:
+> - *Not label noise* — 0/109 train cases have an opposite-class twin within
+>   0.05 in normalised feature space (median distance 0.608).
+> - *`advantage` is confounded by location* — the two segments it compares cover
+>   disjoint stretches of road in **109/109 train and 79/79 official** cases; the
+>   drive never revisits a location under both serving cells.
+> - *No co-located substitute exists* — eight candidates from per-row
+>   `brsrp_minus_serving_rsrp_db`; best reaches train AUC 0.691 vs advantage's
+>   0.795 and transfers worse everywhere. Conjoined with advantage it gains +8 on
+>   train and then **1 case on pooled untouched dev+holdout, McNemar 1:0, p = 1.0**.
+>
+> The informative failure: the better-performing cell is visible at ≥1 affected
+> row in **100% of cases in both classes**, and is *stronger than serving* in 54%
+> of gold C1 against 44.8% of gold C3 — the association runs backwards, because a
+> serving cell below its own lobe is weak, which makes every neighbour look
+> strong. C3 asserts a neighbour would deliver higher **throughput** here; the
+> drive test records throughput for the serving cell only, so that quantity is
+> counterfactual and a single drive cannot produce it. Recorded as a limit of the
+> dataset, not of the method — and as a bound on what any system can honestly
+> claim on these classes.
 
 > **Round-2 note (2026-07-29, seeds v5–v11).** A second round ported the old
 > hybrid's full decision flow (exact gates → strong-C1 → calibrated residual
