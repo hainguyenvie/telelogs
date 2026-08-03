@@ -222,6 +222,9 @@
   details.rev[open] summary::before{content:"▾ "}
   details.rev pre{margin:0;padding:12px 14px;font-size:12px;line-height:1.65;overflow-x:auto;
     border-top:1px solid var(--line);white-space:pre-wrap}
+  pre.ev{margin:8px 0 0;padding:12px 14px;font-size:12px;line-height:1.65;overflow-x:auto;
+    border:1px solid var(--line);border-radius:10px;background:var(--line2);white-space:pre-wrap;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .guardnote{margin-top:10px;border-left:3px solid var(--amber);padding:8px 12px;font-size:13px;
     color:var(--muted);background:color-mix(in srgb,var(--amber) 6%,transparent);border-radius:0 8px 8px 0}
 
@@ -279,6 +282,7 @@
     <a href="#summary">Summary</a>
     <a href="#diagnosis">Diagnosis</a>
     <a href="#architecture">Architecture</a>
+    <a href="#walkthrough">Worked example</a>
     <a href="#tools">Tool layer</a>
     <a href="#dspy">DSPy</a>
     <a href="#integrity">Integrity</a>
@@ -922,7 +926,7 @@
 
     <div class="card" style="margin-top:20px;border-width:2px">
       <div class="fignum">The shipped architecture · final</div>
-      <h3>One program, five layers, on GRPO-tuned weights — 88.77% official</h3>
+      <h3>One program, five layers, on GRPO-tuned weights, magnitude tie-break — 94.21% official</h3>
       <p class="muted" style="font-size:13.5px;margin:0 0 6px">Solid boxes are the shipped system and carry
       their measured value on official-864. Dashed boxes are the alternatives that were designed, run, and
       closed — each names the experiment and the number that closed it. Nothing here is an opinion.</p>
@@ -1094,12 +1098,13 @@
               <div class="s">43.5% of cases · 376 of 864 on official</div></div>
             <div class="arrow">↓</div>
             <div class="toolrow two">
-              <div class="tchip s2"><code>analyze_pci_relations</code><span>equal_residue_pairs — the only evidence for C6</span></div>
-              <div class="tchip s2"><code>analyze_neighbor_overlap</code><span>best_noncolocated_gap — the only evidence for C4</span></div>
+              <div class="tchip s2"><code>analyze_pci_relations</code><span>equal_residue_pair_<b>count</b> — the only evidence for C6</span></div>
+              <div class="tchip s2"><code>analyze_neighbor_overlap</code><span>noncolocated_gap_…_<b>count</b> — the only evidence for C4</span></div>
             </div>
             <div class="arrow">↓</div>
-            <div class="abox stage"><b>Ordered tie-break over C3 / C6 / C4 / C1</b>
-              <div class="s">stop at the first rule whose measured condition holds · this is the hard 43.5%</div></div>
+            <div class="abox stage"><b>Magnitude tie-break over C6 / C4 / C1, else C3</b>
+              <div class="s">count &gt; 2 · count &gt; 2 · depth &gt; 2.5° — stop at the first rule whose measured
+              <i>quantity</i> clears its threshold · this is the hard 43.5%</div></div>
           </div>
         </div>
 
@@ -1420,6 +1425,221 @@
     </div>
   </section>
 
+  <section id="walkthrough">
+    <h2>Worked example — one case through every stage</h2>
+    <p class="lede">Two real cases from the shipped 94.21% run, followed end to end with the actual numbers
+    at every stage. Case A takes the fast path and stops at the gate; case B is a residual case and goes
+    through all five layers. Nothing below is illustrative or reconstructed — the observations are
+    recomputed from the deterministic tools and the reasoning is the model's own text, verbatim.</p>
+
+    <!-- ============================ CASE B (full path) ============================ -->
+    <div class="card" style="margin-top:18px;border-width:2px">
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <span class="pill best">case B · residual path · all five layers</span>
+        <b style="font-size:15px">official case #181 — 26 LM calls</b>
+      </div>
+
+      <h4 style="margin-top:14px">Stage 0 · what the model is handed</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">The raw question: a 10-row drive-test table, an
+      engineering-parameter table for 6 cells, the beam-scenario rules, and the eight cause definitions.
+      The stated criterion for this case is <b>600 Mbps</b>. Four of the ten rows fall below it — those
+      are the <i>affected rows</i> every tool reports on:</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">row</th><th>serving PCI</th><th>throughput</th><th>serving RSRP</th>
+          <th>scheduled RB</th><th>speed</th></tr></thead>
+        <tbody>
+          <tr><td class="l">5</td><td>420</td><td class="bad">501.75</td><td>−85.61</td><td>203.75</td><td>13</td></tr>
+          <tr><td class="l">6</td><td>420</td><td class="bad">437.05</td><td>−83.47</td><td>191.98</td><td>33</td></tr>
+          <tr><td class="l">7</td><td>540</td><td class="bad">349.81</td><td>−89.72</td><td>161.47</td><td>3</td></tr>
+          <tr><td class="l">8</td><td>540</td><td class="bad">357.75</td><td>−79.78</td><td>170.00</td><td>1</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">The model never sees a label, a hint, or a
+      verdict — only this table and a catalog of six functions it may call.</p>
+
+      <h4 style="margin-top:18px">Layer ① · ReAct — the model calls the measurement tools itself</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">It chooses which function to call, in what order, and when
+      it has enough. Stage 1 is the four decisive tools:</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">tool called</th><th class="l">what came back</th></tr></thead>
+        <tbody>
+          <tr><td class="l"><code>analyze_coverage_geometry</code></td>
+            <td class="l"><code>maximum_distance_km = 0.081</code> ·
+              <code>rows_below_main_lobe_lower_edge = []</code> (empty) ·
+              <code>deepest_below_lobe_deficit_deg = null</code></td></tr>
+          <tr><td class="l"><code>analyze_mobility</code></td>
+            <td class="l"><code>maximum_speed_kmh = 33</code> · <code>transition_count = 1</code></td></tr>
+          <tr><td class="l"><code>analyze_radio_resources</code></td>
+            <td class="l"><code>low_throughput_rows_mean_scheduled_rbs = 181.8</code></td></tr>
+          <tr><td class="l"><code>analyze_throughput_segments</code></td>
+            <td class="l">segments <code>{420, 540}</code> ·
+              <code>minimum_difference_mbps = 87.24</code></td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:13.5px;margin:10px 0 0">The model then writes <b>one verification line per exact
+      criterion</b> — field name, both numbers joined by a signed inequality, and a verdict word. This is
+      the format the verifier parses, so it cannot be softened:</p>
+      <pre class="ev">- C2: maximum_distance_km (analyze_coverage_geometry) is 0.081 &lt; 1 → not triggered.
+- C5: transition_count (analyze_mobility) is 1 &lt; 3 → not triggered.
+- C7: maximum_speed_kmh (analyze_mobility) is 33 &lt; 40 → not triggered.
+- C8: low_throughput_rows_mean_scheduled_rbs (analyze_radio_resources) is 181.8 &gt; 160 → not triggered.</pre>
+      <p style="font-size:13.5px;margin:10px 0 0"><b>No exact criterion fires → this is a residual case.</b>
+      It falls to the hard 43.5%, and stage 2 begins.</p>
+
+      <h4 style="margin-top:18px">Layer ② · consistency verifier — pure code, no LM, never names a class</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">It re-reads the four lines above and checks each one against
+      the observation the model actually received. Every inequality is arithmetically true as written
+      (<code>0.081 &lt; 1</code> ✓, <code>1 &lt; 3</code> ✓, <code>33 &lt; 40</code> ✓,
+      <code>181.8 &gt; 160</code> ✓) and every verdict word matches its comparison. <b>Zero flags → no
+      retry.</b></p>
+      <p class="muted" style="font-size:12.5px;margin:0">Had the model written <code>181.8 &lt; 160 →
+      triggered</code>, or written the inequality correctly and then labelled it the wrong way, this layer
+      would have caught it and re-run layer ① with the contradiction quoted back — pointing only at the
+      model's own text, never at a label. It is worth +11.23 points and costs no LM call to detect.</p>
+
+      <h4 style="margin-top:18px">Layer ③ · forced measurement — run what the model skipped</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">A residual conclusion requires both stage-2 observations.
+      If they are missing, code executes the tools rather than asking again:</p>
+      <div class="tw"><table>
+        <thead><tr><th class="l">stage-2 tool</th><th class="l">what came back</th></tr></thead>
+        <tbody>
+          <tr><td class="l"><code>analyze_pci_relations</code></td>
+            <td class="l"><code>equal_residue_pair_count = <b>4</b></code> — rows 5, 6 (PCI 420 ↔ 540) and
+              rows 7, 8 (PCI 540 ↔ 420), all sharing <code>mod30 = 0</code></td></tr>
+          <tr><td class="l"><code>analyze_neighbor_overlap</code></td>
+            <td class="l"><code>noncolocated_gap_at_or_above_neg3db_count = <b>2</b></code> ·
+              <code>best_noncolocated_gap = +7.34 dB</code> (row 7)</td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0"><code>assert_label_neutral</code> runs on
+      these forced observations too — a class token anywhere in them crashes the run rather than leaking
+      quietly.</p>
+
+      <h4 style="margin-top:18px">Layer ④ · residual specialist — one narrow call, the decision</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">A second LM call that sees <b>only</b> the six observations
+      and the ordered rules — no gate criteria, no cause definitions, no drive-test table. It walks the
+      ladder and stops at the first rule whose measured quantity clears its threshold. This is its verbatim
+      output:</p>
+      <pre class="ev">0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated criterion
+   AND whose serving RSRP satisfies RSRP &lt;= -90 proves C1 outright.
+   (rows_below_main_lobe_lower_edge is empty, so this rule is not satisfied)
+1. otherwise equal_residue_pair_count of more than 2 selects C6.
+   (equal_residue_pair_count is 4, which is more than 2, so this rule is satisfied)</pre>
+      <p style="font-size:13.5px;margin:10px 0 0"><b>Answer: C6.</b> It stops at rule 1 and never evaluates
+      rules 2–4 — that is the procedure, not an omission.</p>
+
+      <div style="margin-top:12px;padding:12px 14px;border-radius:10px;
+        background:color-mix(in srgb,var(--green) 8%,transparent);
+        border:1px solid color-mix(in srgb,var(--green) 35%,transparent)">
+        <b style="font-size:13.5px">Why this case is the whole point of the magnitude change</b>
+        <p style="font-size:13.5px;margin:6px 0 0">Look at rule 2's input:
+        <code>best_noncolocated_gap = +7.34 dB</code>, hugely above the −3 dB bar. Under the
+        <b>old presence rule</b> ("<i>a non-colocated gap ≥ −3 dB exists → C4</i>") that witness is
+        emphatically present, and C4 becomes a live candidate decided only by queue position. Under the
+        <b>magnitude rule</b> the question is how many rows are like that — the answer is
+        <b>2, which is not more than 2</b>, so C4 does not fire at all. Meanwhile the mod-30 phenomenon
+        recurs <b>4</b> times. One strong reading versus a phenomenon that repeats: the ladder now sees the
+        difference, and rule 1 is 107/107 precise on official because of it.</p>
+      </div>
+
+      <h4 style="margin-top:18px">Layer ⑤ · narration + grounding guard</h4>
+      <p style="font-size:13.5px;margin:0 0 8px">The class is now <b>locked</b>. The narrator receives it as
+      an <i>input field</i>, so writing prose is structurally incapable of changing the verdict. Every
+      number in the prose is then checked by code against the observations:</p>
+      <div style="padding:12px 14px;border-radius:10px;background:var(--line2);border:1px solid var(--line);
+        font-size:13.5px;line-height:1.6">On this road section, the throughput drops below 600Mbps in
+        certain segments, primarily due to severe interference from neighboring cells sharing the same PCI
+        mod 30 residue. The analysis reveals that <b>four instances</b> of serving and neighboring cells
+        share the same PCI mod 30 residue, which is a clear indicator of interference. This interference
+        significantly degrades the throughput, as evidenced by the low throughput values recorded during
+        these periods. The strongest competing explanation, namely coverage distance exceeding 1km, is
+        ruled out because the maximum distance measured is well within the 1km threshold.</div>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Guard result: <b>0 ungrounded numbers</b> —
+      "four instances" traces to <code>equal_residue_pair_count = 4</code> and "1km" to the C2 criterion.
+      A number with no source in the observations would be flagged and displayed, not hidden.</p>
+
+      <div class="lrow tot" style="margin-top:14px;border-radius:10px;padding:14px">
+        <div class="stg"><b>Final output</b><span>answer · audit_trace · narrative</span></div>
+        <div class="num ok">C6<span>predicted</span></div>
+        <div class="num ok">C6<span>ground truth</span></div>
+        <div class="vd">Correct. The verdict rests on the audited rule walk; the prose is a presentation
+          layer that can be regenerated, translated or dropped without touching a single decision.</div>
+      </div>
+    </div>
+
+    <!-- ============================ CASE A (fast path) ============================ -->
+    <div class="card" style="margin-top:16px">
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <span class="pill ship">case A · gate path · stops at layer ②</span>
+        <b style="font-size:15px">official case #639 — 8 LM calls</b>
+      </div>
+      <p style="font-size:13.5px;margin:0 0 10px">56.5% of cases end here, and they are
+      <b>432/432 correct</b>. Same criterion (600 Mbps), same four stage-1 tools, but this time one exact
+      criterion fires and the pipeline stops — no stage-2 tools, no specialist, one third of the cost.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th class="l">stage</th><th class="l">what happened</th></tr></thead>
+        <tbody>
+          <tr><td class="l"><b>Stage 0</b><br><span class="muted">raw case</span></td>
+            <td class="l">10 rows, 5 cells, 4 rows below 600 Mbps — row 2: 188.8 Mbps at
+              <b>101 RB</b>; row 4: 99.2 Mbps at <b>88 RB</b></td></tr>
+          <tr><td class="l"><b>Layer ①</b><br><span class="muted">ReAct + 4 tools</span></td>
+            <td class="l"><code>maximum_distance_km = 0.108</code> ·
+              <code>transition_count = 1</code> · <code>maximum_speed_kmh = 29</code> ·
+              <code>low_throughput_rows_mean_scheduled_rbs = <b>99.93</b></code></td></tr>
+          <tr><td class="l"><b>Layer ①</b><br><span class="muted">verification lines</span></td>
+            <td class="l"><code>0.108 &lt; 1</code> → not triggered · <code>1 &lt; 3</code> → not
+              triggered · <code>29 &lt; 40</code> → not triggered ·
+              <b><code>99.93 &lt; 160</code> → triggered</b></td></tr>
+          <tr><td class="l"><b>Layer ②</b><br><span class="muted">verifier</span></td>
+            <td class="l">all four inequalities true as written, all verdicts consistent, the answer
+              follows the one line that fired → <b>0 flags, no retry</b></td></tr>
+          <tr><td class="l"><b>Layers ③④</b><br><span class="muted">skipped</span></td>
+            <td class="l muted">A criterion fired, so this is not a residual case. The specialist never
+              runs — it fires on exactly the 432 residual cases and never on a gate case.</td></tr>
+          <tr><td class="l"><b>Layer ⑤</b><br><span class="muted">narration</span></td>
+            <td class="l">"…insufficient scheduled resource blocks, as evidenced by the mean scheduled RBs
+              in low-throughput rows being <b>99.93</b>, which is below the threshold of 160… The strongest
+              competing explanation, C2, was ruled out because the maximum distance (0.108 km) is well
+              within the 1 km limit." — <b>0 ungrounded numbers</b></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="lrow tot" style="margin-top:14px;border-radius:10px;padding:14px">
+        <div class="stg"><b>Final output</b><span>answer · audit_trace · narrative</span></div>
+        <div class="num ok">C8<span>predicted</span></div>
+        <div class="num ok">C8<span>ground truth</span></div>
+        <div class="vd">Correct. Note the cost asymmetry the report measures elsewhere: a case that ends
+          at the gate is always right and costs 8 calls; a case that reaches the specialist costs 26.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>The same five layers, stated as a checklist</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="l">Layer</th><th class="l">Input</th><th class="l">Output</th>
+          <th class="l">Can it change the answer?</th></tr></thead>
+        <tbody>
+          <tr><td class="l"><b>① ReAct + 6 tools</b></td><td class="l">raw case text</td>
+            <td class="l">tool observations + 4 verification lines + a first-pass answer</td>
+            <td class="l ok">Yes — this is the answer path</td></tr>
+          <tr><td class="l"><b>② Consistency verifier</b></td><td class="l">the finished trace</td>
+            <td class="l">flags, or a re-run of ① with the contradiction quoted back</td>
+            <td class="l warn">Indirectly — by forcing a re-decision, never by supplying a label</td></tr>
+          <tr><td class="l"><b>③ Forced measurement</b></td><td class="l">a residual answer missing
+            stage-2 numbers</td><td class="l">the missing observations, executed by code</td>
+            <td class="l warn">Indirectly — it supplies numbers, not conclusions</td></tr>
+          <tr><td class="l"><b>④ Residual specialist</b></td><td class="l">the six observations + the
+            ordered rules, nothing else</td><td class="l">the rule walk and the final class</td>
+            <td class="l ok">Yes — this is where the residual decision is made</td></tr>
+          <tr><td class="l"><b>⑤ Narration + guard</b></td><td class="l">the <b>locked</b> answer +
+            the observations</td><td class="l">engineer-readable prose + a list of ungrounded numbers</td>
+            <td class="l bad">No — structurally impossible, the answer is an input field</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
   <section id="tools">
     <h2>The tool layer — what the model may look at</h2>
     <p class="lede">Nothing in the pipeline reads the raw tables except the tools. The model is handed the
@@ -1689,9 +1909,12 @@
 
     <div class="note" style="margin-top:16px">
       <h4>What is fitted from data, and disclosed</h4>
-      <p style="margin:0">Two quantities in the residual tie-break are calibrated rather than given: the rule
-      order (C6 before C4 before C1) and the <b>142.5 Mbps</b> threshold. Both were fitted on the
-      <b>training split only</b> — 567 residual training cases — and neither has been retuned since. They are
+      <p style="margin:0">Four quantities in the residual tie-break are calibrated rather than given: the rule
+      order (C6 before C4 before C1, then C3 as fallback) and the three thresholds —
+      <b>equal_residue_pair_count &gt; 2</b>, <b>noncolocated_gap_at_or_above_neg3db_count &gt; 2</b>,
+      <b>deepest_below_lobe_deficit_deg &gt; 2.5</b>. All were fitted on the
+      <b>training split only</b> — 567 residual training cases — by the Gini tree in
+      <code>analysis/fit_magnitude_rule.py</code>, and none has been retuned since. They are
       written into the prompt as domain knowledge, the way an engineer would be handed a troubleshooting
       procedure, and they are never applied by code at inference time. The four exact criteria (1 km, 3 PCI
       changes, 40 km/h, 160 RB) are given by the task definition and were not fitted at all.</p>
