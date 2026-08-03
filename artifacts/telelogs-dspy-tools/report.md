@@ -1,5 +1,41 @@
 # TeleLogs tool-calling migration · Qwen3-8B
 
+> **Current result (2026-08-03, commit `b40c48e`): 814/864 = 94.21% on the
+> official test**, under the GSMA ot-full harness and its own boxed-int scorer.
+> The residual tie-break now reads **magnitudes** — `equal_residue_pair_count > 2`
+> → C6, `noncolocated_gap_at_or_above_neg3db_count > 2` → C4,
+> `deepest_below_lobe_deficit_deg > 2.5` → C1, else C3 — instead of asking
+> whether each phenomenon is merely *present*. Against the previous champion
+> (768/864 = 88.89%, same weights, same compiled program, same harness) that is
+> **+46 cases, McNemar 79 : 33, p = 1.6e-05**, roughly 3.5× this system's
+> ±13-case run-to-run noise floor.
+>
+> | | C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 | total |
+> |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+> | presence rules | 79 | 108 | **92** | 70 | 108 | 96 | 108 | 107 | 768 |
+> | magnitude rules | **105** | 108 | 77 | **101** | 108 | **99** | 108 | **108** | **814** |
+>
+> Gate half is now perfect (432/432); the residual half went 78.0% → 88.4%,
+> passing the 89.93% "execution ceiling" the *presence* flow imposed — that
+> ceiling was a property of those rules, not of the task. Thresholds were fitted
+> on the 567-case train residual pool only (`analysis/fit_magnitude_rule.py`,
+> whose built-in sanity check reproduces the old rule at exactly 289/376), then
+> validated in order: frozen residual sets 77.70% → 87.84% (McNemar 27 : 12,
+> p = 0.024), dev-96 91.67%, holdout-96 95.83%, and one pre-registered official
+> run last.
+>
+> **The open defect is C3 (92 → 77), and it is fully localised.** 27 of its 31
+> errors go to C1, all claimed by rule 3. That rule asks "is the serving cell
+> below its main lobe?", but inside its own population both classes answer yes:
+> the split is 63 C1 / 46 C3 on train and 50 C1 / 29 C3 on official, and the lobe
+> deficits overlap (median 6.0° vs 9.9°). What does separate them is throughput
+> advantage (median 43.5 vs 170.6 Mbps): being below the lobe is *necessary* for
+> C1, but it is only the *cause* when no neighbour would have served the stretch
+> materially better. Splitting rule 3 on `advantage ≥ 106.7` (fitted on train
+> only) takes the residual zone to dev 93.12% / holdout 94.18% / official 94.15%
+> — **+15 / +13 / +12 cases**. Not shipped: it needs its own pre-registered
+> paired run. See `analysis/why_c3.py`.
+
 > **Round-2 note (2026-07-29, seeds v5–v11).** A second round ported the old
 > hybrid's full decision flow (exact gates → strong-C1 → calibrated residual
 > tie-break) into the ReAct instruction and upgraded the tools with one-step

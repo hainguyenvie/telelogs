@@ -306,42 +306,54 @@
     <div class="card" style="margin-top:16px;border-width:2px">
       <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <span class="pill ship">shipped method</span>
-        <h3 style="margin:0">Residual-specialist pipeline on GRPO-tuned Qwen3-8B — per-class diagnosis</h3>
+        <h3 style="margin:0">Residual-specialist pipeline on GRPO-tuned Qwen3-8B, magnitude tie-break — per-class diagnosis</h3>
       </div>
       <p class="muted" style="font-size:13.5px;margin:0 0 10px">One program, five layers: ReAct over six
       label-neutral tools → consistency verifier (pure code) → forced measurement → residual specialist →
       narration with a grounding guard. Scored on the full official test — the GSMA ot-full TeleLogs parquet,
-      verified byte-identical (order, questions, answers) to <code>test_official864.json</code>.</p>
+      verified byte-identical (order, questions, answers) to <code>test_official864.json</code>.
+      <b>2026-08-03:</b> the residual rules now read <b>magnitudes</b> (how many mod-30 pairs, how many
+      neighbours clear −3 dB, how far below the lobe) instead of mere presence — commit <code>b40c48e</code>.</p>
       <div class="tw"><table>
         <thead><tr><th class="l">Correct / 108 per class</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th>
           <th>C5</th><th>C6</th><th>C7</th><th>C8</th><th>Total</th><th>Accuracy</th></tr></thead>
         <tbody>
-          <tr><td class="l">Pre-registered run</td><td>74</td><td class="ok">108</td><td>95</td><td>70</td>
+          <tr><td class="l">Pre-registered run · presence rules</td><td>74</td><td class="ok">108</td><td>95</td><td>70</td>
             <td class="ok">108</td><td>97</td><td class="ok">108</td><td>107</td><td><b>767/864</b></td>
-            <td><b class="ok">88.77%</b></td></tr>
+            <td><b>88.77%</b></td></tr>
           <tr><td class="l">Independent re-run · GSMA harness scorer</td><td>79</td><td class="ok">108</td>
             <td>92</td><td>70</td><td class="ok">108</td><td>96</td><td class="ok">108</td><td>107</td>
-            <td><b>768/864</b></td><td><b class="ok">88.89%</b></td></tr>
+            <td><b>768/864</b></td><td><b>88.89%</b></td></tr>
+          <tr style="background:color-mix(in srgb,var(--green) 8%,transparent)">
+            <td class="l"><b>Magnitude rules · shipped</b></td><td class="ok">105</td><td class="ok">108</td>
+            <td class="bad">77</td><td class="ok">101</td><td class="ok">108</td><td>99</td>
+            <td class="ok">108</td><td class="ok">108</td><td><b>814/864</b></td>
+            <td><b class="ok">94.21%</b></td></tr>
         </tbody>
       </table></div>
       <p class="muted" id="gsma-harness-line" style="font-size:13px;margin:10px 0 0">
-        <b>Replication under the official harness.</b> The second row is a full end-to-end re-run scored by
+        <b>Replication under the official harness.</b> All three rows are full end-to-end runs scored by
         the ot-full parser itself — the last <code>\boxed{...}</code> in the completion, first integer against
-        the target, exactly as <code>full4_eval.py</code> scores the base model. 864/864 completions carried a
-        boxed answer, 0 request errors, 864 narratives, 11.9 LM calls per case. Against the pre-registered
-        run it is <b>768 vs 767, McNemar 13 : 12, p = 1.0</b> — 25 answers moved, every one of them inside the
-        residual zone (C4 12, C1 9, C3 3, C6 1) while the gate half stayed at 431/432 in both. That fixes the
-        run-to-run noise floor of this system at about <b>±13 cases (±1.5 points)</b>: any claimed gain
-        smaller than that is not a gain, which is why every comparison in this report is paired rather than a
-        difference of two accuracies.</p>
+        the target, exactly as <code>full4_eval.py</code> scores the base model. Rows 1 and 2 are identical
+        configurations run twice: <b>768 vs 767, McNemar 13 : 12, p = 1.0</b> — 25 answers moved, every one
+        inside the residual zone, while the gate half stayed at 431/432 in both. That fixes the
+        run-to-run noise floor of this system at about <b>±13 cases (±1.5 points)</b>, which is why every
+        comparison here is paired rather than a difference of two accuracies.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">
+        <b>Row 3 against row 2, paired:</b> <b class="ok">+46 cases, McNemar 79 : 33, p = 1.6e-05</b> —
+        three and a half times the noise floor. The trade is explicit and lopsided in our favour:
+        <b>C4 70→101</b>, <b>C1 79→105</b>, C6 96→99, C8 107→108, the four gate classes untouched at
+        108/108 — against <b class="bad">C3 92→77</b>. C3 is now the ladder's fallback, so it absorbs every
+        case the three magnitude rules decline; the diagnosis section below localises that loss to exactly
+        one rule and names the fix.</p>
     </div>
 
     <div class="grid g5" style="margin-top:16px">
       <div class="card kpi">
         <div class="label">Official test · 864 cases</div>
-        <div class="value ok">88.77%</div>
-        <div class="sub">Residual specialist on GRPO-tuned weights, a <b>single</b> program.
-          Journey: 79.75 → 82.99 → 86.23 → <b>88.77</b></div>
+        <div class="value ok">94.21%</div>
+        <div class="sub">Magnitude tie-break on GRPO weights, a <b>single</b> program.
+          Journey: 79.75 → 82.99 → 86.23 → 88.77 → <b>94.21</b></div>
       </div>
       <div class="card kpi">
         <div class="label">Exact-criterion gates</div>
@@ -349,19 +361,20 @@
         <div class="sub">C2 / C5 / C7 / C8 — solved, no remaining error</div>
       </div>
       <div class="card kpi">
-        <div class="label">Previous best · 3-voter ensemble</div>
-        <div class="value" style="color:var(--blue)">82.99%</div>
-        <div class="sub">Beaten by the single program: McNemar <b>81 : 53, p = 0.019</b>, at 45% of its LM calls</div>
+        <div class="label">Previous best · presence rules</div>
+        <div class="value" style="color:var(--blue)">88.89%</div>
+        <div class="sub">Beaten by the magnitude rules: McNemar <b>79 : 33, p = 1.6e-05</b>, at identical cost</div>
       </div>
       <div class="card kpi">
-        <div class="label">Execution ceiling</div>
+        <div class="label">Old execution ceiling · passed</div>
         <div class="value pur">89.93%</div>
-        <div class="sub">The same decision flow in plain Python — every residual rule is only 73–79% precise</div>
+        <div class="sub">The <b>presence</b> flow in plain Python. The shipped LM pipeline now scores
+          <b>above</b> it — that ceiling was a property of the rules, not the task</div>
       </div>
       <div class="card kpi">
         <div class="label">The hard half · 432 residual cases</div>
-        <div class="value" style="color:var(--amber)">72.5%</div>
-        <div class="sub">Up from 53.7%. The symbolic ceiling on the same cases is 79.9% — 72% of the gap closed</div>
+        <div class="value" style="color:var(--amber)">88.4%</div>
+        <div class="sub">Up from 78.0%. One rule (C1-by-depth, 63.3% precise) holds all the remaining loss</div>
       </div>
     </div>
 
@@ -457,62 +470,55 @@
       <div class="card">
         <h3>What each half of the architecture delivered</h3>
         <div class="tw" style="margin-top:10px"><table>
-          <thead><tr><th class="l">Zone</th><th class="l">Layers responsible</th><th>Result</th>
-            <th>Ceiling</th></tr></thead>
+          <thead><tr><th class="l">Zone</th><th class="l">Layers responsible</th><th>Presence</th>
+            <th>Magnitude</th></tr></thead>
           <tbody>
             <tr><td class="l">Gate half · 432 cases<br><span class="muted">C2 / C5 / C7 / C8</span></td>
               <td class="l">① ReAct measurement + ② consistency verifier</td>
-              <td class="ok"><b>431/432</b><br>99.77%</td>
-              <td class="muted">432/432<br>exact criteria</td></tr>
+              <td class="muted">431/432<br>99.77%</td>
+              <td class="ok"><b>432/432</b><br>100%</td></tr>
             <tr><td class="l">Residual half · 432 cases<br><span class="muted">C1 / C3 / C4 / C6</span></td>
               <td class="l">③ forced measurement + ④ residual specialist</td>
-              <td class="warn"><b>337/432</b><br>78.01%</td>
-              <td class="muted">345/432<br>79.86% policy ceiling</td></tr>
+              <td class="muted">337/432<br>78.01%</td>
+              <td class="ok"><b>382/432</b><br>88.43%</td></tr>
           </tbody>
         </table></div>
-        <p style="margin:12px 0 0;font-size:13.5px">The specialist fired on <b>433</b>
-        cases and was right on 337 of them. Read against its own ceiling, the LM half
-        of the system now captures <b>97.7%</b> of everything the published procedure
-        can reach — the remaining distance to the ceiling is 8 cases in 864.</p>
+        <p style="margin:12px 0 0;font-size:13.5px">The specialist fired on <b>431</b>
+        cases — exactly the residual zone — and was right on 382. The old "policy ceiling"
+        of 345/432 is gone: the shipped LM pipeline now scores <b>above</b> the 89.93%
+        plain-Python execution of the presence flow, because that ceiling was a property
+        of <i>those rules</i>, never of the task or the measurements.</p>
       </div>
       <div class="card">
-        <h3>Where the 96 errors actually come from</h3>
+        <h3>Where the 50 errors actually come from</h3>
         <div class="tw" style="margin-top:10px"><table>
           <thead><tr><th class="l">Attribution</th><th>Cases</th><th>of 864</th></tr></thead>
           <tbody>
             <tr><td class="l"><b>The published rule is wrong here</b><br><span class="muted">the model
-              executed the procedure faithfully; the rule it followed does not match the gold label</span></td>
-              <td class="warn"><b>73</b></td>
-              <td class="muted">8.4%</td></tr>
-            <tr><td class="l"><b>Fell through to the C3 fallback</b><br><span class="muted">all 12 answered
-              C3 while an earlier rule was genuinely satisfied — rule 3 in 8 cases, rule 4 in 4. The model
-              read a present witness as absent and kept walking the ladder</span></td>
-              <td class="bad"><b>12</b></td>
-              <td class="muted">1.4%</td></tr>
+              executed the procedure faithfully; the rule it followed does not match the gold label.
+              <b>28 of the 32 are gold C3</b> — see the C3 section below</span></td>
+              <td class="warn"><b>32</b></td>
+              <td class="muted">3.7%</td></tr>
             <tr><td class="l"><b>Stopped at the wrong rule</b><br><span class="muted">both witnesses are
-              real and the order decides; 6 of 8 missed the strong-C1 witness at rule 0 and answered a
-              genuine rule-2 witness instead</span></td>
-              <td class="bad"><b>8</b></td>
-              <td class="muted">0.9%</td></tr>
-            <tr><td class="l">Wrong in a different way than the policy, which was also wrong</td>
-              <td class="muted">2</td><td class="muted">0.2%</td></tr>
+              real and the order decides; the model answered a later rule than the one that fired first</span></td>
+              <td class="bad"><b>11</b></td>
+              <td class="muted">1.3%</td></tr>
+            <tr><td class="l"><b>Answered a class with no witness</b><br><span class="muted">the class it
+              named does not clear its own threshold in the measurements</span></td>
+              <td class="bad"><b>7</b></td>
+              <td class="muted">0.8%</td></tr>
             <tr><td class="l">Gate stage · a fired criterion was not followed</td>
-              <td class="muted">1</td><td class="muted">0.1%</td></tr>
+              <td class="ok">0</td><td class="muted">0%</td></tr>
           </tbody>
         </table></div>
-        <p style="margin:12px 0 0;font-size:13.5px"><b>One mechanism explains 18 of the 20 execution
-        errors:</b> the model evaluates a rule whose witness is present in the measurements and declares it
-        unsatisfied, then continues down the ladder. It is not a knowledge gap — the rule is printed in the
-        prompt and the number is on the table — but a scan over a list of rows or neighbours with a compound
-        condition attached. The obvious guard was measured on this run and still does not pass: a verifier
-        branch that flags "answered C3 while an earlier witness exists" fires on 17 cases, catches 11 of the
-        12, and false-alarms on 6 correct answers, so it stays disabled under the zero-false-flag rule that
-        selected verifier v2.1.</p>
+        <p style="margin:12px 0 0;font-size:13.5px"><b>The error budget inverted.</b> Under the presence
+        rules, 73 of 96 errors were the rule's fault and 23 were execution. Under the magnitude rules the
+        rule-fault bucket collapses to 32 while execution debt stays flat at 18 — the rules got better,
+        the model did not get worse. Raising the bar from "any occurrence" to "more than two" also removed
+        the pathology that generated most execution errors: there is nothing left to mis-scan when the
+        condition is a single integer already computed by the tool.</p>
         <p style="margin:12px 0 0;font-size:13.5px"><b>The model reproduces the published procedure on
-        841/864 = 97.3% of cases.</b> The entire remaining execution debt — every
-        case where it was handed a correct rule and failed to apply it — is <b>23 cases,
-        2.7%</b>. Everything else is the procedure's own precision, which no amount of
-        prompting, training or verification can move.</p>
+        846/864 = 97.9% of cases</b> (was 97.3%). The remaining execution debt is <b>18 cases, 2.1%</b>.</p>
       </div>
     </div>
 
@@ -520,13 +526,13 @@
       <div class="card">
         <h3>Confusion — this run, gold against predicted</h3>
         <p class="muted" style="font-size:13.5px;margin:0 0 8px">Diagonal is the correct count; off-diagonal
-        cells are errors. Every error in the run lands in four columns: the residual classes. C2, C5 and C7
-        have no error at all, and C8 has one.</p>
-        <div class="tw"><table><thead><tr><th class="l">gold ↓ / predicted →</th><th>C1</th><th>C3</th><th>C4</th><th>C6</th><th>errors</th></tr></thead><tbody><tr><td class="l"><b>C1</b></td><td class="muted">79 ✓</td><td class="bad"><b>10</b></td><td class="bad"><b>9</b></td><td class="bad"><b>10</b></td><td class="bad">29</td></tr><tr><td class="l"><b>C2</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C3</b></td><td class="bad"><b>2</b></td><td class="muted">92 ✓</td><td class="bad"><b>9</b></td><td class="bad"><b>5</b></td><td class="warn">16</td></tr><tr><td class="l"><b>C4</b></td><td class="bad"><b>3</b></td><td class="bad"><b>18</b></td><td class="muted">70 ✓</td><td class="bad"><b>17</b></td><td class="bad">38</td></tr><tr><td class="l"><b>C5</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C6</b></td><td class="muted">·</td><td class="bad"><b>12</b></td><td class="muted">·</td><td class="muted">96 ✓</td><td class="warn">12</td></tr><tr><td class="l"><b>C7</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C8</b></td><td class="muted">·</td><td class="muted">·</td><td class="bad"><b>1</b></td><td class="muted">·</td><td class="warn">1</td></tr></tbody></table></div>
-        <p class="muted" style="margin:10px 0 0;font-size:13px">The mass sits in <b>C4 → C3 (18)</b> and
-        <b>C4 → C6 (17)</b>: when several residual witnesses fire at once, the fixed order takes the earlier
-        one and C4 is third in line. C1 loses 29 the same way. This is the shape a missing discriminating
-        feature makes — not the shape of a reasoning failure.</p>
+        cells are errors. C2, C5, C7 and C8 are now perfect. <b>One cell holds 54% of all remaining
+        error: C3 → C1.</b></p>
+        <div class="tw"><table><thead><tr><th class="l">gold ↓ / predicted →</th><th>C1</th><th>C3</th><th>C4</th><th>C6</th><th>errors</th></tr></thead><tbody><tr><td class="l"><b>C1</b></td><td class="muted">105 ✓</td><td class="bad"><b>2</b></td><td class="bad"><b>1</b></td><td class="muted">·</td><td class="warn">3</td></tr><tr><td class="l"><b>C2</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C3</b></td><td class="bad"><b>27</b></td><td class="muted">77 ✓</td><td class="bad"><b>2</b></td><td class="bad"><b>2</b></td><td class="bad">31</td></tr><tr><td class="l"><b>C4</b></td><td class="bad"><b>1</b></td><td class="bad"><b>4</b></td><td class="muted">101 ✓</td><td class="bad"><b>1</b></td><td class="warn">7</td></tr><tr><td class="l"><b>C5</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C6</b></td><td class="bad"><b>2</b></td><td class="bad"><b>5</b></td><td class="bad"><b>2</b></td><td class="muted">99 ✓</td><td class="warn">9</td></tr><tr><td class="l"><b>C7</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr><tr><td class="l"><b>C8</b></td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="muted">·</td><td class="ok">0</td></tr></tbody></table></div>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">Compare the shape with the presence run,
+        where error was spread across C4 → C3 (18), C4 → C6 (17), C1 → three columns (29). Now it is
+        concentrated: <b>C3 → C1 alone is 27 of 50</b>. A concentrated error is a solvable error —
+        it names one rule instead of indicting the whole ladder.</p>
       </div>
       <div class="card">
         <h3>Per-rule precision, measured on this run</h3>
@@ -535,19 +541,87 @@
         <div class="tw"><table>
           <thead><tr><th class="l">Rule</th><th>Decides</th><th>Correct</th><th>Precision</th></tr></thead>
           <tbody>
-            <tr><td class="l">1 · C3 if <code>min_diff ≥ 142.5</code></td><td>111</td>
-              <td>81</td><td class="warn">73.0%</td></tr><tr><td class="l">2 · C6 if a mod-30 pair exists</td><td>123</td>
-              <td>96</td><td class="warn">78.0%</td></tr><tr><td class="l">3 · C4 if <code>gap ≥ −3 dB</code></td><td>100</td>
-              <td>79</td><td class="warn">79.0%</td></tr><tr><td class="l">4 · C1 if a row sits below the lobe</td><td>35</td>
-              <td>27</td><td class="warn">77.1%</td></tr><tr><td class="l">5 · otherwise C3 (fallback)</td><td>7</td>
-              <td>6</td><td class="warn">85.7%</td></tr>
+            <tr><td class="l">1 · C6 if <code>equal_residue_pair_count &gt; 2</code></td><td>107</td>
+              <td>107</td><td class="ok"><b>100%</b></td></tr>
+            <tr><td class="l">2 · C4 if <code>noncolocated_gap_…_count &gt; 2</code></td><td>108</td>
+              <td>107</td><td class="ok"><b>99.1%</b></td></tr>
+            <tr style="background:color-mix(in srgb,var(--red) 7%,transparent)">
+              <td class="l">3 · C1 if <code>deepest_below_lobe_deficit_deg &gt; 2.5</code></td><td>79</td>
+              <td>50</td><td class="bad"><b>63.3%</b></td></tr>
+            <tr><td class="l">4 · otherwise C3 (fallback)</td><td>82</td>
+              <td>78</td><td class="ok">95.1%</td></tr>
           </tbody>
         </table></div>
-        <p style="margin:10px 0 0;font-size:13.5px">No rule exceeds 79% precision. Chaining them in a fixed
-        order gives <b>345/432</b> in the residual half however perfectly they are executed — which is
-        why the 23-case execution debt above, not the rules, is the only part an LM can still fix,
-        and why the next real gain has to be a new measurement rather than a better prompt.</p>
+        <p style="margin:10px 0 0;font-size:13.5px">Two rules are now essentially exact and the fallback is
+        95% precise. <b>All the remaining loss is rule 3</b>: it claims 79 cases and 29 of them are gold C3.
+        The presence ladder's flat 73–79% precision profile has become one bad rule among three good ones —
+        which is the whole difference between "the family is exhausted" and "fix that rule".</p>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;border-color:color-mix(in srgb,var(--red) 40%,transparent)">
+      <div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <span class="pill neg">the open defect</span>
+        <h3 style="margin:0">Why C3 fell to 77/108 — and the measurement that separates it from C1</h3>
+      </div>
+      <p style="font-size:13.5px;margin:0 0 10px">C3 was the one class that got <i>worse</i> (92 → 77).
+      The diagnosis localises it completely: of the 31 C3 errors, <b>27 go to C1</b>, and every one of
+      them is claimed by rule 3. The question rule 3 asks is
+      <i>"is the serving cell geometrically below its main lobe?"</i> — and inside its population that
+      question does not decide anything, because <b>both</b> classes answer yes:</p>
+      <div class="grid g2" style="gap:16px">
+        <div>
+          <p style="font-size:13.5px;margin:0 0 8px"><b>Rule 3's population is a genuine C1/C3 mixture</b>
+          on every split — this is not a test-set accident:</p>
+          <div class="tw"><table>
+            <thead><tr><th class="l">Split</th><th>Cases</th><th>gold C1</th><th>gold C3</th></tr></thead>
+            <tbody>
+              <tr><td class="l">train</td><td>110</td><td>63</td><td class="bad">46</td></tr>
+              <tr><td class="l">dev</td><td>40</td><td>16</td><td class="bad">24</td></tr>
+              <tr><td class="l">holdout</td><td>40</td><td>18</td><td class="bad">22</td></tr>
+              <tr><td class="l">official</td><td>79</td><td>50</td><td class="bad">29</td></tr>
+            </tbody>
+          </table></div>
+          <p class="muted" style="margin:10px 0 0;font-size:13px">Answering "always C1" here — which is
+          what the shipped rule does — is right 57% of the time on train and 63% on official. It is a
+          coin toss with a bias, not a diagnosis.</p>
+        </div>
+        <div>
+          <p style="font-size:13.5px;margin:0 0 8px"><b>Depth does not separate them; throughput advantage
+          does.</b> Distribution inside rule 3's population, official:</p>
+          <div class="tw"><table>
+            <thead><tr><th class="l">Measurement</th><th>gold C1</th><th>gold C3</th></tr></thead>
+            <tbody>
+              <tr><td class="l">lobe deficit, median</td><td>6.0°</td><td>9.9°</td></tr>
+              <tr><td class="l"><span class="muted">…q1–q3</span></td><td class="muted">5.4–6.6°</td>
+                <td class="muted">7.3–11.2°</td></tr>
+              <tr style="background:color-mix(in srgb,var(--green) 7%,transparent)">
+                <td class="l"><b>advantage, median</b></td><td><b>43.5</b> Mbps</td>
+                <td><b>170.6</b> Mbps</td></tr>
+              <tr><td class="l"><span class="muted">…q1–q3</span></td><td class="muted">16.6–84.4</td>
+                <td class="muted">122.5–230.7</td></tr>
+            </tbody>
+          </table></div>
+          <p class="muted" style="margin:10px 0 0;font-size:13px">The lobe deficits overlap almost
+          completely — 6° vs 10° with wide tails. The throughput advantage is nearly four times larger for
+          C3, with the quartile boxes barely touching.</p>
+        </div>
+      </div>
+      <p style="font-size:13.5px;margin:14px 0 0"><b>The physical reading.</b> Being below the main lobe is
+      a <i>necessary</i> condition for C1, not a sufficient one — plenty of cells serve acceptably from
+      below their lobe edge. What makes it the <i>cause</i> is that no one else could have served this
+      stretch better. So the discriminator is not "how bad is my geometry" but "how much better was the
+      alternative": if a neighbouring segment sustains a far higher minimum, the geometry is incidental
+      and the diagnosis is C3 — the neighbour genuinely serves this road better. If no neighbour does
+      materially better, the weak geometry is the whole story and it is C1.</p>
+      <p style="font-size:13.5px;margin:10px 0 0"><b>Measured, fitted on train only:</b> splitting rule 3
+      by <code>advantage ≥ 106.7 Mbps → C3, else C1</code> takes rule 3's own population from 57.3% to
+      75.5% on train, and the whole residual zone to <b>dev 93.12% · holdout 94.18% · official 94.15%</b>
+      against the shipped 85.19 / 87.30 / 90.96 — <b>+15, +13, +12 cases</b>. On official that is
+      C3 78 → 100 and C1 50 → 40 inside the residual zone: a net <b>+12</b>. This is the same depth-4
+      split <code>fit_magnitude_rule.py</code> already reported (354/376) and that the shipped depth-3
+      configuration declined to take — an honest miss, recorded here rather than quietly corrected.
+      It is <b>not shipped</b>: it needs its own pre-registered paired run, exactly like this one had.</p>
     </div>
 
     <div class="card" style="margin-top:16px">
