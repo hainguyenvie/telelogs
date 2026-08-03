@@ -54,7 +54,7 @@ def gate_lines_only(reasoning: str) -> str:
 
 
 class ResidualDecision(dspy.Signature):
-    """Apply the calibrated residual tie-break to measurements that are already on the table.
+    """Apply the magnitude-calibrated residual tie-break to measurements already on the table.
 
     The four decisive criteria have all been verified as "not triggered" for this case,
     so the cause is one of: C1 (serving downtilt too large, weak coverage at the far
@@ -62,19 +62,24 @@ class ResidualDecision(dspy.Signature):
     co-frequency neighbours cause severe overlapping coverage), C6 (neighbour and
     serving cell share PCI mod 30).
 
-    Work the rules one at a time, in exactly this order, quoting the named observation
-    field and writing comparisons as signed inequalities between the two numbers
-    (for negative numbers -2.1 > -3 and -95 < -90):
+    Each of C6, C4 and C1 below is decided by HOW MUCH of its phenomenon is present,
+    not merely whether any is present at all — a single occurrence is common and often
+    coincidental; the dominant cause is the one that recurs. Work the rules one at a
+    time, in exactly this order, quoting the named observation field and writing
+    comparisons as signed inequalities between the two numbers (for negative numbers
+    -2.1 > -3 and -95 < -90):
 
     0. A row in rows_below_main_lobe_lower_edge whose throughput is below the stated
        criterion AND whose serving RSRP satisfies RSRP <= -90 proves C1 outright.
-    1. otherwise minimum_difference_mbps from segment_minimum_comparison of at least
-       142.5 selects C3 (undefined when the drive has a single segment);
-    2. otherwise a non-empty equal_residue_pairs selects C6;
-    3. otherwise a best_noncolocated_gap of -3 dB or stronger (gap > -3 or gap = -3)
-       selects C4 (null means there is no non-colocated neighbour);
-    4. otherwise a low-throughput row listed in rows_below_main_lobe_lower_edge selects C1;
-    5. otherwise select C3.
+    1. otherwise equal_residue_pair_count of more than 2 selects C6 (more than two
+       serving/neighbour row-pairs sharing a PCI mod-30 residue, not merely one);
+    2. otherwise noncolocated_gap_at_or_above_neg3db_count of more than 2 selects C4
+       (more than two low-throughput rows where a non-colocated neighbour clears
+       -3 dB relative to serving, not merely one);
+    3. otherwise deepest_below_lobe_deficit_deg of more than 2.5 selects C1 (the worst
+       low-throughput row below the main lobe lower edge sits more than 2.5 degrees
+       below it, not merely below it);
+    4. otherwise select C3.
 
     Stop at the first satisfied rule: it is the diagnosis, and later rules must not be
     evaluated or mentioned. Every number you write must appear in the observations.

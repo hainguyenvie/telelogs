@@ -241,11 +241,18 @@ def analyze_coverage_geometry(case: CaseContext) -> dict[str, Any]:
         for row in case.observations
         if row["elevation_deg"] is not None and row["elevation_deg"] < row["main_lobe_lower_deg"]
     ]
+    lobe_deficits_deg = [
+        row["main_lobe_lower_deg"] - row["ue_elevation_deg"]
+        for row in below_lobe
+        if row["main_lobe_lower_deg"] is not None and row["ue_elevation_deg"] is not None
+        and row["throughput_mbps"] is not None and row["throughput_mbps"] < case.throughput_threshold_mbps
+    ]
     return {
         "measurement_scope": "serving geometry and signal level for every drive-test row",
         "engineering_available_for_all_serving_cells": all(row["distance_km"] is not None for row in case.observations),
         "maximum_distance_km": _r(max(distances)) if distances else None,
         "rows_below_main_lobe_lower_edge": below_lobe,
+        "deepest_below_lobe_deficit_deg": _r(max(lobe_deficits_deg), 2) if lobe_deficits_deg else None,
         "rows": rows,
     }
 
@@ -337,9 +344,16 @@ def analyze_neighbor_overlap(case: CaseContext) -> dict[str, Any]:
                 "neighbor_pci": top["neighbor_pci"],
                 "neighbor_minus_serving_db": top["neighbor_minus_serving_db"],
             }
+    gap_at_or_above_neg3db_count = sum(
+        1
+        for row in rows
+        for neighbor in row["noncolocated_neighbors"]
+        if neighbor["neighbor_minus_serving_db"] is not None and neighbor["neighbor_minus_serving_db"] >= -3.0
+    )
     return {
         "measurement_scope": "non-colocated neighbor power relative to serving power on low-throughput rows",
         "best_noncolocated_gap": best,
+        "noncolocated_gap_at_or_above_neg3db_count": gap_at_or_above_neg3db_count,
         "rows": rows,
     }
 
@@ -381,6 +395,7 @@ def analyze_pci_relations(case: CaseContext) -> dict[str, Any]:
     return {
         "measurement_scope": "serving and neighbor PCI modulo-30 residues on low-throughput rows",
         "equal_residue_pairs": equal_pairs,
+        "equal_residue_pair_count": len(equal_pairs),
         "rows": rows,
     }
 
