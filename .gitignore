@@ -58,3 +58,9 @@ scripts/*
 .codex/
 .agents/
 .DS_Store
+
+# Third-party training corpora (never commit; multi-GB, unverified provenance)
+infra/*/adaptlkey_nemotron_data/
+infra/*/adaptkey_nemotron_data/
+infra/*/thirdparty/
+infra/*/adaptkey_nemotron_data/
