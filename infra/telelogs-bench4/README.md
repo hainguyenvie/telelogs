@@ -25,15 +25,15 @@ The model identifier is `vllm/Qwen/Qwen3-8B` in Inspect and
 
 ```bash
 ssh H200_Tensara 'kubectl get pod telelogs-bench4 -n tensara'
-ssh H200_Tensara 'tail -f ~/projects/telelogs-bench4/done/serve_qwen3_8b.log'
-ssh H200_Tensara 'touch ~/projects/telelogs-bench4/done/serve_qwen3_8b.kill'
+ssh H200_Tensara 'tail -f ~/projects/telelogs/runs/bench4/done/serve_qwen3_8b.log'
+ssh H200_Tensara 'touch ~/projects/telelogs/runs/bench4/done/serve_qwen3_8b.kill'
 ```
 
 To start it again after an intentional stop, upload the serving job:
 
 ```bash
 scp infra/telelogs-bench4/serve_qwen3_8b.sh \
-  H200_Tensara:~/projects/telelogs-bench4/jobs/
+  H200_Tensara:~/projects/telelogs/runs/bench4/jobs/
 ```
 
 The Service is cluster-internal. Do not expose port 8000 publicly.

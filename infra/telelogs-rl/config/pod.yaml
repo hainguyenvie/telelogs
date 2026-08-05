@@ -1,4 +1,4 @@
-# telelogs-rl v2 — single free GPU on hgx47, node-local storage, bootstrap over
+# telelogs-rl v2 — single free GPU, node-local storage, bootstrap over
 # the cluster network (weights from HF, code/data from the bench4 client
 # fileserver at BOOTSTRAP_URL). Survives restarts: fetch is skipped once done.
 apiVersion: v1
@@ -10,7 +10,7 @@ metadata:
     app: telelogs-rl
     owner: h2n
 spec:
-  nodeName: hla9104p1-escn8-smt-hgx47
+  nodeName: hgx046
   restartPolicy: Always
   containers:
     - name: main
@@ -98,7 +98,7 @@ spec:
   volumes:
     - name: project
       hostPath:
-        path: /mnt/tensara-home/projects/telelogs-rl
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/rl-grpo
         type: DirectoryOrCreate
     - name: shm
       emptyDir:

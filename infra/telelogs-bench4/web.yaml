@@ -44,7 +44,7 @@ spec:
   volumes:
     - name: project
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs-bench4
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4
         type: Directory
 ---
 apiVersion: v1

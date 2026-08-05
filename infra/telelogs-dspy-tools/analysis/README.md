@@ -1,7 +1,7 @@
 # Offline analysis of stored predictions
 
 These run against `predictions.jsonl` files pulled from
-`~/projects/telelogs-bench4/dspy-tools/results/<run>/` on the H200 host. They keep
+`~/projects/telelogs/runs/bench4/dspy-tools/results/<run>/` on the H200 host. They keep
 no state of their own: every number in the solution report can be regenerated from
 the stored per-case predictions plus `symbolic_reference.py`.
 

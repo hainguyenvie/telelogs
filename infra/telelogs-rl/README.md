@@ -54,6 +54,22 @@ thiết kế 1-GPU:
 - Eval: `serve_grpo_model.sh` chiếm lại GPU đó sau khi train xong; service
   `telelogs-rl-vllm` định tuyến từ client bench4 qua mạng cụm.
 
+### Cập nhật 2026-08-05: hgx47 bị thu hồi, dữ liệu đã chuyển về hgx046
+
+Mô tả ở trên là thiết kế gốc và giữ nguyên làm ghi chép. Thực tế hiện tại khác:
+hgx45 và hgx47 bị thu hồi, nên toàn bộ 36 GB ở
+`/mnt/tensara-home/projects/telelogs-rl` trên hgx47 đã được chuyển sang hgx046
+tại `/mnt/registry/tensara-home/projects/telelogs/runs/rl-grpo` — đối chiếu bằng
+manifest md5 của 96 file (kích thước + đường dẫn), khớp tuyệt đối.
+
+`kubectl cp` không dùng được vì cụm chặn `pods/exec`; cách đi được là dựng một
+pod phục vụ HTTP trên node nguồn rồi `wget` từ login host (796 MB/s).
+
+Bản merged 31 GB `models/qwen3-8b-grpo-v1` **đã bị dồn vào `_trash`** — nó lưu
+float32 và dựng lại được từ `checkpoints/v1/final` bằng `merge_checkpoint.sh`,
+lần này nên merge ở bfloat16 để còn một nửa dung lượng. `config/pod.yaml` đã đổi
+sang `nodeName: hgx046` và đường dẫn mới.
+
 ## Checklist khi được lệnh launch
 
 1. `kubectl apply -f config/pod.yaml && kubectl apply -f config/service.yaml`

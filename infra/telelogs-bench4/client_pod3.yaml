@@ -59,12 +59,21 @@ spec:
         - name: telelogs-base
           mountPath: /workspace/telelogs
           readOnly: true
+        # Lifted to the project root by the 2026-08-05 consolidation and mounted
+        # back where it was, so /workspace/telelogs/cache/hf still resolves.
+        - name: hf-cache
+          mountPath: /workspace/telelogs/cache/hf
+          readOnly: true
   volumes:
     - name: project
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs-bench4
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4
         type: DirectoryOrCreate
     - name: telelogs-base
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/v0-lora
+        type: Directory
+    - name: hf-cache
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs/shared/hf-cache
         type: Directory

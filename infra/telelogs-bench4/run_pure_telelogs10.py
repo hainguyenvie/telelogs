@@ -29,7 +29,7 @@ ENDPOINT = os.environ.get(
 OUTPUT_DIR = Path(
     os.environ.get(
         "OUTPUT_DIR",
-        "/home/tensara/projects/telelogs-bench4/results/pure_telelogs10",
+        "/home/tensara/projects/telelogs/runs/bench4/results/pure_telelogs10",
     )
 )
 MODEL = "Qwen/Qwen3-8B"

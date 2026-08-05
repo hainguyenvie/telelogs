@@ -93,16 +93,35 @@ spec:
         - name: telelogs-base
           mountPath: /workspace/telelogs
           readOnly: true
+        # The 2026-08-05 consolidation lifted the venv and the HF cache out of
+        # the v0-lora run and up to the project root, since both are shared. They
+        # are mounted back at their original in-pod paths so that no script has
+        # to learn a new location — /workspace/telelogs/venv/bin/python and
+        # HF_HOME=/workspace/telelogs/cache/hf still resolve.
+        - name: venv
+          mountPath: /workspace/telelogs/venv
+          readOnly: true
+        - name: hf-cache
+          mountPath: /workspace/telelogs/cache/hf
+          readOnly: true
         - name: shm
           mountPath: /dev/shm
   volumes:
     - name: project
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs-bench4
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4
         type: DirectoryOrCreate
     - name: telelogs-base
       hostPath:
-        path: /mnt/registry/tensara-home/projects/telelogs
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/v0-lora
+        type: Directory
+    - name: venv
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs/venvs/venv
+        type: Directory
+    - name: hf-cache
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs/shared/hf-cache
         type: Directory
     - name: shm
       emptyDir:
