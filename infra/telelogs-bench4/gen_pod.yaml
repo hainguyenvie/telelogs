@@ -1,0 +1,77 @@
+# Generator for the teleqna synthetic-MCQ track: Qwen3.5-35B-A3B-FP8 on one
+# H200. Separate pod from telelogs-bench4 because the architectures need
+# different vLLM generations: qwen3_5_moe requires >= v0.26 while the bench4
+# venv is pinned to 0.11.0 for the existing arms — this pod uses the upstream
+# image directly and touches no venv.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-gen
+  namespace: tensara
+  labels:
+    app: telelogs-gen
+    owner: h2n
+spec:
+  restartPolicy: Always
+  # /mnt/registry/tensara-home is hgx046-local storage; do not reschedule.
+  nodeName: hgx046
+  containers:
+    - name: vllm
+      image: vllm/vllm-openai:v0.26.0-cu129-ubuntu2404
+      args:
+        - --model=/workspace/models/Qwen3.5-35B-A3B-FP8
+        - --served-model-name=Qwen3.5-35B-A3B-FP8
+        - --host=0.0.0.0
+        - --port=8000
+        - --max-model-len=32768
+        - --gpu-memory-utilization=0.90
+        - --max-num-seqs=64
+      resources:
+        requests:
+          cpu: "8"
+          memory: 48Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "16"
+          memory: 96Gi
+          nvidia.com/gpu: "1"
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        timeoutSeconds: 3
+        failureThreshold: 60
+      volumeMounts:
+        - name: models
+          mountPath: /workspace/models
+          readOnly: true
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    - name: models
+      hostPath:
+        path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4/models
+        type: Directory
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 32Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telelogs-gen-vllm
+  namespace: tensara
+spec:
+  selector:
+    app: telelogs-gen
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
