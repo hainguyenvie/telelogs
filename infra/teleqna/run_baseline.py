@@ -78,11 +78,20 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+BARE_ANSWER = re.compile(r"^\s*([A-Ea-e])(?:[).:,\s]|$)")
+
+
 def parse_answer(completion: str, choice_count: int) -> str:
-    """Verbatim port of Inspect's parse_answers() for multiple_correct=False."""
+    """Port of Inspect's parse_answers() for multiple_correct=False, plus a
+    bare-letter fallback: OTel-LLM-8.3B-IT ignores the ANSWER: contract and
+    replies "A) NOMA" (its SFT set is 0.03% MCQ). The fallback only fires when
+    both ANSWER: regexes found nothing, so every previously parsed run parses
+    identically."""
     matches = STRICT_ANSWER.findall(completion or "")
     if not matches:
         matches = LOOSE_ANSWER.findall(completion or "")
+    if not matches:
+        matches = BARE_ANSWER.findall(completion or "")
     if not matches:
         return ""
     matched = matches[-1].strip().rstrip(".").upper()
