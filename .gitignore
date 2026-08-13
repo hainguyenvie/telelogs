@@ -64,3 +64,6 @@ infra/*/adaptlkey_nemotron_data/
 infra/*/adaptkey_nemotron_data/
 infra/*/thirdparty/
 infra/*/adaptkey_nemotron_data/
+
+# Local server-state snapshots (multi-GB rsync mirrors, never commit)
+backups/

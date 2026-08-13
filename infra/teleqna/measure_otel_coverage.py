@@ -63,6 +63,19 @@ def main() -> None:
                          "hard-core subset; comma-separated, a row counts "
                          "when every file got it wrong")
     ap.add_argument("--max-df", type=int, default=100)
+    ap.add_argument("--field", action="append", default=None,
+                    help="record fields to read, repeatable. Default is the "
+                         "OTel SFT triple anchor/prompt/completion; pass "
+                         "--field content for corpora like Tele-Data.")
+    ap.add_argument("--window", type=int, default=0,
+                    help="split each record into windows of this many words, "
+                         "0 = whole record. A corpus of full papers and a "
+                         "corpus of SFT records are not comparable at record "
+                         "granularity: a 6,000-word paper carries the rare "
+                         "terms of many unrelated questions and scores a "
+                         "coverage no retrievable passage would. Pass ~400 to "
+                         "ask the question that matters — is the fact in one "
+                         "passage — rather than 'is it somewhere in the file'.")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
 
@@ -95,16 +108,24 @@ def main() -> None:
             except Exception:
                 continue
             n += 1
-            blob_terms = terms_of(" ".join(
-                str(rec.get(k, "") or "") for k in ("anchor", "prompt", "completion")))
-            matched: collections.Counter = collections.Counter()
-            for term in blob_terms & index.keys():
-                for i in index[term]:
-                    matched[i] += 1
-            for i, c in matched.items():
-                frac = c / len(rare_of[i])
-                if frac > best[i]:
-                    best[i] = frac
+            fields = args.field or ("anchor", "prompt", "completion")
+            blob = " ".join(str(rec.get(k, "") or "") for k in fields)
+            if args.window:
+                words = blob.split()
+                blobs = [" ".join(words[s:s + args.window])
+                         for s in range(0, max(1, len(words)), args.window)]
+            else:
+                blobs = [blob]
+            for blob in blobs:
+                blob_terms = terms_of(blob)
+                matched: collections.Counter = collections.Counter()
+                for term in blob_terms & index.keys():
+                    for i in index[term]:
+                        matched[i] += 1
+                for i, c in matched.items():
+                    frac = c / len(rare_of[i])
+                    if frac > best[i]:
+                        best[i] = frac
             if n % 50000 == 0:
                 covered = sum(best[i] >= 0.5 for i in judgeable)
                 print(f"  ...{n:,} records | >=50% covered: "
