@@ -53,6 +53,20 @@ def main() -> None:
     ap.add_argument("--max-tokens", type=int, default=1024)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--gpu-mem", type=float, default=0.85)
+    ap.add_argument("--tp", type=int, default=1,
+                    help="tensor_parallel_size. 1 for the 8B; the 122B's BF16 "
+                         "weights are 250GB and one H200 holds 143GB.")
+    ap.add_argument("--max-model-len", type=int, default=4096,
+                    help="4096 is right for the 8B at a 1,024-token budget. A "
+                         "pass@k ceiling is destroyed by truncation — a rollout "
+                         "that runs out of tokens scores zero and is "
+                         "indistinguishable from a wrong answer — so a verbose "
+                         "model needs both this and --max-tokens raised.")
+    ap.add_argument("--engine-kwargs", default="",
+                    help="JSON merged into LLM(). The 122B needs "
+                         "language_model_only, disable_custom_all_reduce and a "
+                         "max_num_seqs its Mamba cache can hold; each of those "
+                         "was found by a 250GB crash.")
     args = ap.parse_args()
 
     from transformers import AutoTokenizer
@@ -68,8 +82,13 @@ def main() -> None:
                                        add_generation_prompt=True,
                                        enable_thinking=True) for r in rows]
 
-    llm = LLM(model=args.model, gpu_memory_utilization=args.gpu_mem,
-              max_model_len=4096, enforce_eager=False)
+    engine = dict(model=args.model, gpu_memory_utilization=args.gpu_mem,
+                  max_model_len=args.max_model_len,
+                  tensor_parallel_size=args.tp, enforce_eager=False)
+    if args.engine_kwargs:
+        engine.update(json.loads(args.engine_kwargs))
+    print("engine:", {k: v for k, v in engine.items() if k != "model"}, flush=True)
+    llm = LLM(**engine)
     sp = SamplingParams(n=args.k, temperature=args.temperature, top_p=0.95,
                         top_k=20, max_tokens=args.max_tokens, seed=42)
     outs = llm.generate(prompts, sp)
@@ -86,6 +105,11 @@ def main() -> None:
             rec["k"] = args.k
             rec["correct"] = correct
             rec["unparsed"] = unparsed
+            # keep the letters, not just the count: the count answers "is this
+            # prompt trainable", the letters additionally answer "would voting
+            # have got it" — the sampled-branch counterpart of the 4-permutation
+            # vote, at no extra generation cost.
+            rec["letters"] = got
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
     total = len(rows)

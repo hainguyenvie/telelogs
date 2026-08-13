@@ -83,7 +83,14 @@ spec:
           cpu: "200m"
           memory: 8Gi
         limits:
-          cpu: "8"
+          # 32, not 8. The limit is a hard CFS quota, and torch sizes its OMP
+          # pool from the NODE's 192 cores, not from the quota — so four eval
+          # processes inside an 8-core quota spawned ~768 threads and throttled
+          # to a standstill: the 16 GB base model loaded in 3 s while the 0.7 GB
+          # LoRA adapter crawled at 36 MB/min with the GPUs at 0%. OMP_NUM_THREADS
+          # below is the other half of the fix; raising the quota alone is not
+          # enough. requests stays at 200m so admission still passes.
+          cpu: "32"
           memory: 192Gi
       env:
         # all + pin, because index and UUID forms are unresolvable on this node
@@ -101,6 +108,10 @@ spec:
           value: "1"
         - name: TOKENIZERS_PARALLELISM
           value: "false"
+        # torch reads the node's core count, not the cgroup quota; without this
+        # every process opens a 192-thread pool and they fight over the quota.
+        - name: OMP_NUM_THREADS
+          value: "8"
         - name: PYTORCH_CUDA_ALLOC_CONF
           value: expandable_segments:True
       volumeMounts:

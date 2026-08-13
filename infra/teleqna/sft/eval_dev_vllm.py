@@ -91,6 +91,9 @@ def main() -> None:
     ap.add_argument("--with-base", action="store_true",
                     help="also score the bare base model")
     ap.add_argument("--thinking", action="store_true")
+    ap.add_argument("--open-thought", action="store_true",
+                    help="end the prompt with the thought channel opened but "
+                         "not closed; see the block in main()")
     ap.add_argument("--max-new", type=int, default=0,
                     help="0 = 6000 thinking / 512 no-think. The no-think "
                          "default is 512 rather than eval_dev.py's 8: a model "
@@ -127,6 +130,35 @@ def main() -> None:
                                 tokenize=False, add_generation_prompt=True,
                                 enable_thinking=args.thinking)
         for r in rows]
+
+    # --open-thought: leave the thought channel OPEN instead of pre-closed.
+    #
+    # Gemma-4-derived templates offer only two endings, and on OTel-2.0-31B they
+    # behave nothing alike. enable_thinking=False ends the prompt with
+    #     <|turn>model\n<|channel>thought\n<channel|>\n
+    # -- an empty thought opened and immediately closed -- and the model then
+    # answers in the required format on 987 of 1000 rows. enable_thinking=True
+    # ends with a bare <|turn>model\n, and the model stops opening a thought
+    # channel at all, answers "C) 150 ms" conversationally, and emits ANSWER: on
+    # 59 rows. So what enforces the format is not the instruction in the prompt,
+    # which is identical either way -- it is the channel scaffold.
+    #
+    # That leaves an untried third ending: opened but not closed. It gives the
+    # model the scaffold it clearly recognises while still leaving room to think
+    # before answering, which is exactly the combination neither flag produces.
+    if args.open_thought:
+        CLOSE = "<channel|>"
+        out = []
+        for p in prompts:
+            i = p.rfind(CLOSE)
+            if i < 0 or "<|channel>thought" not in p:
+                raise SystemExit(
+                    "--open-thought: this template has no pre-closed thought "
+                    "channel to open, so the flag would silently do nothing")
+            out.append(p[:i])
+        prompts = out
+        print("open-thought: prompts end with",
+              repr(prompts[0][-40:]), flush=True)
 
     max_new = args.max_new or (6000 if args.thinking else 512)
     arms = []

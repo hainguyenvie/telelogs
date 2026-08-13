@@ -32,7 +32,23 @@ from pathlib import Path
 # transformers/trl keep precedence and only vllm resolves from the other tree.
 _EXTRA = os.environ.get("EXTRA_SITE")
 if _EXTRA:
+    # numpy is the one package that has to come from the OTHER tree. venv-grpo
+    # ships numpy 2.3.2 and no numba; venv ships the matched pair numpy 2.2.6 +
+    # numba 0.61.2, and numba refuses to load against anything above 2.2. With
+    # EXTRA_SITE merely appended, venv-grpo's 2.3.2 wins and vllm dies on import
+    # with "Numba needs NumPy 2.2 or less".
+    #
+    # So resolve numpy — and only numpy — from the other tree first, then put
+    # the path back at the end. Once numpy 2.2.6 is in sys.modules every later
+    # import gets it, while trl/peft/transformers still resolve venv-grpo-first
+    # as intended. This has to happen before datasets/peft/trl are imported
+    # below, because those pull numpy in themselves.
+    sys.path.insert(0, _EXTRA)
+    import numpy as _np
+    sys.path.pop(0)
     sys.path.append(_EXTRA)
+    print(f"pinned numpy {_np.__version__} from EXTRA_SITE for numba/vllm",
+          flush=True)
 
 from datasets import Dataset
 from peft import LoraConfig
@@ -118,8 +134,42 @@ def main() -> None:
             "and the run would look merely slow rather than misconfigured.")
 
     records = [json.loads(l) for l in Path(args.dataset).read_text(encoding="utf-8").splitlines()]
+
+    # Thinking is rendered into the prompt here rather than requested through
+    # GRPOConfig. trl 0.23.1 has no chat_template_kwargs field, and the earlier
+    # version of this script refused to run without it — correctly, because
+    # rewarding a bare `ANSWER: X` is the one-bit letter channel that SFT and
+    # four DPO recipes already exhausted. The fix is to stop asking the config:
+    # trl's maybe_apply_chat_template leaves a `prompt` that is already a plain
+    # string untouched (it only templates conversational examples), so applying
+    # the template ourselves with enable_thinking=True is exact and needs no
+    # upgrade over a network that is currently unusable.
+    from transformers import AutoTokenizer
+    _tok = AutoTokenizer.from_pretrained(args.model_path, local_files_only=True)
+
+    def render(msgs) -> str:
+        return _tok.apply_chat_template(msgs, tokenize=False,
+                                        add_generation_prompt=True,
+                                        enable_thinking=True)
+
+    probe_on = render([{"role": "user", "content": "probe"}])
+    probe_off = _tok.apply_chat_template([{"role": "user", "content": "probe"}],
+                                          tokenize=False, add_generation_prompt=True,
+                                          enable_thinking=False)
+    if probe_on == probe_off:
+        raise SystemExit(
+            "this tokenizer renders enable_thinking=True and False identically, "
+            "so thinking cannot be guaranteed in rollouts — refusing to train a "
+            "letter-only policy by accident")
+    print(f"thinking prompts verified: enabled/disabled renderings differ by "
+          f"{len(probe_off) - len(probe_on)} chars", flush=True)
+
+    for r in records:
+        if isinstance(r.get("prompt"), list):
+            r["prompt"] = render(r["prompt"])
+
     dataset = Dataset.from_list(records)
-    print(f"dataset: {len(dataset)} prompts", flush=True)
+    print(f"dataset: {len(dataset)} prompts (pre-rendered, thinking on)", flush=True)
 
     cfg = dict(
         output_dir=args.output_dir,
@@ -149,12 +199,12 @@ def main() -> None:
         seed=42,
     )
     valid = {f.name for f in dataclasses.fields(GRPOConfig)}
-    # thinking ON — the whole point of this run
+    # Thinking is already baked into the prompt strings above. On a trl that
+    # does have the field, set it too — it is a no-op for prompts that are
+    # already rendered, and keeps the run correct if the prompts ever go back
+    # to conversational form.
     if "chat_template_kwargs" in valid:
         cfg["chat_template_kwargs"] = {"enable_thinking": True}
-    else:
-        raise SystemExit("GRPOConfig has no chat_template_kwargs: this TRL cannot "
-                         "guarantee thinking is enabled in rollouts — upgrade first")
     if "mask_truncated_completions" in valid:
         cfg["mask_truncated_completions"] = True
     for k in [k for k in cfg if k not in valid]:

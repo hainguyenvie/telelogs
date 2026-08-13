@@ -1,9 +1,16 @@
 #!/bin/bash
-# GRPO on thinking traces. STAGED, not queued — MODEL_DIR must be decided
-# after the CPT dev-1000 sweep:
-#   CPT helped   -> merge the winning CPT checkpoint, train GRPO on top
-#   CPT flat     -> point MODEL_DIR at the bare base; GRPO harvests what is
-#                   already in the weights (oracle 83.85 vs voted 74.71)
+# GRPO on thinking traces. MODEL_DIR is the bare base, and that is now a
+# measured choice rather than a fallback:
+#   * CPT campaign 1 was negative at every checkpoint and every dose, so there
+#     is nothing to merge.
+#   * dpo3@200 is +1.4 on dev-1000 but p=0.17 — not distinguishable from base —
+#     and preference training sharpens the letter distribution, which shrinks
+#     exactly the rollout diversity GRPO feeds on. Starting from base preserves
+#     the 23.3% trainable band measured by the dev-1000 pass@8 run.
+# That run also replaced the justification for this job. The old one cited an
+# oracle of 83.85% that is taken over four CHOICE-ORDER PERMUTATIONS; at fixed
+# order, sampling 8 thinking traces gives pass@8 = 84.0% against greedy 75.1%,
+# so the headroom is real and is not a permutation artefact.
 # Smoke first: 200 prompts, 1 epoch. If reward/mean climbs and completions
 # stay well-formed, rerun with the full set.
 set -euo pipefail
@@ -33,7 +40,7 @@ timeout 43200 "$PY" "$ROOT/infra/train_grpo.py" \
   --epochs 1 --learning-rate 1e-5 --beta 0.01 \
   --num-generations 8 --generation-batch-size 8 \
   --per-device-batch 8 --grad-accum 4 \
-  --max-completion-length 1536 --temperature 1.0 \
+  --max-completion-length 2560 --temperature 1.0 \
   --lora-r 16 --vllm-gpu-mem 0.3 --save-steps 20
 echo "#### $RUN GRPO DONE $(date -Iseconds)"
 
