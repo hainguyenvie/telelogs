@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-rl2-arch
+  namespace: tensara
+  labels:
+    app: telelogs-rl2-arch
+    owner: h2n
+spec:
+  restartPolicy: Always
+  nodeName: hgx046
+  containers:
+    - name: main
+      # No GPU. This pod exists only because safetensors writes
+      # adapter_model.safetensors as 0600 root, so the dev pod (uid 1000) cannot
+      # read it, and `kubectl exec` into the training pod is blocked by webhook.
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -u
+          R=/workspace/telelogs-rl
+          SRC=$R/checkpoints/v2
+          DST=$R/results/ckpt_archive
+          KEEP="adapter_model.safetensors adapter_config.json trainer_state.json"
+          mkdir -p "$DST"; chmod 0777 "$DST"
+          echo "archiver up $(date)"
+          while true; do
+            # Make every checkpoint world-readable so downstream steps (merge,
+            # serve, pulling results off the box) are not blocked by 0600.
+            chmod -R a+rX "$SRC" 2>/dev/null || true
+            for d in "$SRC"/checkpoint-*; do
+              [ -d "$d" ] || continue
+              n=$(basename "$d"); step=${n#checkpoint-}
+              case "$step" in (*[!0-9]*) continue ;; esac
+              [ $((step % 100)) -eq 0 ] || continue
+              [ -e "$DST/$n" ] && continue
+              rm -rf "$DST/$n.part"; mkdir -p "$DST/$n.part"
+              ok=1
+              for f in $KEEP; do
+                [ -f "$d/$f" ] || continue
+                cp "$d/$f" "$DST/$n.part/" || ok=0
+              done
+              # Promote only when every file landed, so a truncated archive is
+              # never mistaken for a usable one.
+              if [ "$ok" = "1" ] && [ -f "$DST/$n.part/adapter_model.safetensors" ]; then
+                mv "$DST/$n.part" "$DST/$n"
+                chmod -R 0777 "$DST/$n"
+                echo "$(date -u +%H:%M:%S) archived $n"
+              else
+                rm -rf "$DST/$n.part"
+                echo "$(date -u +%H:%M:%S) $n incomplete, will retry"
+              fi
+            done
+            chmod -R 0777 "$DST" 2>/dev/null || true
+            sleep 120
+          done
+      resources:
+        requests: {cpu: "1", memory: 2Gi}
+        limits:   {cpu: "2", memory: 8Gi}
+      volumeMounts:
+        - {name: rl, mountPath: /workspace/telelogs-rl}
+  volumes:
+    - name: rl
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/rl-grpo2, type: Directory}

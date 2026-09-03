@@ -1,0 +1,86 @@
+# TeleLogs specialist, ready for a router to call.
+#
+#   docker compose up -d          start
+#   docker compose logs -f        watch until "=== READY ==="
+#   docker compose run --rm --entrypoint /opt/entrypoint.sh telelogs verify
+#                                 re-score official-864 inside the container
+#
+# The router reaches it at http://telelogs:20503/v1 if the router runs on this
+# same compose network, or at http://127.0.0.1:20503/v1 if it runs on the host.
+services:
+  telelogs:
+    image: hainh67/telelogs-serve:ckpt700
+    container_name: telelogs
+    restart: unless-stopped
+
+    # Bound to loopback on purpose: 20503 is reachable from processes on this
+    # host and from nothing on the network. A bare "20503:20503" would listen on
+    # every interface of the machine, which is not what "khong expose ra ngoai"
+    # means. Drop this block entirely if the router is a container on the `telco`
+    # network below -- then nothing is published at all and it is addressed by name.
+    ports:
+      - "127.0.0.1:20503:20503"
+
+    environment:
+      # --- what the router sees -----------------------------------------
+      PIPELINE_PORT: "20503"         # container-side port; keep the right side of `ports` equal to this
+      PIPELINE_HOST: "0.0.0.0"       # must stay 0.0.0.0 to be reachable outside the container
+      PIPELINE_SERVED_NAME: "telelogs-ckpt700"
+      PIPELINE_ECHO_MODEL: "1"       # answer under the model name the caller asked for
+      PIPELINE_EXPOSE_META: "1"      # set 0 to drop the non-standard x_pipeline field
+
+      # --- the engine underneath ----------------------------------------
+      # 8100 lives inside the container's own network namespace, so it cannot
+      # collide with anything on your host -- UNLESS you switch to
+      # network_mode: host, where it becomes a real port and may need changing.
+      VLLM_PORT: "8100"
+      # Tensor parallel. MEASURED: TP=1 vs TP=2 scored 812 vs 811 of 864,
+      # McNemar 16:15, p = 1.00 -- the degree does not change accuracy. Raise it
+      # for capacity, never for quality, and keep it <= the number of GPUs below.
+      VLLM_TP: "1"
+      VLLM_MAX_MODEL_LEN: "40960"
+      # A100-SXM4-40GB: 40960 MiB. 0.90 leaves ~36.9 GB, of which 16.4 GB is
+      # weights and ~20 GB is KV cache -- about 140k tokens, far more than the
+      # pipeline's 8 workers can use. Lower it only if the card is shared.
+      VLLM_GPU_MEM_UTIL: "0.90"
+      VLLM_MAX_NUM_SEQS: "64"
+      VERIFY_WORKERS: "8"
+
+    # PINNED, not `count: 1`. On this host GPUs 0,2,3,6,7 are already carrying
+    # 36-38 GB of somebody else's work and GPU 1 has 12 GB; only 4 and 5 are
+    # empty. `count: 1` hands out the first device it finds -- GPU 0 -- and the
+    # container dies out of memory before it ever answers.
+    # Pinned to GPU 5. For both free cards, set device_ids: ["4","5"] AND
+    # VLLM_TP: "2"; vLLM aborts at startup if tensor-parallel size exceeds the
+    # visible device count.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["5"]
+              capabilities: [gpu]
+
+    # 16.4 GB of weights load before the endpoint answers, then the entrypoint
+    # runs one real diagnosis through the whole stack. start_period covers both,
+    # so the container is not declared unhealthy while it is legitimately warming.
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:20503/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 600s
+
+    # vLLM needs more shared memory than Docker's 64 MB default, and multi-GPU
+    # tensor parallel needs it badly -- the symptom is a hang at startup, not an
+    # obvious error.
+    shm_size: "8gb"
+
+    networks: [telco]
+
+# A user-defined network gives DNS by container name, so a router on the same
+# network reaches this as http://telelogs:20503/v1 with no published port at all.
+networks:
+  telco:
+    driver: bridge

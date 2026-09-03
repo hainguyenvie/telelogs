@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-imgbuild-dry
+  namespace: tensara
+  labels: {app: telelogs-imgbuild-dry, owner: h2n}
+spec:
+  restartPolicy: Never
+  nodeName: hgx046
+  # Cluster DNS (10.96.0.10) does not answer: a pod on the default ClusterFirst
+  # policy fails every external lookup with an i/o timeout, which kills both the
+  # base-image pull and pip. tensara-dev-0 reaches the internet only because it
+  # carries exactly this fallback -- public resolvers, with timeout 1 / attempts 1
+  # so the dead cluster resolver is skipped in a second instead of stalling.
+  dnsConfig:
+    nameservers: ["8.8.8.8", "1.1.1.1"]
+    options:
+      - {name: timeout, value: "1"}
+      - {name: attempts, value: "1"}
+  containers:
+    - name: kaniko
+      # kaniko builds and pushes from an ordinary pod: no docker daemon, no
+      # containerd socket, no privileged flag -- which matters because this
+      # service account has `create pods` but not `pods/exec` and not
+      # `daemonsets`, so docker-in-docker was never available.
+      # The -debug tag ships /busybox/sh, needed to assemble the context first.
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command: ["/busybox/sh", "-c"]
+      args:
+        - |
+          set -e
+          SRC=/workspace/build/src
+          CTX=/workspace/build/context
+
+          echo "=== assembling build context $(date -u) ==="
+          rm -rf "$CTX"; mkdir -p "$CTX"
+          cp -r "$SRC/." "$CTX/"
+
+          # The weights are 16 GB on the same filesystem, so hardlink rather than
+          # copy: a copy would spend ten minutes and 16 GB producing identical
+          # bytes. kaniko reads through the links exactly as it would real files.
+          mkdir -p "$CTX/model"
+          for f in /workspace/model/*; do
+            ln "$f" "$CTX/model/$(basename "$f")" 2>/dev/null || cp "$f" "$CTX/model/"
+          done
+
+          echo "--- context ---"
+          ls "$CTX"
+          echo "code/: $(ls "$CTX/code" | wc -l) files    model/: $(ls "$CTX/model" | wc -l) files"
+          du -sh "$CTX" "$CTX/model"
+
+          # Refuse to build a broken image rather than discover it after a 30 GB push.
+          for required in Dockerfile entrypoint.sh program.json \
+                          pipeline_openai_shim.py official_telelogs_eval.py \
+                          verify_summary.py champion_gsma_full.py \
+                          harness/full4_eval.py \
+                          data/ot-full/telelogs/test-00000-of-00001.parquet \
+                          model/config.json; do
+            [ -e "$CTX/$required" ] || { echo "!! context is missing $required"; exit 1; }
+          done
+
+          echo "=== build + push $(date -u) ==="
+          # --compressed-caching=false is not optional at this size: kaniko
+          # otherwise holds compressed layer contents in RAM and a 16 GB layer
+          # OOMs the pod. --snapshot-mode=redo skips full filesystem hashing.
+          /kaniko/executor \
+            --context "dir://$CTX" \
+            --dockerfile "$CTX/Dockerfile" \
+            --no-push \
+            --compressed-caching=false \
+            --snapshot-mode=redo \
+            --cache=false \
+            --push-retry 3 \
+            --verbosity info
+          echo DRY_BUILD_DONE
+      env:
+        # PRIVATE repository. The image carries data/raw_train_2400/train.json and
+        # data/official_test_864/test.json, which TeleLogs asks users not to
+        # publicly redistribute; REPRODUCING.md allows them here only on the
+        # condition of privacy, and that condition travels with the image.
+        # Create the repo as private on Docker Hub BEFORE this runs: a push to a
+        # repository that does not exist yet creates it PUBLIC.
+        # kaniko stages layer tarballs through the temp dir; the default sits in
+        # the container's small filesystem rather than the node's 787 GB.
+        - {name: TMPDIR, value: /workspace/build/tmp}
+      resources:
+        requests: {cpu: "4", memory: 16Gi}
+        limits:   {cpu: "16", memory: 96Gi}
+      volumeMounts:
+        - {name: build, mountPath: /workspace/build}
+        - {name: model, mountPath: /workspace/model, readOnly: true}
+        # Docker Hub credentials from a Secret, never from shared storage:
+        # /mnt/registry/tensara-home is visible to other tenants and a
+        # push-scoped token must not live there. Delete the Secret after the push.
+  volumes:
+    - name: build
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/image-build, type: DirectoryOrCreate}
+    - name: model
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/eval-v2/models/qwen3-8b-grpo-v2-ckpt700, type: Directory}

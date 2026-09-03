@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-holdsel
+  namespace: tensara
+  labels:
+    app: telelogs-holdsel
+    owner: h2n
+spec:
+  restartPolicy: Never
+  nodeName: hgx046
+  containers:
+    - name: main
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -u
+          ROOT=/workspace/eval
+          mkdir -p "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/models"
+          chmod -R 0777 "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/models"
+          echo "runner up $(date) $(hostname)"
+          nvidia-smi -L || true
+          while true; do
+            for j in "$ROOT"/jobs/*.sh; do
+              [ -e "$j" ] || continue
+              n=$(basename "$j" .sh)
+              mv "$j" "$ROOT/done/$n.running" || continue
+              setsid bash "$ROOT/done/$n.running" > "$ROOT/done/$n.log" 2>&1 &
+              pid=$!
+              while kill -0 "$pid" 2>/dev/null; do
+                if [ -e "$ROOT/done/$n.kill" ]; then
+                  kill -- -"$pid" 2>/dev/null || true
+                  sleep 2; kill -9 -- -"$pid" 2>/dev/null || true
+                  rm -f "$ROOT/done/$n.kill"
+                fi
+                sleep 5
+              done
+              wait "$pid"; rc=$?
+              mv "$ROOT/done/$n.running" "$ROOT/done/$n.rc$rc"
+              chmod -R 0777 "$ROOT/done" "$ROOT/results" "$ROOT/models" 2>/dev/null || true
+            done
+            sleep 5
+          done
+      resources:
+        requests: {cpu: "32", memory: 160Gi, nvidia.com/gpu: "6"}
+        limits:   {cpu: "64", memory: 320Gi, nvidia.com/gpu: "6"}
+      env:
+        - {name: TORCH_CUDA_ARCH_LIST, value: "9.0"}
+        - {name: HF_HOME, value: /workspace/eval/cache/hf}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+      volumeMounts:
+        - {name: eval, mountPath: /workspace/eval}
+        # Training workspace read-only: the merge reads adapters and train.json
+        # from here and must not be able to disturb the run still using it.
+        - {name: rl, mountPath: /workspace/telelogs-rl, readOnly: true}
+        - {name: models, mountPath: /workspace/models, readOnly: true}
+        - {name: bench4, mountPath: /workspace/telelogs-bench4, readOnly: true}
+        - {name: shm, mountPath: /dev/shm}
+  volumes:
+    - name: eval
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/eval-v2, type: DirectoryOrCreate}
+    - name: rl
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/rl-grpo2, type: Directory}
+    - name: models
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/shared/models, type: Directory}
+    - name: bench4
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4, type: Directory}
+    - name: shm
+      emptyDir: {medium: Memory, sizeLimit: 32Gi}

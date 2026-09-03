@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-gpuprobe
+  namespace: tensara
+  labels: {app: telelogs-gpuprobe, owner: h2n}
+spec:
+  restartPolicy: Never
+  # /mnt/registry/tensara-home is hgx046-local storage, so the real run has to
+  # land here; probing anywhere else would answer the wrong question.
+  nodeName: hgx046
+  containers:
+    - name: main
+      image: registry.k8s.io/pause:3.9
+      resources:
+        requests: {cpu: "1", memory: 1Gi, nvidia.com/gpu: "1"}
+        limits:   {cpu: "1", memory: 1Gi, nvidia.com/gpu: "1"}

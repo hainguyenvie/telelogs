@@ -52,6 +52,11 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--max-tokens", type=int, default=1000)
     parser.add_argument("--out", required=True)
+    # Same pipeline, same official parser, different question set: the
+    # checkpoint-selection sweep runs this script over holdout-479 and must not
+    # stamp its summaries with the ot-full suite name.
+    parser.add_argument("--suite",
+                        default="GSMA ot-full \u00b7 telelogs \u00b7 official boxed-int scorer")
     args = parser.parse_args()
 
     import dspy
@@ -158,7 +163,7 @@ def main() -> None:
         for r in rows_out if not r["correct"]
     )
     summary = {
-        "suite": "GSMA ot-full · telelogs · official boxed-int scorer",
+        "suite": args.suite,
         "method": args.method,
         "program": args.program,
         "total": len(rows_out),

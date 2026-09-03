@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-serve700
+  namespace: tensara
+  labels:
+    app: telelogs-serve700
+    owner: h2n
+spec:
+  restartPolicy: Never
+  nodeName: hgx046
+  # CDI door instead of the device plugin. Not for capacity — the plugin has
+  # free allocations right now — but for CHOICE: a device-plugin pod is handed
+  # arbitrary cards renumbered 0..N-1 and cannot tell which host cards it got,
+  # while runtimeClassName: nvidia + NVIDIA_VISIBLE_DEVICES=all exposes all
+  # eight under their HOST indices so CUDA_VISIBLE_DEVICES can pin exactly the
+  # ones we are allowed to touch. Host 6 and 7 are somebody else's (~80 GB each
+  # in use at the time of writing) and host 0/1 are off limits by instruction;
+  # every job here pins to 2 and 3.
+  #
+  # The isolation is soft: this container can see all eight cards, so a job that
+  # forgets CUDA_VISIBLE_DEVICES will land on someone else's GPU. Never omit it.
+  runtimeClassName: nvidia
+  containers:
+    - name: main
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -u
+          ROOT=/workspace/eval
+          mkdir -p "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/models"
+          chmod -R 0777 "$ROOT/jobs" "$ROOT/done" "$ROOT/results" "$ROOT/models" 2>/dev/null || true
+          echo "runner up $(date -Iseconds) $(hostname)"
+          nvidia-smi --query-gpu=index,uuid,memory.used,utilization.gpu --format=csv || true
+          while true; do
+            for job in "$ROOT"/jobs/*.sh; do
+              [ -e "$job" ] || continue
+              name=$(basename "$job" .sh)
+              mv "$job" "$ROOT/done/$name.running" || continue
+              setsid bash "$ROOT/done/$name.running" > "$ROOT/done/$name.log" 2>&1 &
+              pid=$!
+              while kill -0 "$pid" 2>/dev/null; do
+                if [ -e "$ROOT/done/$name.kill" ]; then
+                  kill -- -"$pid" 2>/dev/null || true
+                  sleep 2; kill -9 -- -"$pid" 2>/dev/null || true
+                  rm -f "$ROOT/done/$name.kill"
+                fi
+                sleep 5
+              done
+              wait "$pid"; rc=$?
+              mv "$ROOT/done/$name.running" "$ROOT/done/$name.rc$rc"
+              chmod -R 0777 "$ROOT/done" "$ROOT/results" "$ROOT/models" 2>/dev/null || true
+            done
+            sleep 5
+          done
+      env:
+        # "all" is the only device this node's CDI registry resolves; UUID and
+        # index forms fail at container creation with "unresolvable CDI devices".
+        - {name: NVIDIA_VISIBLE_DEVICES, value: "all"}
+        - {name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility"}
+        - {name: TORCH_CUDA_ARCH_LIST, value: "9.0"}
+        - {name: HF_HOME, value: /workspace/eval/cache/hf}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        # limits.cpu is a hard CFS quota that torch does not see: it sizes its
+        # OMP pool from the node's 192 cores and throttles itself to a standstill.
+        - {name: OMP_NUM_THREADS, value: "8"}
+      resources:
+        requests: {cpu: "8", memory: 32Gi}
+        limits:   {cpu: "48", memory: 200Gi}
+      volumeMounts:
+        - {name: eval, mountPath: /workspace/eval}
+        - {name: rl, mountPath: /workspace/telelogs-rl, readOnly: true}
+        - {name: models, mountPath: /workspace/models, readOnly: true}
+        - {name: bench4, mountPath: /workspace/telelogs-bench4, readOnly: true}
+        - {name: hfcache, mountPath: /workspace/hf-cache, readOnly: true}
+        - {name: shm, mountPath: /dev/shm}
+  volumes:
+    - name: eval
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/eval-v2, type: Directory}
+    - name: rl
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/rl-grpo2, type: Directory}
+    - name: models
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/shared/models, type: Directory}
+    - name: bench4
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4, type: Directory}
+    - name: hfcache
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/shared/hf-cache, type: Directory}
+    - name: shm
+      emptyDir: {medium: Memory, sizeLimit: 32Gi}

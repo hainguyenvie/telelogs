@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telelogs-repro9421
+  namespace: tensara
+  labels:
+    app: telelogs-repro9421
+    owner: h2n
+spec:
+  # One-shot reproduction: if the runner dies we want to see it, not have the
+  # kubelet quietly restart it and hide a half-finished run.
+  restartPolicy: Never
+  # /mnt/registry/tensara-home is hgx046-local storage; the mounts below come up
+  # empty on any other node.
+  nodeName: hgx046
+  containers:
+    - name: main
+      image: pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -u
+          ROOT=/workspace/repro
+          mkdir -p "$ROOT/jobs" "$ROOT/done" "$ROOT/results"
+          chmod -R 0777 "$ROOT/jobs" "$ROOT/done" "$ROOT/results"
+          echo "runner up $(date) $(hostname)"
+          nvidia-smi -L || true
+          while true; do
+            for j in "$ROOT"/jobs/*.sh; do
+              [ -e "$j" ] || continue
+              n=$(basename "$j" .sh)
+              mv "$j" "$ROOT/done/$n.running" || continue
+              setsid bash "$ROOT/done/$n.running" > "$ROOT/done/$n.log" 2>&1 &
+              pid=$!
+              while kill -0 "$pid" 2>/dev/null; do
+                if [ -e "$ROOT/done/$n.kill" ]; then
+                  kill -- -"$pid" 2>/dev/null || true
+                  sleep 2
+                  kill -9 -- -"$pid" 2>/dev/null || true
+                  rm -f "$ROOT/done/$n.kill"
+                fi
+                sleep 5
+              done
+              wait "$pid"
+              rc=$?
+              mv "$ROOT/done/$n.running" "$ROOT/done/$n.rc$rc"
+              chmod -R 0777 "$ROOT/done" "$ROOT/results" 2>/dev/null || true
+            done
+            sleep 5
+          done
+      resources:
+        requests:
+          cpu: "8"
+          memory: 32Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "16"
+          memory: 64Gi
+          nvidia.com/gpu: "1"
+      env:
+        - {name: TORCH_CUDA_ARCH_LIST, value: "9.0"}
+        - {name: HF_HOME, value: /workspace/telelogs/cache/hf}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        - {name: VLLM_WORKER_MULTIPROC_METHOD, value: spawn}
+      volumeMounts:
+        # The only writable project mount: jobs, logs and results.
+        - {name: repro, mountPath: /workspace/repro}
+        # Base Qwen3-8B, lifted out of the HF cache into shared/models.
+        - {name: models, mountPath: /workspace/models, readOnly: true}
+        # runs/v0-lora is gone, so /workspace/telelogs no longer has a real
+        # backing directory. An emptyDir anchors it — writable, so containerd can
+        # create the two nested mountpoints below (a read-only parent cannot).
+        - {name: tlbase, mountPath: /workspace/telelogs}
+        - {name: venv, mountPath: /workspace/telelogs/venv, readOnly: true}
+        - {name: hfcache, mountPath: /workspace/telelogs/cache/hf, readOnly: true}
+        # DSPy venv, compiled program.json and the frozen test json. Read-only:
+        # this run must not be able to modify the artifact it is reproducing.
+        - {name: bench4, mountPath: /workspace/telelogs-bench4, readOnly: true}
+        - {name: shm, mountPath: /dev/shm}
+  volumes:
+    - name: repro
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/repro-9421, type: DirectoryOrCreate}
+    - name: models
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/shared/models, type: Directory}
+    - name: tlbase
+      emptyDir: {}
+    - name: venv
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/venvs/venv, type: Directory}
+    - name: hfcache
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/shared/hf-cache, type: Directory}
+    - name: bench4
+      hostPath: {path: /mnt/registry/tensara-home/projects/telelogs/runs/bench4, type: Directory}
+    - name: shm
+      emptyDir: {medium: Memory, sizeLimit: 16Gi}

@@ -1,0 +1,61 @@
+paired rows            : 864
+original (2026-08-03)  : 814/864 = 94.21%
+base rerun (2026-08-24): 797/864 = 92.25%
+
+both correct           : 786
+original only          : 28
+base only              : 11
+neither                : 39
+discordant             : 39
+exact McNemar p        : 0.009475
+
+class   orig  base  delta
+C1       105   101     -4
+C2       108   108     +0
+C3        77    70     -7
+C4       101    92     -9
+C5       108   108     +0
+C6        99   102     +3
+C7       108   108     +0
+C8       108   108     +0
+
+discordant cases (index, gold, original answer, base answer)
+    29  gold=C6  orig=C6       base=C3        won=orig
+    50  gold=C3  orig=C3       base=C4        won=orig
+    61  gold=C6  orig=C1       base=C6        won=base
+    74  gold=C3  orig=C3       base=C1        won=orig
+    75  gold=C4  orig=C4       base=unparsed  won=orig
+    85  gold=C6  orig=C6       base=C3        won=orig
+   141  gold=C6  orig=C3       base=C6        won=base
+   155  gold=C4  orig=C4       base=C3        won=orig
+   269  gold=C6  orig=C1       base=C6        won=base
+   298  gold=C3  orig=C3       base=C1        won=orig
+   314  gold=C3  orig=C3       base=C1        won=orig
+   323  gold=C4  orig=C3       base=C4        won=base
+   325  gold=C6  orig=C3       base=C6        won=base
+   355  gold=C4  orig=C4       base=C1        won=orig
+   387  gold=C4  orig=C4       base=unparsed  won=orig
+   403  gold=C4  orig=C4       base=C3        won=orig
+   411  gold=C4  orig=unparsed base=C4        won=base
+   434  gold=C3  orig=C3       base=C4        won=orig
+   448  gold=C1  orig=C1       base=C3        won=orig
+   514  gold=C3  orig=C3       base=C6        won=orig
+   515  gold=C4  orig=C4       base=C6        won=orig
+   539  gold=C4  orig=C4       base=C6        won=orig
+   547  gold=C4  orig=C4       base=C1        won=orig
+   557  gold=C6  orig=C4       base=C6        won=base
+   570  gold=C3  orig=C3       base=C6        won=orig
+   571  gold=C4  orig=C4       base=C6        won=orig
+   600  gold=C1  orig=C1       base=C3        won=orig
+   608  gold=C1  orig=C1       base=C3        won=orig
+   619  gold=C4  orig=C3       base=C4        won=base
+   650  gold=C3  orig=C3       base=C4        won=orig
+   653  gold=C6  orig=C3       base=C6        won=base
+   659  gold=C4  orig=C4       base=C6        won=orig
+   682  gold=C3  orig=C6       base=C3        won=base
+   701  gold=C6  orig=C4       base=C6        won=base
+   749  gold=C6  orig=C6       base=C1        won=orig
+   755  gold=C4  orig=C4       base=C6        won=orig
+   795  gold=C4  orig=C4       base=C1        won=orig
+   800  gold=C1  orig=C1       base=C6        won=orig
+   845  gold=C6  orig=C6       base=C3        won=orig
