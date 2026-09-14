@@ -67,3 +67,8 @@ infra/*/adaptkey_nemotron_data/
 # Local server-state snapshots (multi-GB rsync mirrors, never commit)
 backups/
 
+
+# Job wrapper dưới infra/ là SOURCE, không phải runtime state: chúng là công thức
+# tái lập (vd 50_merge_ckpt700.sh dựng lại bản merge từ adapter). Quy tắc "jobs/"
+# ở trên viết cho thư mục hàng đợi ở gốc repo và đã nuốt nhầm cả 79 file này.
+!infra/*/jobs/
