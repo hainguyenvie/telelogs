@@ -96,23 +96,23 @@ Torch/vLLM đọc `nproc` rồi mở 192 thread OMP và tự bóp cổ mình →
 `--dataloader_num_workers` vừa phải. Nạp nhiều model lớn song song thì OOM-killer giết theo cgroup 512 GiB,
 **không có traceback**.
 
-**Ổ đĩa gần đầy.** `/home/tensara` 3,5 TB, **94% dùng, còn ~202 GB** — dùng chung cho mọi project.
+**Ổ đĩa gần đầy.** `/home/tensara` 3,5 TB, **93% dùng, còn ~248 GB** — dùng chung cho mọi project.
 
 ```bash
 df -h /home/tensara                          # kiểm TRƯỚC mỗi lô mới
 du -sh ~/projects/telelogs/runs/* | sort -rh
 ```
 
-Phần của telelogs là 76 GB: `runs/` 71 GB (rl-grpo2 53 G, eval-v2 18 G) và `venvs/` 4,8 GB, cộng phần dùng
-chung `~/projects/_shared` 110 GB (models 94 G, corpora 17 G) chia với teleqna. Cách dọn: mục 9.
+Phần của telelogs là 30 GB: `runs/` 25 GB (rl-grpo2 22 G, eval-v2 2 G, bench4 858 M) và `venvs/` 4,8 GB, cộng
+phần dùng chung `~/projects/_shared` 110 GB (models 94 G, corpora 17 G) chia với teleqna. Cách dọn: mục 9.
 
 ## 4. Bố cục thư mục và bảng quy đổi đường dẫn
 
 ```text
-~/projects/telelogs/                76G
+~/projects/telelogs/                30G
 ├── runs/
-│   ├── rl-grpo2/     53G   GRPO v2: checkpoints/v2/, results/ckpt_archive/checkpoint-700 ⭐
-│   ├── eval-v2/      18G   pipeline chấm official-864 + shim OpenAI
+│   ├── rl-grpo2/     22G   GRPO v2: checkpoints/v2/ 8,3G, results/ckpt_archive/checkpoint-700 ⭐, venv/ 8,3G (chết)
+│   ├── eval-v2/     2,0G   pipeline chấm official-864 + shim OpenAI
 │   ├── bench4/      858M   phục vụ vLLM + dashboard
 │   └── canon/, repro-9421/, rl-skeleton/, image-build/
 ├── venvs/            4,8G  venv, venv-dl, venv-grpo, venv-train  ← 3/4 đã chết, xem mục 5
@@ -250,6 +250,12 @@ mv <thứ-cần-bỏ> $T/
 # … kiểm tra lại …
 rm -rf $T
 ```
+
+Đã dọn 14/09/2026 theo đúng mẫu này: 46 GB hai bản merge (`rl-grpo2/models/qwen3-8b-grpo-v2` 31 G fp32 và
+`eval-v2/models/...-ckpt700` 16 G bf16). Bản fp32 vốn đã hỏng — hai rank DDP ghi đè lên nhau, chính
+`50_merge_ckpt700.sh` ghi rõ nó **không** dùng thay được. Bản bf16 dựng lại bằng script đó từ
+`results/ckpt_archive/checkpoint-700`. **Trước khi xoá, script dựng lại đã được đưa vào git** — xoá dữ liệu
+dẫn xuất mà công thức tái lập chỉ nằm trên đĩa thì không phải dọn, là mất.
 
 Với checkpoint: **adapter là bản gốc, merged là dữ liệu dẫn xuất.** Mỗi lần train sinh một adapter (0,3–4 GB)
 và một bản merged (16 GB) = base + adapter. Giữ adapter, bỏ merged, dựng lại khi cần — và merge ở `bfloat16`,
