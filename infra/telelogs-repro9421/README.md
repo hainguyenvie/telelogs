@@ -2,10 +2,10 @@
 
 ## Vì sao có track này
 
-[h200_use.md](../../h200_use.md) §11 khẳng định kết quả 94,21% official-864 chạy
+Bản `h200_use.md` cũ (nay đã gộp vào [H200_SERVER_GUIDE.md](../../H200_SERVER_GUIDE.md)) §11 khẳng định kết quả 94,21% official-864 chạy
 trên `Qwen/Qwen3-8B` **gốc**, và lấy đó làm lý do xoá 215 GB trọng số merged.
 Log của chính run đó trên H200 nói ngược lại — cả ba job `magrule` đều ghi
-`GRPO weights`. Lập luận trong h200_use.md sai về phương pháp: nó dựa vào
+`GRPO weights`. Lập luận trong `h200_use.md` sai về phương pháp: nó dựa vào
 `DSPY_MODEL` để mặc định, nhưng `serve_grpo_model.sh` cố ý đặt
 `--served-model-name Qwen/Qwen3-8B` để giả danh base, nên `DSPY_MODEL` không
 phân biệt được gì. Thứ phân biệt là `DSPY_API_BASE`, và giá trị đó không được
@@ -42,7 +42,7 @@ Biến duy nhất: `/workspace/models/Qwen3-8B` (base) thay cho endpoint GRPO.
 `runs/v0-lora` đã bị xoá nên `/workspace/telelogs` không còn thư mục backing.
 pod.yaml neo nó bằng một `emptyDir` (ghi được) rồi mount `venv` và `cache/hf`
 lồng vào trong — mount lồng vào một parent read-only thì containerd không tạo nổi
-mountpoint (bẫy đã ghi ở h200_use.md §8).
+mountpoint (bẫy đã ghi ở [H200_SERVER_GUIDE.md](../../H200_SERVER_GUIDE.md) §12).
 
 ## Bố cục file
 
@@ -89,7 +89,7 @@ Toàn bộ chênh lệch nằm trong nửa residual: C2/C5/C7/C8 đều 108/108 
 còn C4 −9, C3 −7, C1 −4, C6 +3. Đúng chỗ mà specialist call chịu trách nhiệm, tức
 đúng chỗ GRPO được huấn luyện để chạy.
 
-**Kết luận: h200_use.md §11 sai.** Run 94,21% chạy trên trọng số GRPO, đúng như log
+**Kết luận: `h200_use.md` §11 sai.** Run 94,21% chạy trên trọng số GRPO, đúng như log
 của chính nó. Lý do dùng để xoá 215 GB merged là một suy luận sai từ `DSPY_MODEL`.
 Trọng số GRPO nay đã mất, nên **94,21% hiện không tái tạo được**; con số tái tạo
 được bằng checkpoint công khai là 92,25%.

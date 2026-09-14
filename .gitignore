@@ -45,7 +45,6 @@ server_backup/
 review-ui/
 
 # Local historical tracks not required for the reproducible DSPy baseline
-h200_use.md
 readme.md
 infra/telelogs-*-sft/
 scripts/*
@@ -68,7 +67,3 @@ infra/*/adaptkey_nemotron_data/
 # Local server-state snapshots (multi-GB rsync mirrors, never commit)
 backups/
 
-# ...but the H200 job wrappers under the sft tree are source, not runtime state.
-# The bare "jobs/" rule above was written for queue directories at the repo root
-# and silently swallowed all 30 of them.
-!infra/teleqna/sft/jobs/
